@@ -114,6 +114,7 @@ private:
 	// ============================================================
 	float ViewStartTime = -0.25f;
 	float ViewEndTime = 2.5f;
+	float TimelinePanelHeight = 220.0f;
 
 	// ============================================================
 	// Notify Marker Edit State

@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "Core/CoreTypes.h"
 #include "Math/Quat.h"
@@ -6,6 +6,7 @@
 #include "Math/Vector.h"
 #include "Object/FName.h"
 #include "Serialization/Archive.h"
+#include "Notify.h"
 
 /** 한 Bone의 transform key 데이터만 들고 있는 순수 데이터 구조체 입니다. */
 struct FRawAnimSequenceTrack
@@ -55,6 +56,8 @@ struct FAnimNotifyEvent
 	float TriggerTime = 0.0f;
 	float Duration    = 0.0f;
 	FName NotifyName;
+
+	UNotify* NotifyTrigger = nullptr;
 
 	bool IsStateNotify() const { return Duration > 0.0f; }
 

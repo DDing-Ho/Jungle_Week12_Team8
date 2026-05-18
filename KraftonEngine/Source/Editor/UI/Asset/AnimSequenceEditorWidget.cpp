@@ -2,8 +2,11 @@
 
 #include "Animation/AnimDataModel.h"
 #include "Animation/AnimSequence.h"
+#include "Animation/Notify.h"
+#include "Animation/NotifyRegistry.h"
 #include "Component/Light/DirectionalLightComponent.h"
 #include "Component/SkeletalMeshComponent.h"
+#include "Core/PropertyTypes.h"
 #include "Editor/Settings/EditorSettings.h"
 #include "GameFramework/Light/DirectionalLightActor.h"
 #include "GameFramework/StaticMeshActor.h"
@@ -33,6 +36,89 @@ namespace
 			Result.insert(static_cast<size_t>(InsertPos), ",");
 		}
 		return Result;
+	}
+
+	// Notify 프로퍼티 1개를 타입별로 렌더링. 변경 여부 반환.
+	bool DrawNotifyPropertyRow(FProperty& Prop)
+	{
+		bool bChanged = false;
+		switch (Prop.Type)
+		{
+		case EPropertyType::Float:
+		{
+			float* Val = static_cast<float*>(Prop.ValuePtr);
+			if (Prop.Min != 0.0f || Prop.Max != 0.0f)
+				bChanged = ImGui::DragFloat("##v", Val, Prop.Speed, Prop.Min, Prop.Max, "%.4f");
+			else
+				bChanged = ImGui::DragFloat("##v", Val, Prop.Speed);
+			break;
+		}
+		case EPropertyType::Bool:
+		{
+			bool* Val = static_cast<bool*>(Prop.ValuePtr);
+			bChanged = ImGui::Checkbox("##v", Val);
+			break;
+		}
+		case EPropertyType::Int:
+		{
+			int32* Val = static_cast<int32*>(Prop.ValuePtr);
+			if (Prop.Min != 0.0f || Prop.Max != 0.0f)
+				bChanged = ImGui::DragInt("##v", Val, static_cast<int32>(Prop.Speed), static_cast<int32>(Prop.Min), static_cast<int32>(Prop.Max));
+			else
+				bChanged = ImGui::DragInt("##v", Val, static_cast<int32>(Prop.Speed));
+			break;
+		}
+		case EPropertyType::Vec3:
+		{
+			float* Val = static_cast<float*>(Prop.ValuePtr);
+			bChanged = ImGui::DragFloat3("##v", Val, Prop.Speed);
+			break;
+		}
+		case EPropertyType::String:
+		{
+			FString* Val = static_cast<FString*>(Prop.ValuePtr);
+			char Buf[256];
+			strncpy_s(Buf, sizeof(Buf), Val->c_str(), _TRUNCATE);
+			if (ImGui::InputText("##v", Buf, sizeof(Buf)))
+			{
+				*Val = Buf;
+				bChanged = true;
+			}
+			break;
+		}
+		case EPropertyType::Name:
+		{
+			FName* Val = static_cast<FName*>(Prop.ValuePtr);
+			char Buf[256];
+			strncpy_s(Buf, sizeof(Buf), Val->ToString().c_str(), _TRUNCATE);
+			if (ImGui::InputText("##v", Buf, sizeof(Buf)))
+			{
+				*Val = FName(Buf);
+				bChanged = true;
+			}
+			break;
+		}
+		case EPropertyType::Enum:
+		{
+			if (Prop.EnumNames && Prop.EnumCount > 0)
+			{
+				int32 Idx = 0;
+				if (Prop.EnumSize == 1)      Idx = *static_cast<uint8*>(Prop.ValuePtr);
+				else if (Prop.EnumSize == 4) Idx = *static_cast<int32*>(Prop.ValuePtr);
+				if (ImGui::Combo("##v", &Idx, Prop.EnumNames, static_cast<int32>(Prop.EnumCount)))
+				{
+					if (Prop.EnumSize == 1)      *static_cast<uint8*>(Prop.ValuePtr) = static_cast<uint8>(Idx);
+					else if (Prop.EnumSize == 4) *static_cast<int32*>(Prop.ValuePtr) = Idx;
+					bChanged = true;
+				}
+			}
+			break;
+		}
+		default:
+			ImGui::TextDisabled("(unsupported type)");
+			break;
+		}
+		return bChanged;
 	}
 }
 
@@ -529,7 +615,8 @@ void FAnimSequenceEditorWidget::Render(float DeltaTime)
 		FSlateApplication::Get().BringViewportToFront(&ViewportClient);
 	}
 
-	const float MainHeight = std::max(220.0f, ImGui::GetContentRegionAvail().y - 132.0f);
+	constexpr float SplitterH = 4.0f;
+	const float MainHeight = std::max(220.0f, ImGui::GetContentRegionAvail().y - SplitterH - TimelinePanelHeight);
 	ImGui::BeginChild("##AnimSequenceMainArea", ImVec2(0.0f, MainHeight), false);
 
 	ImGui::BeginChild("SkeletonTree", ImVec2(HierarchyWidth, 0), true);
@@ -605,7 +692,22 @@ void FAnimSequenceEditorWidget::Render(float DeltaTime)
 
 	ImGui::EndChild();
 
-	ImGui::Separator();
+	// --- 타임라인 / 메인 패널 수직 스플리터 ---
+	ImGui::PushStyleColor(ImGuiCol_Button,        ImVec4(0.3f, 0.3f, 0.3f, 1.0f));
+	ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.5f, 0.5f, 0.5f, 1.0f));
+	ImGui::PushStyleColor(ImGuiCol_ButtonActive,  ImVec4(0.6f, 0.6f, 0.6f, 1.0f));
+	ImGui::Button("##TimelineSplitter", ImVec2(-1.0f, SplitterH));
+	if (ImGui::IsItemActive())
+	{
+		TimelinePanelHeight -= ImGui::GetIO().MouseDelta.y;
+		TimelinePanelHeight = std::clamp(TimelinePanelHeight, 80.0f, ImGui::GetWindowHeight() - 150.0f);
+	}
+	if (ImGui::IsItemHovered() || ImGui::IsItemActive())
+	{
+		ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeNS);
+	}
+	ImGui::PopStyleColor(3);
+
 	RenderTimelinePanel();
 
 	ImGui::End();
@@ -920,14 +1022,13 @@ void FAnimSequenceEditorWidget::TickTimeline(float DeltaTime)
 
 void FAnimSequenceEditorWidget::RenderTimelinePanel()
 {
-	constexpr float TimelineHeight = 156.0f;
 	constexpr float LeftPanelWidth = 180.0f;
 	constexpr float RulerHeight = 28.0f;
 	const bool bHasTimelineLength = PlayLength > 0.0f;
 
 	ImGui::BeginChild(
 		"##AnimSequenceTimelinePanel",
-		ImVec2(0.0f, TimelineHeight),
+		ImVec2(0.0f, TimelinePanelHeight),
 		true,
 		ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
 
@@ -1097,6 +1198,89 @@ void FAnimSequenceEditorWidget::RenderTimelinePanel()
 		if (ImGui::Button("Delete"))
 		{
 			DeleteSelectedVisualNotify();
+		}
+
+		// --- Notify 타입 선택 드롭다운 ---
+		ImGui::Spacing();
+		ImGui::Separator();
+		ImGui::Spacing();
+
+		const char* CurrentTypeName = SelectedNotify.NotifyTrigger
+			? SelectedNotify.NotifyTrigger->GetClass()->GetName() : "(None)";
+
+		ImGui::SetNextItemWidth(200.0f);
+		if (ImGui::BeginCombo("Notify Type", CurrentTypeName))
+		{
+			if (ImGui::Selectable("(None)", SelectedNotify.NotifyTrigger == nullptr))
+			{
+				delete SelectedNotify.NotifyTrigger;
+				SelectedNotify.NotifyTrigger = nullptr;
+				MarkDirty();
+			}
+
+			// Registry에서 미리 등록된 목록 가져오기
+			const TMap<FString, UClass*>& NotifyMap = FNotifyRegistry::Get().GetNotifyClasses();
+
+			for (const auto& Pair : NotifyMap)
+			{
+				const FString& ClassName = Pair.first;
+				UClass* Cls = Pair.second;
+
+				const bool bSelected = SelectedNotify.NotifyTrigger &&
+					SelectedNotify.NotifyTrigger->GetClass() == Cls;
+
+				if (ImGui::Selectable(ClassName.c_str(), bSelected))
+				{
+					// 기존 객체 안전하게 삭제
+					delete SelectedNotify.NotifyTrigger;
+
+					// 팩토리를 통해 클래스 이름으로 새 객체 생성
+					UObject* Obj = FObjectFactory::Get().Create(ClassName);
+					SelectedNotify.NotifyTrigger = Cast<UNotify>(Obj);
+
+					MarkDirty();
+				}
+			}
+			ImGui::EndCombo();
+		}
+
+		// --- 리플렉션 기반 프로퍼티 인스펙터 ---
+		if (UNotify* Notify = SelectedNotify.NotifyTrigger)
+		{
+			TArray<FProperty> Props;
+			Notify->GetEditableProperties(Props);
+
+			if (!Props.empty())
+			{
+				ImGui::Spacing();
+				if (ImGui::BeginTable("##NotifyProps", 2,
+					ImGuiTableFlags_SizingStretchProp |
+					ImGuiTableFlags_BordersInnerV |
+					ImGuiTableFlags_PadOuterX |
+					ImGuiTableFlags_RowBg))
+				{
+					ImGui::TableSetupColumn("Name",  ImGuiTableColumnFlags_WidthFixed, 130.0f);
+					ImGui::TableSetupColumn("Value", ImGuiTableColumnFlags_WidthStretch);
+
+					for (int32 i = 0; i < static_cast<int32>(Props.size()); ++i)
+					{
+						ImGui::TableNextRow();
+						ImGui::PushID(i);
+
+						ImGui::TableSetColumnIndex(0);
+						ImGui::AlignTextToFramePadding();
+						ImGui::TextUnformatted(Props[i].Name.c_str());
+
+						ImGui::TableSetColumnIndex(1);
+						ImGui::SetNextItemWidth(-1);
+						if (DrawNotifyPropertyRow(Props[i]))
+							MarkDirty();
+
+						ImGui::PopID();
+					}
+					ImGui::EndTable();
+				}
+			}
 		}
 
 		ImGui::PopID();

@@ -26,8 +26,6 @@ public:
 	virtual void Tick(float DeltaTime);
 	virtual void EndPlay();
 
-	virtual void OnAnimNotify(const FName& NotifyName) {}
-
 	bool HasActorBegunPlay() const { return bActorHasBegunPlay; }
 
 	void Serialize(FArchive& Ar) override;

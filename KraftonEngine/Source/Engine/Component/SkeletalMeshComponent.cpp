@@ -1,4 +1,4 @@
-#include "SkeletalMeshComponent.h"
+﻿#include "SkeletalMeshComponent.h"
 #include "Core/Log.h"
 #include "Render/Proxy/SkeletalMeshSceneProxy.h"
 #include "Mesh/SkeletalMesh.h"
@@ -81,9 +81,9 @@ void USkeletalMeshComponent::ApplyPoseToComponent(const FPoseContext& Pose)
 
 void USkeletalMeshComponent::HandleAnimNotify(const FAnimNotifyEvent& Notify)
 {
-	UE_LOG("[AnimNotify] Fired: %s (time=%.3f)", Notify.NotifyName.ToString().c_str(), Notify.TriggerTime);
+	if (!Notify.NotifyTrigger)
+		return;
 
 	AActor* Owner = GetOwner();
-	if (Owner)
-		Owner->OnAnimNotify(Notify.NotifyName);
+	Notify.NotifyTrigger->OnNotify(Owner, this);
 }

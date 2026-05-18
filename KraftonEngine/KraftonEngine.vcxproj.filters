@@ -1308,6 +1308,11 @@
       <Filter>ThirdParty\ImGui</Filter>
     </ClCompile>
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="HighPerformanceGpuHint.cpp" />
+    <ClCompile Include="Source\Editor\UI\Asset\AnimSequenceEditorWidget.cpp" />
+    <ClCompile Include="Source\Engine\Animation\Notify.cpp" />
+    <ClCompile Include="Source\Engine\Animation\NotifyRegistry.cpp" />
+    <ClCompile Include="Source\Engine\Animation\Notify_PlaySound.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\Editor\EditorEngine.h">
@@ -3947,6 +3952,9 @@
     <ClInclude Include="ThirdParty\sol2\include\sol\utility\to_string.hpp">
       <Filter>ThirdParty\sol2\include\sol\utility</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Animation\Notify.h" />
+    <ClInclude Include="Source\Engine\Animation\NotifyRegistry.h" />
+    <ClInclude Include="Source\Engine\Animation\Notify_PlaySound.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="KraftonEngine.rc" />
