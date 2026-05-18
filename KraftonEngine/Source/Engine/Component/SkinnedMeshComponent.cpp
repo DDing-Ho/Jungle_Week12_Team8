@@ -5,6 +5,7 @@
 #include "Mesh/MeshManager.h"
 #include "Collision/RayUtils.h"
 #include "Core/Log.h"
+#include "Profiling/Stats.h"
 
 IMPLEMENT_CLASS(USkinnedMeshComponent, UMeshComponent)
 HIDE_FROM_COMPONENT_LIST(USkinnedMeshComponent)
@@ -558,6 +559,8 @@ const TArray<FMatrix>& USkinnedMeshComponent::GetCurrentSkinMatrices() const
 
 void USkinnedMeshComponent::UpdateSkinMatrices() const
 {
+	SCOPE_STAT_CAT("UpdateSkinMatrices", "Skinning");
+
 	USkeletalMesh* Mesh = GetSkeletalMesh();
 	if (!Mesh || !Mesh->GetSkeletalMeshAsset())
 	{
@@ -602,6 +605,8 @@ void USkinnedMeshComponent::UpdateSkinMatrices() const
 // CPU skinned vertices는 렌더링/쿼리에서 실제로 필요할 때만 lazy 계산한다.
 void USkinnedMeshComponent::EnsureCPUSkinnedVertices() const
 {
+	SCOPE_STAT_CAT("EnsureCPUSkinnedVertices", "Skinning");
+
 	USkeletalMesh* Mesh = GetSkeletalMesh();
 	if (!Mesh || !Mesh->GetSkeletalMeshAsset())
 	{

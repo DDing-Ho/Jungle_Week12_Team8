@@ -4,6 +4,7 @@
 #include "Render/Command/DrawCommand.h"
 #include "Runtime/Engine.h"
 #include "Profiling/Timer.h"
+#include "Profiling/Stats.h"
 
 FSkeletalMeshSceneProxy::FSkeletalMeshSceneProxy(USkeletalMeshComponent* InComponent)
 	: FPrimitiveSceneProxy(InComponent)
@@ -58,6 +59,8 @@ bool FSkeletalMeshSceneProxy::WantsGpuSkinning(const FPrimitiveDrawOptions& Opti
 
 bool FSkeletalMeshSceneProxy::PrepareDrawBuffer(ID3D11Device* Device, ID3D11DeviceContext* Context, FDrawCommandBuffer& OutBuffer) const
 {
+	SCOPE_STAT_CAT("PrepareCPUSkinningDrawBuffer", "Skinning");
+
 	USkeletalMeshComponent* SMC = GetSkeletalMeshComponent();
 	if (!SMC) return false;
 
@@ -98,6 +101,8 @@ bool FSkeletalMeshSceneProxy::PrepareDrawBuffer(ID3D11Device* Device, ID3D11Devi
 
 bool FSkeletalMeshSceneProxy::PrepareGpuSkinningDrawBuffer(ID3D11Device* Device, ID3D11DeviceContext* Context, FDrawCommandBuffer& OutBuffer) const
 {
+	SCOPE_STAT_CAT("PrepareGPUSkinningDrawBuffer", "Skinning");
+
 	USkeletalMeshComponent* SMC = GetSkeletalMeshComponent();
 	if (!SMC) return false;
 
@@ -115,6 +120,8 @@ bool FSkeletalMeshSceneProxy::PrepareGpuSkinningDrawBuffer(ID3D11Device* Device,
 bool FSkeletalMeshSceneProxy::PrepareDrawCommandBindings(ID3D11Device* Device, ID3D11DeviceContext* Context,
 	const FPrimitiveDrawOptions& Options, FDrawCommand& OutCommand) const
 {
+	SCOPE_STAT_CAT("PrepareSkinningBindings", "Skinning");
+
 	if (!Device || !Context)
 	{
 		return false;
@@ -156,6 +163,8 @@ bool FSkeletalMeshSceneProxy::PrepareDrawCommandBindings(ID3D11Device* Device, I
 		const uint64 CurrentRevision = SMC->GetSkinMatrixRevision();
 		if (UploadedSkinMatrixRevision != CurrentRevision)
 		{
+			SCOPE_STAT_CAT("UploadSkinMatrices", "Skinning");
+
 			if (!SkinMatrixBuffer.Update(Context, SkinMatrices.data(), MatrixCount))
 			{
 				return false;

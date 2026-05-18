@@ -2,9 +2,11 @@
 
 #include "Editor/EditorEngine.h"
 #include "Engine/Profiling/Timer.h"
+#include "Engine/Profiling/Stats.h"
 #include "Engine/Profiling/MemoryStats.h"
 #include "Engine/Profiling/ShadowStats.h"
 #include "Engine/Profiling/GPUProfiler.h"
+#include "Engine/Render/Types/RenderFeatureSettings.h"
 #include "Slate/SWindow.h"
 #include "ImGui/imgui.h"
 #include <algorithm>
@@ -182,6 +184,60 @@ void FOverlayStatSystem::BuildShadowLines(TArray<FString>& OutLines) const
 #endif
 }
 
+void FOverlayStatSystem::BuildSkinningLines(TArray<FString>& OutLines) const
+{
+#if STATS
+	char Buffer[192] = {};
+	const ESkinningMode SkinningMode = FRenderFeatureSettings::Get().GetSkinningMode();
+
+	OutLines.push_back(FString("--- Skinning ---"));
+	snprintf(Buffer, sizeof(Buffer), "Skinning Mode : %s", SkinningMode == ESkinningMode::GPU ? "GPU" : "CPU");
+	OutLines.push_back(FString(Buffer));
+
+	const char* StatNames[] =
+	{
+		"UpdateSkinMatrices",
+		"EnsureCPUSkinnedVertices",
+		"PrepareCPUSkinningDrawBuffer",
+		"PrepareGPUSkinningDrawBuffer",
+		"UploadSkinMatrices",
+		"PrepareSkinningBindings",
+	};
+
+	const TArray<FStatEntry>& Snapshot = FStatManager::Get().GetSnapshot();
+	for (const char* StatName : StatNames)
+	{
+		const FStatEntry* FoundEntry = nullptr;
+		for (const FStatEntry& Entry : Snapshot)
+		{
+			const bool bSkinningCategory = Entry.Category && strcmp(Entry.Category, "Skinning") == 0;
+			const bool bNameMatch = Entry.Name && strcmp(Entry.Name, StatName) == 0;
+			if (bNameMatch && bSkinningCategory)
+			{
+				FoundEntry = &Entry;
+				break;
+			}
+		}
+
+		if (FoundEntry)
+		{
+			snprintf(Buffer, sizeof(Buffer), "%s : %.3f ms (avg %.3f, calls %u)",
+				StatName,
+				FoundEntry->LastTime * 1000.0,
+				FoundEntry->AvgTime * 1000.0,
+				FoundEntry->CallCount);
+		}
+		else
+		{
+			snprintf(Buffer, sizeof(Buffer), "%s : 0.000 ms (avg 0.000, calls 0)", StatName);
+		}
+		OutLines.push_back(FString(Buffer));
+	}
+#else
+	OutLines.push_back(FString("Skinning stats unavailable (STATS=0)"));
+#endif
+}
+
 void FOverlayStatSystem::BuildLines(const UEditorEngine& Editor, TArray<FOverlayStatLine>& OutLines) const
 {
 	OutLines.clear();
@@ -200,6 +256,10 @@ void FOverlayStatSystem::BuildLines(const UEditorEngine& Editor, TArray<FOverlay
 		EstimatedLineCount += 8;
 	}
 	if (bShowShadow)
+	{
+		EstimatedLineCount += 8;
+	}
+	if (bShowSkinning)
 	{
 		EstimatedLineCount += 8;
 	}
@@ -238,6 +298,13 @@ void FOverlayStatSystem::BuildLines(const UEditorEngine& Editor, TArray<FOverlay
 	{
 		Lines.clear();
 		BuildShadowLines(Lines);
+		AppendGroup(Lines);
+	}
+
+	if (bShowSkinning)
+	{
+		Lines.clear();
+		BuildSkinningLines(Lines);
 		AppendGroup(Lines);
 	}
 }
@@ -338,5 +405,12 @@ void FOverlayStatSystem::RenderImGui(const UEditorEngine& Editor, const FRect& V
 		Lines.clear();
 		BuildShadowLines(Lines);
 		RenderWindow("##StatShadowOverlay", "Stat Shadow", ImVec4(0.08f, 0.05f, 0.12f, 0.62f), Lines);
+	}
+
+	if (bShowSkinning)
+	{
+		Lines.clear();
+		BuildSkinningLines(Lines);
+		RenderWindow("##StatSkinningOverlay", "Stat Skinning", ImVec4(0.05f, 0.10f, 0.08f, 0.62f), Lines);
 	}
 }
