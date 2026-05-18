@@ -21,6 +21,7 @@ void FStateCache::Reset()
 	Buffer      = {};
 	PerObjectCB = nullptr;
 	Bindings    = {};
+	Skinning    = {};
 
 	RTV = nullptr;
 	DSV = nullptr;
@@ -37,6 +38,15 @@ void FStateCache::Cleanup(ID3D11DeviceContext* Ctx)
 			Ctx->PSSetShaderResources(i, 1, &nullSRV);
 			Bindings.SRVs[i] = nullptr;
 		}
+	}
+
+	if (Skinning.SkeletalRenderCB || Skinning.SkinMatrixSRV || Skinning.bEnabled)
+	{
+		ID3D11Buffer* nullCB = nullptr;
+		ID3D11ShaderResourceView* nullSRV = nullptr;
+		Ctx->VSSetConstantBuffers(ECBSlot::SkeletalRender, 1, &nullCB);
+		Ctx->VSSetShaderResources(ESystemTexSlot::SkinMatrices, 1, &nullSRV);
+		Skinning = {};
 	}
 }
 
@@ -228,6 +238,34 @@ void FDrawCommandList::SubmitCommand(const FDrawCommand& Cmd,
 			Ctx->PSSetShaderResources(i, 1, &SRV);
 			Cache.Bindings.SRVs[i] = Cmd.Bindings.SRVs[i];
 		}
+	}
+
+	// --- Skeletal skinning bindings (b6, t26) ---
+	if (Cmd.Skinning.bEnabled)
+	{
+		if (bForce || Cmd.Skinning.SkeletalRenderCB != Cache.Skinning.SkeletalRenderCB || !Cache.Skinning.bEnabled)
+		{
+			ID3D11Buffer* RawCB = Cmd.Skinning.SkeletalRenderCB ? Cmd.Skinning.SkeletalRenderCB->GetBuffer() : nullptr;
+			Ctx->VSSetConstantBuffers(ECBSlot::SkeletalRender, 1, &RawCB);
+			Cache.Skinning.SkeletalRenderCB = Cmd.Skinning.SkeletalRenderCB;
+		}
+
+		if (bForce || Cmd.Skinning.SkinMatrixSRV != Cache.Skinning.SkinMatrixSRV || !Cache.Skinning.bEnabled)
+		{
+			ID3D11ShaderResourceView* SRV = Cmd.Skinning.SkinMatrixSRV;
+			Ctx->VSSetShaderResources(ESystemTexSlot::SkinMatrices, 1, &SRV);
+			Cache.Skinning.SkinMatrixSRV = Cmd.Skinning.SkinMatrixSRV;
+		}
+
+		Cache.Skinning.bEnabled = true;
+	}
+	else if (bForce || Cache.Skinning.bEnabled || Cache.Skinning.SkeletalRenderCB || Cache.Skinning.SkinMatrixSRV)
+	{
+		ID3D11Buffer* nullCB = nullptr;
+		ID3D11ShaderResourceView* nullSRV = nullptr;
+		Ctx->VSSetConstantBuffers(ECBSlot::SkeletalRender, 1, &nullCB);
+		Ctx->VSSetShaderResources(ESystemTexSlot::SkinMatrices, 1, &nullSRV);
+		Cache.Skinning = {};
 	}
 
 	Cache.bForceAll = false;

@@ -21,7 +21,7 @@ struct FStateCache
 	FDrawCommandBuffer       Buffer;
 	FConstantBuffer*         PerObjectCB = nullptr;
 	FDrawCommandBindings     Bindings;
-
+	FSkinningDrawBindings    Skinning;
 
 	// Render target 추적 (CopyResource 후 DSV 복원 등)
 	ID3D11RenderTargetView*  RTV         = nullptr;
