@@ -161,6 +161,10 @@ void FEditorContentBrowserWidget::Initialize(UEditorEngine* InEditor, ID3D11Devi
 	ContentBrowserContext Context;
 	Context.ContentSize = ImVec2(112, 112);
 	Context.EditorEngine = InEditor;
+	Context.OnImportFbxSource = [this](const FString& SourcePath)
+	{
+		BeginFbxImport(SourcePath);
+	};
 	BrowserContext = Context;
 	LoadFromSettings();
 
@@ -544,94 +548,15 @@ void FEditorContentBrowserWidget::BeginImportSourceFile()
 
 void FEditorContentBrowserWidget::BeginFbxImport(const FString& SourcePath)
 {
-	PendingImportSourcePath = SourcePath;
-	bImportFbxStaticMesh = true;
-	bImportFbxSkeletalMesh = true;
-	bImportFbxAnimations = true;
-	PendingStaticFbxSkinnedMeshPolicy =
-		FImportOptions::Default().StaticFbxSkinnedMeshPolicy == EStaticFbxSkinnedMeshPolicy::ImportBindPoseAsStatic ? 1 : 0;
-	TargetSkeletonOptions = ScanSkeletonAssets();
-	SelectedTargetSkeletonIndex = 0;
-	bOpenFbxImportPopup = true;
+	FbxImportDialog.Open(SourcePath);
 }
 
 void FEditorContentBrowserWidget::RenderFbxImportPopup()
 {
-	if (bOpenFbxImportPopup)
+	if (FbxImportDialog.Render(BrowserContext.EditorEngine))
 	{
-		ImGui::OpenPopup("FBX Import Options");
-		bOpenFbxImportPopup = false;
+		Refresh();
 	}
-
-	if (!ImGui::BeginPopupModal("FBX Import Options", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
-	{
-		return;
-	}
-
-	ImGui::TextUnformatted(PendingImportSourcePath.c_str());
-	ImGui::Separator();
-
-	ImGui::Checkbox("Import Static Mesh", &bImportFbxStaticMesh);
-	if (bImportFbxStaticMesh)
-	{
-		ImGui::RadioButton("Skip skinned mesh for static import", &PendingStaticFbxSkinnedMeshPolicy, 0);
-		ImGui::RadioButton("Import bind pose as static mesh", &PendingStaticFbxSkinnedMeshPolicy, 1);
-	}
-
-	ImGui::Checkbox("Import Skeletal Mesh", &bImportFbxSkeletalMesh);
-	ImGui::Checkbox("Import Animations", &bImportFbxAnimations);
-
-	const char* PreviewSkeleton = "None (Adjacent/Create)";
-	if (SelectedTargetSkeletonIndex > 0 && SelectedTargetSkeletonIndex <= static_cast<int32>(TargetSkeletonOptions.size()))
-	{
-		PreviewSkeleton = TargetSkeletonOptions[SelectedTargetSkeletonIndex - 1].FullPath.c_str();
-	}
-
-	if (ImGui::BeginCombo("Target Skeleton", PreviewSkeleton))
-	{
-		const bool bNoneSelected = SelectedTargetSkeletonIndex == 0;
-		if (ImGui::Selectable("None (Adjacent/Create)", bNoneSelected))
-		{
-			SelectedTargetSkeletonIndex = 0;
-		}
-
-		for (int32 Index = 0; Index < static_cast<int32>(TargetSkeletonOptions.size()); ++Index)
-		{
-			const bool bSelected = SelectedTargetSkeletonIndex == Index + 1;
-			const FMeshAssetListItem& Item = TargetSkeletonOptions[Index];
-			if (ImGui::Selectable(Item.FullPath.c_str(), bSelected))
-			{
-				SelectedTargetSkeletonIndex = Index + 1;
-			}
-		}
-
-		ImGui::EndCombo();
-	}
-
-	const bool bAnyImportTypeSelected = bImportFbxStaticMesh || bImportFbxSkeletalMesh || bImportFbxAnimations;
-	if (!bAnyImportTypeSelected)
-	{
-		ImGui::TextDisabled("Select at least one import type.");
-	}
-
-	if (ImGui::Button("Import") && bAnyImportTypeSelected)
-	{
-		if (ExecuteFbxImport())
-		{
-			PendingImportSourcePath.clear();
-			ImGui::CloseCurrentPopup();
-			Refresh();
-		}
-	}
-
-	ImGui::SameLine();
-	if (ImGui::Button("Cancel"))
-	{
-		PendingImportSourcePath.clear();
-		ImGui::CloseCurrentPopup();
-	}
-
-	ImGui::EndPopup();
 }
 
 bool FEditorContentBrowserWidget::ExecuteObjImport(const FString& SourcePath)
@@ -649,52 +574,6 @@ bool FEditorContentBrowserWidget::ExecuteObjImport(const FString& SourcePath)
 		RefreshImportedAssetLists();
 	}
 	return bImported;
-}
-
-bool FEditorContentBrowserWidget::ExecuteFbxImport()
-{
-	if (!BrowserContext.EditorEngine || PendingImportSourcePath.empty())
-	{
-		return false;
-	}
-
-	bool bAnySucceeded = false;
-	ID3D11Device* Device = BrowserContext.EditorEngine->GetRenderer().GetFD3DDevice().GetDevice();
-
-	if (bImportFbxStaticMesh)
-	{
-		FImportOptions Options = FImportOptions::Default();
-		Options.StaticFbxSkinnedMeshPolicy = PendingStaticFbxSkinnedMeshPolicy == 1
-			? EStaticFbxSkinnedMeshPolicy::ImportBindPoseAsStatic
-			: EStaticFbxSkinnedMeshPolicy::Skip;
-
-		UStaticMesh* ImportedStaticMesh = nullptr;
-		bAnySucceeded |= FEditorFbxImportService::ImportStaticMeshFromFbx(PendingImportSourcePath, Options, Device, ImportedStaticMesh, false);
-	}
-
-	if (bImportFbxSkeletalMesh)
-	{
-		TArray<USkeletalMesh*> ImportedSkeletalMeshes;
-		bAnySucceeded |= FEditorFbxImportService::ImportSkeletalMeshesFromFbx(PendingImportSourcePath, Device, ImportedSkeletalMeshes, false);
-	}
-
-	if (bImportFbxAnimations)
-	{
-		FString TargetSkeletonPath;
-		if (SelectedTargetSkeletonIndex > 0 && SelectedTargetSkeletonIndex <= static_cast<int32>(TargetSkeletonOptions.size()))
-		{
-			TargetSkeletonPath = TargetSkeletonOptions[SelectedTargetSkeletonIndex - 1].FullPath;
-		}
-
-		TArray<UAnimSequence*> ImportedSequences;
-		bAnySucceeded |= FEditorFbxImportService::ImportAnimSequencesFromFbx(PendingImportSourcePath, TargetSkeletonPath, ImportedSequences, false);
-	}
-
-	if (bAnySucceeded)
-	{
-		RefreshImportedAssetLists();
-	}
-	return bAnySucceeded;
 }
 
 void FEditorContentBrowserWidget::RefreshImportedAssetLists()

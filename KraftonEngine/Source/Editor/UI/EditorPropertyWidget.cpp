@@ -1,8 +1,6 @@
 ﻿#include "Editor/UI/EditorPropertyWidget.h"
 
 #include "Editor/EditorEngine.h"
-#include "Editor/Import/EditorFbxImportService.h"
-#include "Editor/Import/EditorObjImportService.h"
 
 #include "ImGui/imgui.h"
 #include "Component/ActorComponent.h"
@@ -26,15 +24,12 @@
 #include "Object/FName.h"
 #include "Object/ObjectIterator.h"
 #include "Materials/Material.h"
-#include "Mesh/MeshImportOptions.h"
 #include "Mesh/MeshManager.h"
 #include "Mesh/StaticMesh.h"
 #include "Mesh/SkeletalMesh.h"
 #include "Platform/Paths.h"
 #include "SimpleJSON/json.hpp"
 
-#include <Windows.h>
-#include <commdlg.h>
 #include <algorithm>
 #include <array>
 #include <cfloat>
@@ -50,14 +45,6 @@ namespace
 	inline const char* PropLabel(const FProperty& Prop)
 	{
 		return Prop.Name.c_str();
-	}
-
-	bool IsFbxFilePath(const FString& Path)
-	{
-		std::filesystem::path FilePath(FPaths::ToWide(Path));
-		std::wstring Extension = FilePath.extension().wstring();
-		std::transform(Extension.begin(), Extension.end(), Extension.begin(), ::towlower);
-		return Extension == L".fbx";
 	}
 
 	bool ShouldHideInComponentTree(const UActorComponent* Component, bool bShowEditorOnlyComponents)
@@ -126,91 +113,6 @@ static FString GetStemFromPath(const FString& Path)
 	size_t SlashPos = Path.find_last_of("/\\");
 	FString FileName = (SlashPos == FString::npos) ? Path : Path.substr(SlashPos + 1);
 	return RemoveExtension(FileName);
-}
-
-FString FEditorPropertyWidget::OpenObjFileDialog()
-{
-	wchar_t FilePath[MAX_PATH] = {};
-
-	OPENFILENAMEW Ofn = {};
-	Ofn.lStructSize = sizeof(Ofn);
-	Ofn.hwndOwner = nullptr;
-	Ofn.lpstrFilter = L"OBJ Files (*.obj)\0*.obj\0All Files (*.*)\0*.*\0";
-	Ofn.lpstrFile = FilePath;
-	Ofn.nMaxFile = MAX_PATH;
-	Ofn.lpstrTitle = L"Import OBJ Mesh";
-	Ofn.Flags = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST | OFN_NOCHANGEDIR;
-
-	if (GetOpenFileNameW(&Ofn))
-	{
-		std::filesystem::path AbsPath = std::filesystem::path(FilePath).lexically_normal();
-		std::filesystem::path RootPath = std::filesystem::path(FPaths::RootDir());
-		std::filesystem::path RelPath = AbsPath.lexically_relative(RootPath);
-
-		// 상대 경로 변환 실패 시 (드라이브가 다른 경우 등) 절대 경로를 그대로 반환
-		if (RelPath.empty() || RelPath.wstring().starts_with(L".."))
-		{
-			return FPaths::ToUtf8(AbsPath.generic_wstring());
-		}
-		return FPaths::ToUtf8(RelPath.generic_wstring());
-	}
-
-	return FString();
-}
-
-FString FEditorPropertyWidget::OpenStaticMeshFileDialog()
-{
-	wchar_t FilePath[MAX_PATH] = {};
-
-	OPENFILENAMEW Ofn = {};
-	Ofn.lStructSize = sizeof(Ofn);
-	Ofn.hwndOwner = nullptr;
-	Ofn.lpstrFilter = L"Static Mesh Files (*.obj;*.fbx)\0*.obj;*.fbx\0OBJ Files (*.obj)\0*.obj\0FBX Files (*.fbx)\0*.fbx\0All Files (*.*)\0*.*\0";
-	Ofn.lpstrFile = FilePath;
-	Ofn.nMaxFile = MAX_PATH;
-	Ofn.lpstrTitle = L"Import Static Mesh";
-	Ofn.Flags = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST | OFN_NOCHANGEDIR;
-
-	if (GetOpenFileNameW(&Ofn))
-	{
-		std::filesystem::path AbsPath = std::filesystem::path(FilePath).lexically_normal();
-		std::filesystem::path RootPath = std::filesystem::path(FPaths::RootDir());
-		std::filesystem::path RelPath = AbsPath.lexically_relative(RootPath);
-
-		if (RelPath.empty() || RelPath.wstring().starts_with(L".."))
-		{
-			return FPaths::ToUtf8(AbsPath.generic_wstring());
-		}
-		return FPaths::ToUtf8(RelPath.generic_wstring());
-	}
-
-	return FString();
-}
-
-FString FEditorPropertyWidget::OpenFbxFileDialog()
-{
-	wchar_t FilePath[MAX_PATH] = {};
-	OPENFILENAMEW Ofn = {};
-	Ofn.lStructSize = sizeof(Ofn);
-	Ofn.hwndOwner = nullptr;
-	Ofn.lpstrFilter = L"FBX Files (*.fbx)\0*.fbx\0All Files (*.*)\0*.*\0";
-	Ofn.lpstrFile = FilePath;
-	Ofn.nMaxFile = MAX_PATH;
-	Ofn.lpstrTitle = L"Import FBX Mesh";
-	Ofn.Flags = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST | OFN_NOCHANGEDIR;
-	if (GetOpenFileNameW(&Ofn))
-	{
-		std::filesystem::path AbsPath = std::filesystem::path(FilePath).lexically_normal();
-		std::filesystem::path RootPath = std::filesystem::path(FPaths::RootDir());
-		std::filesystem::path RelPath = AbsPath.lexically_relative(RootPath);
-		// 상대 경로 변환 실패 시 (드라이브가 다른 경우 등) 절대 경로를 그대로 반환
-		if (RelPath.empty() || RelPath.wstring().starts_with(L".."))
-		{
-			return FPaths::ToUtf8(AbsPath.generic_wstring());
-		}
-		return FPaths::ToUtf8(RelPath.generic_wstring());
-	}
-	return FString();
 }
 
 void FEditorPropertyWidget::Render(float DeltaTime)
@@ -1211,10 +1113,6 @@ bool FEditorPropertyWidget::RenderPropertyWidget(TArray<FProperty>& Props, int32
 		FString Preview = Val->empty() ? "None" : GetStemFromPath(*Val);
 		if (*Val == "None") Preview = "None";
 
-		float ButtonWidth = ImGui::CalcTextSize("Import").x + ImGui::GetStyle().FramePadding.x * 2.0f;
-		float Spacing = ImGui::GetStyle().ItemSpacing.x;
-		ImGui::SetNextItemWidth(-(ButtonWidth + Spacing));
-
 		if (ImGui::BeginCombo("##Mesh", Preview.c_str()))
 		{
 			bool bSelectedNone = (*Val == "None");
@@ -1240,77 +1138,6 @@ bool FEditorPropertyWidget::RenderPropertyWidget(TArray<FProperty>& Props, int32
 			}
 			ImGui::EndCombo();
 		}
-
-		// .obj/.fbx static mesh 임포트 버튼
-		ImGui::SameLine();
-
-		ImGui::SetCursorPosX(ImGui::GetWindowContentRegionMax().x - ButtonWidth);
-		if (ImGui::Button("Import"))
-		{
-			FString MeshPath = OpenStaticMeshFileDialog();
-			if (!MeshPath.empty())
-			{
-				if (IsFbxFilePath(MeshPath))
-				{
-					PendingStaticMeshImportPath = MeshPath;
-					PendingStaticMeshImportTarget = Val;
-					PendingStaticFbxSkinnedMeshPolicy =
-						FImportOptions::Default().StaticFbxSkinnedMeshPolicy == EStaticFbxSkinnedMeshPolicy::ImportBindPoseAsStatic ? 1 : 0;
-					ImGui::OpenPopup("Static FBX Import Options");
-				}
-				else
-				{
-					ID3D11Device* Device = GEngine->GetRenderer().GetFD3DDevice().GetDevice();
-					UStaticMesh* Loaded = nullptr;
-					FEditorObjImportService::ImportStaticMeshFromObj(MeshPath, Device, Loaded);
-					if (Loaded)
-					{
-						// Component에는 바로 로드할 .uasset 경로를 저장한다.
-						// Scene을 다시 열 때 원본 import를 반복하지 않기 위해서다.
-						*Val = Loaded->GetAssetPathFileName();
-						bChanged = true;
-					}
-				}
-			}
-		}
-
-		if (ImGui::BeginPopupModal("Static FBX Import Options", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
-		{
-			ImGui::TextUnformatted("Skinned mesh handling");
-			ImGui::RadioButton("Skip skinned meshes", &PendingStaticFbxSkinnedMeshPolicy, 0);
-			ImGui::RadioButton("Import bind pose as static mesh", &PendingStaticFbxSkinnedMeshPolicy, 1);
-
-			if (ImGui::Button("Import"))
-			{
-				FImportOptions Options = FImportOptions::Default();
-				Options.StaticFbxSkinnedMeshPolicy = PendingStaticFbxSkinnedMeshPolicy == 1
-					? EStaticFbxSkinnedMeshPolicy::ImportBindPoseAsStatic
-					: EStaticFbxSkinnedMeshPolicy::Skip;
-
-				ID3D11Device* Device = GEngine->GetRenderer().GetFD3DDevice().GetDevice();
-				UStaticMesh* Loaded = nullptr;
-				FEditorFbxImportService::ImportStaticMeshFromFbx(PendingStaticMeshImportPath, Options, Device, Loaded);
-				if (Loaded && PendingStaticMeshImportTarget)
-				{
-					// 옵션을 적용해 만든 결과도 .uasset 경로로 남긴다.
-					*PendingStaticMeshImportTarget = Loaded->GetAssetPathFileName();
-					bChanged = true;
-				}
-
-				PendingStaticMeshImportPath.clear();
-				PendingStaticMeshImportTarget = nullptr;
-				ImGui::CloseCurrentPopup();
-			}
-
-			ImGui::SameLine();
-			if (ImGui::Button("Cancel"))
-			{
-				PendingStaticMeshImportPath.clear();
-				PendingStaticMeshImportTarget = nullptr;
-				ImGui::CloseCurrentPopup();
-			}
-			ImGui::EndPopup();
-		}
 		break;
 	}
 	// TODO: implement
@@ -1321,9 +1148,6 @@ bool FEditorPropertyWidget::RenderPropertyWidget(TArray<FProperty>& Props, int32
 		FString Preview = Val->empty() ? "None" : GetStemFromPath(*Val);
 		if (*Val == "None") Preview = "None";
 
-		float ButtonWidth = ImGui::CalcTextSize("Import FBX").x + ImGui::GetStyle().FramePadding.x * 2.0f;
-		float Spacing = ImGui::GetStyle().ItemSpacing.x;
-		ImGui::SetNextItemWidth(-(ButtonWidth + Spacing));
 		if (ImGui::BeginCombo("##SkeletalMesh", Preview.c_str()))
 		{
 			bool bSelectedNone = (*Val == "None");
@@ -1347,28 +1171,6 @@ bool FEditorPropertyWidget::RenderPropertyWidget(TArray<FProperty>& Props, int32
 					ImGui::SetItemDefaultFocus();
 			}
 			ImGui::EndCombo();
-		}
-
-		// .fbx 임포트 버튼
-		ImGui::SameLine();
-
-		ImGui::SetCursorPosX(ImGui::GetWindowContentRegionMax().x - ButtonWidth);
-		if (ImGui::Button("Import FBX"))
-		{
-			FString FbxPath = OpenFbxFileDialog();
-			if (!FbxPath.empty())
-			{
-				ID3D11Device* Device = GEngine->GetRenderer().GetFD3DDevice().GetDevice();
-				USkeletalMesh* Loaded = nullptr;
-				FEditorFbxImportService::ImportSkeletalMeshFromFbx(FbxPath, Device, Loaded);
-				if (Loaded)
-				{
-					// Component에는 바로 로드할 .uasset 경로를 저장한다.
-					// 원본 FBX 경로는 Binary 안의 PathFileName에만 남긴다.
-					*Val = Loaded->GetAssetPathFileName();
-					bChanged = true;
-				}
-			}
 		}
 		break;
 	}

@@ -51,7 +51,7 @@ private:
 
 public:
 	static bool Import(const FString& FilePath);
-	static bool ImportStatic(const FString& FilePath, const FImportOptions* Options, FStaticMesh& OutMesh, TArray<FStaticMaterial>& OutMaterials);
+	static bool ImportStatic(const FString& FilePath, const FImportOptions* Options, FStaticMesh& OutMesh, TArray<FStaticMaterial>& OutMaterials, const TArray<int32>* MeshNodeIndexFilter = nullptr);
 	static bool DiscoverMeshNames(const FString& FilePath, TArray<FString>& OutMeshNames);
 	static bool DiscoverAnimStackNames(const FString& FilePath, TArray<FString>& OutStackNames);
 	static bool ImportAnimations(const FString& FilePath, const FSkeletonAsset* TargetSkeleton, FSkeletonAsset& OutParsedSkeleton, TArray<FImportedAnimSequence>& OutSequences);

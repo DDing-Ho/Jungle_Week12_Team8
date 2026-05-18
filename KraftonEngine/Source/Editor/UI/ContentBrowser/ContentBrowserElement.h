@@ -48,6 +48,9 @@ public:
 
 class SourceFileElement final : public ContentBrowserElement
 {
+public:
+	void OnDoubleLeftClicked(ContentBrowserContext& Context) override;
+
 protected:
 	const char* GetTypeLabel() const override { return "Source File"; }
 	uint32 GetAccentColor() const override { return IM_COL32(120, 128, 138, 255); }

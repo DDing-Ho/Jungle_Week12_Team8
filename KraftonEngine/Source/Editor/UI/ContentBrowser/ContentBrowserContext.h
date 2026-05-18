@@ -1,6 +1,8 @@
 ﻿#pragma once
+#include "Core/CoreTypes.h"
 #include "imgui.h" 
 #include "Platform/Paths.h"
+#include <functional>
 #include <memory>
 
 class ContentBrowserElement;
@@ -14,6 +16,7 @@ struct ContentBrowserContext final
 	std::shared_ptr<ContentBrowserElement> SelectedElement;
 
 	UEditorEngine* EditorEngine;
+	std::function<void(const FString&)> OnImportFbxSource;
 
 	bool bPendingContentRefresh = false;
 	bool bShowSourceFiles = false;

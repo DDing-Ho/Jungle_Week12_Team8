@@ -596,6 +596,9 @@
     <ClCompile Include="Source\Editor\UI\ContentBrowser\ContentBrowserElement.cpp">
       <Filter>Source\Editor\UI\ContentBrowser</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Editor\UI\ContentBrowser\EditorFbxImportDialog.cpp">
+      <Filter>Source\Editor\UI\ContentBrowser</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Editor\UI\ContentBrowser\EditorPrefabWidget.cpp">
       <Filter>Source\Editor\UI\ContentBrowser</Filter>
     </ClCompile>
@@ -1445,6 +1448,9 @@
       <Filter>Source\Editor\UI\ContentBrowser</Filter>
     </ClInclude>
     <ClInclude Include="Source\Editor\UI\ContentBrowser\ContentItem.h">
+      <Filter>Source\Editor\UI\ContentBrowser</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\UI\ContentBrowser\EditorFbxImportDialog.h">
       <Filter>Source\Editor\UI\ContentBrowser</Filter>
     </ClInclude>
     <ClInclude Include="Source\Editor\UI\ContentBrowser\EditorPrefabWidget.h">

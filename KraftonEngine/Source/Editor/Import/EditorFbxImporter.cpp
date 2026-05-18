@@ -81,6 +81,16 @@ namespace
 		}
 	}
 
+	bool ContainsIndex(const TArray<int32>* Indices, int32 Value)
+	{
+		if (!Indices)
+		{
+			return true;
+		}
+
+		return std::find(Indices->begin(), Indices->end(), Value) != Indices->end();
+	}
+
 	bool LoadConvertedFbxScene(const FString& FilePath, const char* SceneName, FbxManager*& OutSdkManager, FbxScene*& OutScene)
 	{
 		OutSdkManager = nullptr;
@@ -927,7 +937,7 @@ bool FEditorFbxImporter::ImportAnimations(const FString& FilePath, const FSkelet
 	return true;
 }
 
-bool FEditorFbxImporter::ImportStatic(const FString& FilePath, const FImportOptions* Options, FStaticMesh& OutMesh, TArray<FStaticMaterial>& OutMaterials)
+bool FEditorFbxImporter::ImportStatic(const FString& FilePath, const FImportOptions* Options, FStaticMesh& OutMesh, TArray<FStaticMaterial>& OutMaterials, const TArray<int32>* MeshNodeIndexFilter)
 {
 	OutMesh = FStaticMesh();
 	OutMaterials.clear();
@@ -1002,12 +1012,18 @@ bool FEditorFbxImporter::ImportStatic(const FString& FilePath, const FImportOpti
 	TArray<FVector> StaticBitangentSums;
 	bool bNeedsNoneSlot = OutMaterials.empty();
 
+	int32 MeshNodeIndex = 0;
 	for (FbxNode* Node : Nodes)
 	{
 		if (!Node) continue;
 
 		FbxMesh* Mesh = Node->GetMesh();
 		if (!Mesh) continue;
+		const int32 CurrentMeshNodeIndex = MeshNodeIndex++;
+		if (!ContainsIndex(MeshNodeIndexFilter, CurrentMeshNodeIndex))
+		{
+			continue;
+		}
 
 		const int32 SkinCount = Mesh->GetDeformerCount(FbxDeformer::eSkin);
 		FbxSkin* Skin = SkinCount > 0 ? static_cast<FbxSkin*>(Mesh->GetDeformer(0, FbxDeformer::eSkin)) : nullptr;

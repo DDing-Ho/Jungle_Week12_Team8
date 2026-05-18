@@ -286,6 +286,419 @@ namespace
 		FMaterialManager::Get().ScanMaterialAssets();
 		FEditorFbxImportService::ScanFbxSourceFiles();
 	}
+
+	bool ContainsSourceIndex(const TArray<int32>* SourceIndices, int32 SourceIndex)
+	{
+		if (!SourceIndices)
+		{
+			return true;
+		}
+
+		return std::find(SourceIndices->begin(), SourceIndices->end(), SourceIndex) != SourceIndices->end();
+	}
+
+	FString ResolvePackagePathOverride(const TMap<int32, FString>* PackagePathOverrides, int32 SourceIndex, const FString& DefaultPackagePath)
+	{
+		if (!PackagePathOverrides)
+		{
+			return DefaultPackagePath;
+		}
+
+		auto It = PackagePathOverrides->find(SourceIndex);
+		if (It == PackagePathOverrides->end() || It->second.empty())
+		{
+			return DefaultPackagePath;
+		}
+
+		return NormalizeProjectPath(It->second);
+	}
+
+	void CollectFbxNodes(FbxNode* Node, TArray<FbxNode*>& OutNodes)
+	{
+		if (!Node)
+		{
+			return;
+		}
+
+		OutNodes.push_back(Node);
+		for (int32 ChildIndex = 0; ChildIndex < Node->GetChildCount(); ++ChildIndex)
+		{
+			CollectFbxNodes(Node->GetChild(ChildIndex), OutNodes);
+		}
+	}
+
+	bool LoadRawFbxScene(const FString& FilePath, const char* SceneName, FbxManager*& OutSdkManager, FbxScene*& OutScene)
+	{
+		OutSdkManager = nullptr;
+		OutScene = nullptr;
+
+		FbxManager* SdkManager = FbxManager::Create();
+		if (!SdkManager)
+		{
+			return false;
+		}
+
+		FbxIOSettings* IoSettings = FbxIOSettings::Create(SdkManager, IOSROOT);
+		if (!IoSettings)
+		{
+			SdkManager->Destroy();
+			return false;
+		}
+		SdkManager->SetIOSettings(IoSettings);
+
+		FbxScene* Scene = FbxScene::Create(SdkManager, SceneName);
+		FbxImporter* Importer = FbxImporter::Create(SdkManager, "");
+		if (!Scene || !Importer)
+		{
+			if (Importer) Importer->Destroy();
+			SdkManager->Destroy();
+			return false;
+		}
+
+		const FString FullPath = FPaths::ToUtf8(ResolveProjectPath(FilePath).generic_wstring());
+		if (!Importer->Initialize(FullPath.c_str(), -1, SdkManager->GetIOSettings()))
+		{
+			Importer->Destroy();
+			SdkManager->Destroy();
+			return false;
+		}
+
+		const bool bImported = Importer->Import(Scene);
+		Importer->Destroy();
+		if (!bImported)
+		{
+			SdkManager->Destroy();
+			return false;
+		}
+
+		OutSdkManager = SdkManager;
+		OutScene = Scene;
+		return true;
+	}
+
+	void CopySkeletonBoneNames(const TArray<FBone>& Bones, FFbxImportSourceInfo& OutInfo)
+	{
+		if (!OutInfo.SkeletonBoneNames.empty())
+		{
+			return;
+		}
+
+		OutInfo.SkeletonBoneNames.reserve(Bones.size());
+		for (const FBone& Bone : Bones)
+		{
+			OutInfo.SkeletonBoneNames.push_back(Bone.Name);
+		}
+	}
+
+	bool ImportStaticMeshFromFbxInternal(
+		const FString& FbxFilePath,
+		const FImportOptions& Options,
+		ID3D11Device* Device,
+		UStaticMesh*& OutStaticMesh,
+		bool bRefreshAssetLists,
+		const TArray<int32>* MeshNodeIndexFilter,
+		const FString& PackagePathOverride)
+	{
+		OutStaticMesh = nullptr;
+
+		if (!Device)
+		{
+			UE_LOG("FBX static import failed: D3D device is null. Path=%s", FbxFilePath.c_str());
+			return false;
+		}
+
+		if (GetLowerExtension(FbxFilePath) != L".fbx")
+		{
+			UE_LOG("FBX static import failed: unsupported source extension. Path=%s", FbxFilePath.c_str());
+			return false;
+		}
+
+		std::unique_ptr<FStaticMesh> NewMeshAsset = std::make_unique<FStaticMesh>();
+		TArray<FStaticMaterial> ParsedMaterials;
+		if (!FEditorFbxImporter::ImportStatic(FbxFilePath, &Options, *NewMeshAsset, ParsedMaterials, MeshNodeIndexFilter))
+		{
+			UE_LOG("FBX static import failed: importer returned empty mesh. Path=%s", FbxFilePath.c_str());
+			return false;
+		}
+
+		const FString SourcePath = NormalizeProjectPath(FbxFilePath);
+		const FString PackagePath = PackagePathOverride.empty()
+			? FEditorFbxImportService::GetStaticMeshPackagePathForFbx(FbxFilePath)
+			: NormalizeProjectPath(PackagePathOverride);
+
+		UStaticMesh* StaticMesh = UObjectManager::Get().CreateObject<UStaticMesh>();
+		NewMeshAsset->PathFileName = SourcePath;
+		StaticMesh->SetStaticMaterials(std::move(ParsedMaterials));
+		StaticMesh->SetStaticMeshAsset(NewMeshAsset.release());
+
+		FMeshManager::StaticMeshCache.erase(PackagePath);
+		if (!SaveStaticMeshPackage(StaticMesh, PackagePath, FbxFilePath))
+		{
+			return false;
+		}
+
+		StaticMesh->InitResources(Device);
+		StaticMesh->SetAssetPathFileName(PackagePath);
+		FMeshManager::StaticMeshCache[PackagePath] = StaticMesh;
+		OutStaticMesh = StaticMesh;
+
+		if (bRefreshAssetLists)
+		{
+			RefreshAssetLists();
+		}
+
+		UE_LOG("FBX static mesh imported successfully. Source=%s Package=%s", FbxFilePath.c_str(), PackagePath.c_str());
+		return true;
+	}
+
+	bool ImportSkeletalMeshesFromFbxInternal(
+		const FString& FbxFilePath,
+		ID3D11Device* Device,
+		TArray<USkeletalMesh*>& OutSkeletalMeshes,
+		bool bRefreshAssetLists,
+		const TArray<int32>* MeshIndexFilter,
+		const TMap<int32, FString>* PackagePathOverrides)
+	{
+		OutSkeletalMeshes.clear();
+
+		if (!Device)
+		{
+			UE_LOG("FBX skeletal import failed: D3D device is null. Path=%s", FbxFilePath.c_str());
+			return false;
+		}
+
+		if (GetLowerExtension(FbxFilePath) != L".fbx")
+		{
+			UE_LOG("FBX skeletal import failed: unsupported source extension. Path=%s", FbxFilePath.c_str());
+			return false;
+		}
+
+		if (!FEditorFbxImporter::Import(FbxFilePath))
+		{
+			UE_LOG("FBX skeletal import failed: importer returned empty mesh. Path=%s", FbxFilePath.c_str());
+			return false;
+		}
+
+		const FString SourcePath = NormalizeProjectPath(FbxFilePath);
+		const FString SkeletonPackagePath = FEditorFbxImportService::GetSkeletonPackagePathForFbx(SourcePath);
+
+		std::unique_ptr<FSkeletonAsset> NewSkeletonAsset = std::make_unique<FSkeletonAsset>();
+		NewSkeletonAsset->PathFileName = SourcePath;
+		NewSkeletonAsset->Bones = std::move(FEditorFbxImporter::Bones);
+
+		USkeleton* Skeleton = UObjectManager::Get().CreateObject<USkeleton>();
+		Skeleton->SetAssetPathFileName(SkeletonPackagePath);
+		Skeleton->SetSkeletonAsset(NewSkeletonAsset.release());
+
+		if (!SaveSkeletonPackage(Skeleton, SkeletonPackagePath, SourcePath))
+		{
+			return false;
+		}
+		FSkeletonManager::Get().RegisterSkeleton(SkeletonPackagePath, Skeleton);
+
+		TArray<FString> MeshNames;
+		MeshNames.reserve(FEditorFbxImporter::ImportedSkeletalMeshes.size());
+		for (const FEditorFbxImporter::FImportedSkeletalMesh& ImportedMesh : FEditorFbxImporter::ImportedSkeletalMeshes)
+		{
+			MeshNames.push_back(ImportedMesh.MeshName);
+		}
+
+		const bool bSingleMesh = MeshNames.size() <= 1;
+		const TArray<FString> UniqueNames = MakeUniqueMeshNames(MeshNames);
+
+		for (int32 MeshIndex = 0; MeshIndex < static_cast<int32>(FEditorFbxImporter::ImportedSkeletalMeshes.size()); ++MeshIndex)
+		{
+			if (!ContainsSourceIndex(MeshIndexFilter, MeshIndex))
+			{
+				continue;
+			}
+
+			FEditorFbxImporter::FImportedSkeletalMesh& ImportedMesh = FEditorFbxImporter::ImportedSkeletalMeshes[MeshIndex];
+			const FString MeshName = MeshIndex < static_cast<int32>(UniqueNames.size()) ? UniqueNames[MeshIndex] : ImportedMesh.MeshName;
+			const FString DefaultPackagePath = FEditorFbxImportService::GetSkeletalMeshPackagePathForFbx(SourcePath, MeshName, bSingleMesh);
+			const FString PackagePath = ResolvePackagePathOverride(PackagePathOverrides, MeshIndex, DefaultPackagePath);
+
+			std::unique_ptr<FSkeletalMesh> NewMeshAsset = std::make_unique<FSkeletalMesh>();
+			NewMeshAsset->PathFileName = SourcePath;
+			NewMeshAsset->SkeletonPath = SkeletonPackagePath;
+			NewMeshAsset->MeshBindGlobal = ImportedMesh.MeshBindGlobal;
+			NewMeshAsset->Vertices = std::move(ImportedMesh.Vertices);
+			NewMeshAsset->Indices = std::move(ImportedMesh.Indices);
+			NewMeshAsset->Sections = std::move(ImportedMesh.Sections);
+
+			USkeletalMesh* SkeletalMesh = UObjectManager::Get().CreateObject<USkeletalMesh>();
+			SkeletalMesh->SetSkeletalMaterials(std::move(ImportedMesh.Materials));
+			SkeletalMesh->SetSkeletalMeshAsset(NewMeshAsset.release());
+			SkeletalMesh->SetSkeleton(Skeleton);
+
+			FMeshManager::SkeletalMeshCache.erase(PackagePath);
+			if (!SaveSkeletalMeshPackage(SkeletalMesh, PackagePath, SourcePath))
+			{
+				return false;
+			}
+
+			SkeletalMesh->InitResources(Device);
+			SkeletalMesh->SetAssetPathFileName(PackagePath);
+			FMeshManager::SkeletalMeshCache[PackagePath] = SkeletalMesh;
+			OutSkeletalMeshes.push_back(SkeletalMesh);
+		}
+
+		if (bRefreshAssetLists)
+		{
+			RefreshAssetLists();
+		}
+
+		UE_LOG("FBX skeletal meshes imported successfully. Source=%s Skeleton=%s MeshCount=%zu", FbxFilePath.c_str(), SkeletonPackagePath.c_str(), OutSkeletalMeshes.size());
+		return !OutSkeletalMeshes.empty();
+	}
+
+	bool ImportAnimSequencesFromFbxInternal(
+		const FString& FbxFilePath,
+		const FString& TargetSkeletonPath,
+		TArray<UAnimSequence*>& OutAnimSequences,
+		bool bRefreshAssetLists,
+		const TArray<int32>* SequenceIndexFilter,
+		const TMap<int32, FString>* PackagePathOverrides)
+	{
+		OutAnimSequences.clear();
+
+		if (GetLowerExtension(FbxFilePath) != L".fbx")
+		{
+			UE_LOG("FBX animation import failed: unsupported source extension. Path=%s", FbxFilePath.c_str());
+			return false;
+		}
+
+		const FString SourcePath = NormalizeProjectPath(FbxFilePath);
+		const bool bUseExplicitSkeleton = !TargetSkeletonPath.empty();
+		const FString SkeletonPackagePath = bUseExplicitSkeleton
+			? NormalizeProjectPath(TargetSkeletonPath)
+			: FEditorFbxImportService::GetSkeletonPackagePathForFbx(SourcePath);
+
+		USkeleton* Skeleton = nullptr;
+		FSkeletonAsset* TargetSkeletonAsset = nullptr;
+		FAssetImportMetadata SkeletonMetadata;
+		if (FAssetPackage::ReadMetadata(SkeletonPackagePath, EAssetPackageType::Skeleton, SkeletonMetadata))
+		{
+			Skeleton = FSkeletonManager::Get().Load(SkeletonPackagePath);
+			if (Skeleton && Skeleton->GetSkeletonAsset() && !Skeleton->GetSkeletonAsset()->Bones.empty())
+			{
+				TargetSkeletonAsset = Skeleton->GetSkeletonAsset();
+			}
+			else
+			{
+				Skeleton = nullptr;
+			}
+		}
+
+		if (bUseExplicitSkeleton && !TargetSkeletonAsset)
+		{
+			UE_LOG("FBX animation import failed: target Skeleton is invalid. Source=%s Skeleton=%s", FbxFilePath.c_str(), SkeletonPackagePath.c_str());
+			return false;
+		}
+
+		FSkeletonAsset ParsedSkeleton;
+		TArray<FEditorFbxImporter::FImportedAnimSequence> ImportedSequences;
+		if (!FEditorFbxImporter::ImportAnimations(SourcePath, TargetSkeletonAsset, ParsedSkeleton, ImportedSequences))
+		{
+			UE_LOG("FBX animation import failed: importer could not parse animation source. Path=%s", FbxFilePath.c_str());
+			return false;
+		}
+
+		if (ImportedSequences.empty())
+		{
+			UE_LOG("FBX animation import skipped: source has no AnimStack. Path=%s", FbxFilePath.c_str());
+			return false;
+		}
+
+		if (!Skeleton && !bUseExplicitSkeleton)
+		{
+			if (ParsedSkeleton.Bones.empty())
+			{
+				UE_LOG("FBX animation import failed: no valid Skeleton package and source did not contain bones. Path=%s", FbxFilePath.c_str());
+				return false;
+			}
+
+			std::unique_ptr<FSkeletonAsset> NewSkeletonAsset = std::make_unique<FSkeletonAsset>();
+			NewSkeletonAsset->PathFileName = SourcePath;
+			NewSkeletonAsset->Bones = std::move(ParsedSkeleton.Bones);
+
+			Skeleton = UObjectManager::Get().CreateObject<USkeleton>();
+			Skeleton->SetAssetPathFileName(SkeletonPackagePath);
+			Skeleton->SetSkeletonAsset(NewSkeletonAsset.release());
+
+			if (!SaveSkeletonPackage(Skeleton, SkeletonPackagePath, SourcePath))
+			{
+				return false;
+			}
+			FSkeletonManager::Get().RegisterSkeleton(SkeletonPackagePath, Skeleton);
+			TargetSkeletonAsset = Skeleton->GetSkeletonAsset();
+		}
+
+		if (!TargetSkeletonAsset)
+		{
+			TargetSkeletonAsset = Skeleton ? Skeleton->GetSkeletonAsset() : nullptr;
+		}
+
+		if (!TargetSkeletonAsset)
+		{
+			UE_LOG("FBX animation import failed: resolved Skeleton is invalid. Path=%s", FbxFilePath.c_str());
+			return false;
+		}
+
+		TArray<FString> StackNames;
+		StackNames.reserve(ImportedSequences.size());
+		for (const FEditorFbxImporter::FImportedAnimSequence& ImportedSequence : ImportedSequences)
+		{
+			StackNames.push_back(ImportedSequence.StackName);
+		}
+
+		const bool bSingleStack = StackNames.size() <= 1;
+		const TArray<FString> UniqueNames = MakeUniqueMeshNames(StackNames);
+
+		for (int32 SequenceIndex = 0; SequenceIndex < static_cast<int32>(ImportedSequences.size()); ++SequenceIndex)
+		{
+			if (!ContainsSourceIndex(SequenceIndexFilter, SequenceIndex))
+			{
+				continue;
+			}
+
+			FEditorFbxImporter::FImportedAnimSequence& ImportedSequence = ImportedSequences[SequenceIndex];
+			const FString StackName = SequenceIndex < static_cast<int32>(UniqueNames.size()) ? UniqueNames[SequenceIndex] : ImportedSequence.StackName;
+			const FString DefaultPackagePath = FEditorFbxImportService::GetAnimSequencePackagePathForFbx(SourcePath, StackName, bSingleStack);
+			const FString PackagePath = ResolvePackagePathOverride(PackagePathOverrides, SequenceIndex, DefaultPackagePath);
+
+			UAnimSequence* AnimSequence = UObjectManager::Get().CreateObject<UAnimSequence>();
+			UAnimDataModel* DataModel = UObjectManager::Get().CreateObject<UAnimDataModel>(AnimSequence);
+			DataModel->SetPlayLength(ImportedSequence.PlayLength);
+			DataModel->SetFrameRate(ImportedSequence.FrameRate);
+			DataModel->SetNumberOfFrames(ImportedSequence.NumberOfFrames);
+			DataModel->SetNumberOfKeys(ImportedSequence.NumberOfKeys);
+			DataModel->SetBoneAnimationTracks(std::move(ImportedSequence.Tracks));
+
+			AnimSequence->SetAssetPathFileName(PackagePath);
+			AnimSequence->SetSkeleton(Skeleton);
+			AnimSequence->SetSequenceLength(ImportedSequence.PlayLength);
+			AnimSequence->SetRateScale(1.0f);
+			AnimSequence->SetLooping(true);
+			AnimSequence->SetDataModel(DataModel);
+
+			if (!SaveAnimSequencePackage(AnimSequence, PackagePath, SourcePath))
+			{
+				return false;
+			}
+
+			FAnimSequenceManager::Get().RegisterAnimSequence(PackagePath, AnimSequence);
+			OutAnimSequences.push_back(AnimSequence);
+		}
+
+		if (bRefreshAssetLists)
+		{
+			FEditorFbxImportService::ScanFbxSourceFiles();
+		}
+
+		UE_LOG("FBX animation sequences imported successfully. Source=%s Skeleton=%s SequenceCount=%zu", FbxFilePath.c_str(), SkeletonPackagePath.c_str(), OutAnimSequences.size());
+		return !OutAnimSequences.empty();
+	}
 #else
 	FString NormalizeProjectPath(const FString& Path)
 	{
@@ -440,6 +853,236 @@ bool FEditorFbxImportService::DiscoverAnimSequenceSourcesFromFbx(const FString& 
 #endif
 }
 
+bool FEditorFbxImportService::InspectFbxSource(const FString& FbxFilePath, FFbxImportSourceInfo& OutInfo)
+{
+	OutInfo = FFbxImportSourceInfo();
+	OutInfo.SourcePath = NormalizeProjectPath(FbxFilePath);
+#if WITH_EDITOR
+	if (GetLowerExtension(FbxFilePath) != L".fbx")
+	{
+		return false;
+	}
+
+	FbxManager* SdkManager = nullptr;
+	FbxScene* Scene = nullptr;
+	if (!LoadRawFbxScene(FbxFilePath, "FBX Import Inspect Scene", SdkManager, Scene))
+	{
+		return false;
+	}
+
+	OutInfo.MaterialCount = Scene->GetSrcObjectCount<FbxSurfaceMaterial>();
+
+	if (FbxNode* RootNode = Scene->GetRootNode())
+	{
+		TArray<FbxNode*> Nodes;
+		CollectFbxNodes(RootNode, Nodes);
+
+		int32 MeshSourceIndex = 0;
+		for (FbxNode* Node : Nodes)
+		{
+			if (!Node)
+			{
+				continue;
+			}
+
+			FbxNodeAttribute* Attribute = Node->GetNodeAttribute();
+			if (Attribute && Attribute->GetAttributeType() == FbxNodeAttribute::eSkeleton)
+			{
+				++OutInfo.SkeletonNodeCount;
+			}
+
+			FbxMesh* Mesh = Node->GetMesh();
+			if (!Mesh)
+			{
+				continue;
+			}
+
+			const int32 SkinCount = Mesh->GetDeformerCount(FbxDeformer::eSkin);
+			FbxSkin* Skin = SkinCount > 0 ? static_cast<FbxSkin*>(Mesh->GetDeformer(0, FbxDeformer::eSkin)) : nullptr;
+
+			FFbxImportMeshInfo MeshInfo;
+			MeshInfo.SourceIndex = MeshSourceIndex++;
+			MeshInfo.Name = Node->GetName() && Node->GetName()[0] ? FString(Node->GetName()) : FString("Mesh_") + std::to_string(MeshInfo.SourceIndex + 1);
+			MeshInfo.bSkinned = Skin && Skin->GetClusterCount() > 0;
+			MeshInfo.MaterialCount = Node->GetMaterialCount();
+			MeshInfo.PolygonCount = Mesh->GetPolygonCount();
+			OutInfo.Meshes.push_back(std::move(MeshInfo));
+		}
+	}
+
+	const int32 StackCount = Scene->GetSrcObjectCount<FbxAnimStack>();
+	for (int32 StackIndex = 0; StackIndex < StackCount; ++StackIndex)
+	{
+		FbxAnimStack* Stack = Scene->GetSrcObject<FbxAnimStack>(StackIndex);
+		if (!Stack)
+		{
+			continue;
+		}
+
+		const char* StackName = Stack->GetName();
+		FFbxImportAnimStackInfo StackInfo;
+		StackInfo.SourceIndex = StackIndex;
+		StackInfo.Name = StackName && StackName[0] ? FString(StackName) : FString("Take_") + std::to_string(StackIndex + 1);
+		OutInfo.AnimStacks.push_back(std::move(StackInfo));
+	}
+
+	SdkManager->Destroy();
+
+	if (FEditorFbxImporter::Import(OutInfo.SourcePath))
+	{
+		for (int32 MeshIndex = 0; MeshIndex < static_cast<int32>(FEditorFbxImporter::ImportedSkeletalMeshes.size()); ++MeshIndex)
+		{
+			const FEditorFbxImporter::FImportedSkeletalMesh& ImportedMesh = FEditorFbxImporter::ImportedSkeletalMeshes[MeshIndex];
+			FFbxImportSkeletalMeshInfo MeshInfo;
+			MeshInfo.SourceIndex = MeshIndex;
+			MeshInfo.Name = ImportedMesh.MeshName.empty() ? FString("SkeletalMesh_") + std::to_string(MeshIndex + 1) : ImportedMesh.MeshName;
+			MeshInfo.MaterialCount = static_cast<int32>(ImportedMesh.Materials.size());
+			OutInfo.SkeletalMeshes.push_back(std::move(MeshInfo));
+		}
+		CopySkeletonBoneNames(FEditorFbxImporter::Bones, OutInfo);
+	}
+
+	if (OutInfo.SkeletonBoneNames.empty() && !OutInfo.AnimStacks.empty())
+	{
+		FSkeletonAsset ParsedSkeleton;
+		TArray<FEditorFbxImporter::FImportedAnimSequence> IgnoredSequences;
+		if (FEditorFbxImporter::ImportAnimations(OutInfo.SourcePath, nullptr, ParsedSkeleton, IgnoredSequences))
+		{
+			CopySkeletonBoneNames(ParsedSkeleton.Bones, OutInfo);
+		}
+	}
+
+	return true;
+#else
+	(void)FbxFilePath;
+	return false;
+#endif
+}
+
+bool FEditorFbxImportService::ImportFromRequest(const FFbxImportRequest& Request, ID3D11Device* Device, FFbxImportResult& OutResult)
+{
+	OutResult = FFbxImportResult();
+#if WITH_EDITOR
+	if (Request.SourcePath.empty())
+	{
+		OutResult.Messages.push_back("Source path is empty.");
+		return false;
+	}
+
+	bool bAttemptedImport = false;
+
+	for (const FFbxImportItemRequest& Item : Request.StaticMeshes)
+	{
+		if (!Item.bImport)
+		{
+			continue;
+		}
+
+		bAttemptedImport = true;
+		TArray<int32> MeshFilter = { Item.SourceIndex };
+		UStaticMesh* ImportedStaticMesh = nullptr;
+		if (ImportStaticMeshFromFbxInternal(Request.SourcePath, Request.StaticMeshOptions, Device, ImportedStaticMesh, false, &MeshFilter, Item.PackagePath))
+		{
+			++OutResult.StaticMeshCount;
+			if (ImportedStaticMesh)
+			{
+				OutResult.ImportedPackagePaths.push_back(ImportedStaticMesh->GetAssetPathFileName());
+			}
+		}
+		else
+		{
+			OutResult.Messages.push_back("Static Mesh import failed: " + Item.SourceName);
+		}
+	}
+
+	TArray<int32> SkeletalMeshFilter;
+	TMap<int32, FString> SkeletalMeshPackageOverrides;
+	for (const FFbxImportItemRequest& Item : Request.SkeletalMeshes)
+	{
+		if (!Item.bImport)
+		{
+			continue;
+		}
+
+		SkeletalMeshFilter.push_back(Item.SourceIndex);
+		SkeletalMeshPackageOverrides[Item.SourceIndex] = Item.PackagePath;
+	}
+
+	if (!SkeletalMeshFilter.empty())
+	{
+		bAttemptedImport = true;
+		TArray<USkeletalMesh*> ImportedSkeletalMeshes;
+		if (ImportSkeletalMeshesFromFbxInternal(Request.SourcePath, Device, ImportedSkeletalMeshes, false, &SkeletalMeshFilter, &SkeletalMeshPackageOverrides))
+		{
+			OutResult.SkeletalMeshCount += static_cast<int32>(ImportedSkeletalMeshes.size());
+			for (USkeletalMesh* ImportedMesh : ImportedSkeletalMeshes)
+			{
+				if (ImportedMesh)
+				{
+					OutResult.ImportedPackagePaths.push_back(ImportedMesh->GetAssetPathFileName());
+				}
+			}
+		}
+		else
+		{
+			OutResult.Messages.push_back("Skeletal Mesh import failed.");
+		}
+	}
+
+	TArray<int32> AnimSequenceFilter;
+	TMap<int32, FString> AnimSequencePackageOverrides;
+	for (const FFbxImportItemRequest& Item : Request.AnimSequences)
+	{
+		if (!Item.bImport)
+		{
+			continue;
+		}
+
+		AnimSequenceFilter.push_back(Item.SourceIndex);
+		AnimSequencePackageOverrides[Item.SourceIndex] = Item.PackagePath;
+	}
+
+	if (!AnimSequenceFilter.empty())
+	{
+		bAttemptedImport = true;
+		TArray<UAnimSequence*> ImportedSequences;
+		if (ImportAnimSequencesFromFbxInternal(Request.SourcePath, Request.TargetSkeletonPath, ImportedSequences, false, &AnimSequenceFilter, &AnimSequencePackageOverrides))
+		{
+			OutResult.AnimSequenceCount += static_cast<int32>(ImportedSequences.size());
+			for (UAnimSequence* ImportedSequence : ImportedSequences)
+			{
+				if (ImportedSequence)
+				{
+					OutResult.ImportedPackagePaths.push_back(ImportedSequence->GetAssetPathFileName());
+				}
+			}
+		}
+		else
+		{
+			OutResult.Messages.push_back("Animation import failed.");
+		}
+	}
+
+	OutResult.bSucceeded = OutResult.StaticMeshCount > 0 || OutResult.SkeletalMeshCount > 0 || OutResult.AnimSequenceCount > 0;
+	if (!bAttemptedImport)
+	{
+		OutResult.Messages.push_back("No FBX import items were selected.");
+	}
+
+	if (OutResult.bSucceeded && Request.bRefreshAssetLists)
+	{
+		RefreshAssetLists();
+	}
+
+	return OutResult.bSucceeded;
+#else
+	(void)Request;
+	(void)Device;
+	OutResult.Messages.push_back("FBX import is editor-only.");
+	return false;
+#endif
+}
+
 void FEditorFbxImportService::ScanFbxSourceFiles()
 {
 	AvailableFbxFiles.clear();
@@ -475,54 +1118,7 @@ bool FEditorFbxImportService::ImportStaticMeshFromFbx(const FString& FbxFilePath
 bool FEditorFbxImportService::ImportStaticMeshFromFbx(const FString& FbxFilePath, const FImportOptions& Options, ID3D11Device* Device, UStaticMesh*& OutStaticMesh, bool bRefreshAssetLists)
 {
 #if WITH_EDITOR
-	OutStaticMesh = nullptr;
-
-	if (!Device)
-	{
-		UE_LOG("FBX static import failed: D3D device is null. Path=%s", FbxFilePath.c_str());
-		return false;
-	}
-
-	if (GetLowerExtension(FbxFilePath) != L".fbx")
-	{
-		UE_LOG("FBX static import failed: unsupported source extension. Path=%s", FbxFilePath.c_str());
-		return false;
-	}
-
-	std::unique_ptr<FStaticMesh> NewMeshAsset = std::make_unique<FStaticMesh>();
-	TArray<FStaticMaterial> ParsedMaterials;
-	if (!FEditorFbxImporter::ImportStatic(FbxFilePath, &Options, *NewMeshAsset, ParsedMaterials))
-	{
-		UE_LOG("FBX static import failed: importer returned empty mesh. Path=%s", FbxFilePath.c_str());
-		return false;
-	}
-
-	const FString SourcePath = NormalizeProjectPath(FbxFilePath);
-	const FString PackagePath = GetStaticMeshPackagePathForFbx(FbxFilePath);
-
-	UStaticMesh* StaticMesh = UObjectManager::Get().CreateObject<UStaticMesh>();
-	NewMeshAsset->PathFileName = SourcePath;
-	StaticMesh->SetStaticMaterials(std::move(ParsedMaterials));
-	StaticMesh->SetStaticMeshAsset(NewMeshAsset.release());
-
-	FMeshManager::StaticMeshCache.erase(PackagePath);
-	if (!SaveStaticMeshPackage(StaticMesh, PackagePath, FbxFilePath))
-	{
-		return false;
-	}
-
-	StaticMesh->InitResources(Device);
-	StaticMesh->SetAssetPathFileName(PackagePath);
-	FMeshManager::StaticMeshCache[PackagePath] = StaticMesh;
-	OutStaticMesh = StaticMesh;
-
-	if (bRefreshAssetLists)
-	{
-		RefreshAssetLists();
-	}
-
-	UE_LOG("FBX static mesh imported successfully. Source=%s Package=%s", FbxFilePath.c_str(), PackagePath.c_str());
-	return true;
+	return ImportStaticMeshFromFbxInternal(FbxFilePath, Options, Device, OutStaticMesh, bRefreshAssetLists, nullptr, FString());
 #else
 	(void)FbxFilePath;
 	(void)Options;
@@ -536,91 +1132,7 @@ bool FEditorFbxImportService::ImportStaticMeshFromFbx(const FString& FbxFilePath
 bool FEditorFbxImportService::ImportSkeletalMeshesFromFbx(const FString& FbxFilePath, ID3D11Device* Device, TArray<USkeletalMesh*>& OutSkeletalMeshes, bool bRefreshAssetLists)
 {
 #if WITH_EDITOR
-	OutSkeletalMeshes.clear();
-
-	if (!Device)
-	{
-		UE_LOG("FBX skeletal import failed: D3D device is null. Path=%s", FbxFilePath.c_str());
-		return false;
-	}
-
-	if (GetLowerExtension(FbxFilePath) != L".fbx")
-	{
-		UE_LOG("FBX skeletal import failed: unsupported source extension. Path=%s", FbxFilePath.c_str());
-		return false;
-	}
-
-	if (!FEditorFbxImporter::Import(FbxFilePath))
-	{
-		UE_LOG("FBX skeletal import failed: importer returned empty mesh. Path=%s", FbxFilePath.c_str());
-		return false;
-	}
-
-	const FString SourcePath = NormalizeProjectPath(FbxFilePath);
-	const FString SkeletonPackagePath = GetSkeletonPackagePathForFbx(SourcePath);
-
-	std::unique_ptr<FSkeletonAsset> NewSkeletonAsset = std::make_unique<FSkeletonAsset>();
-	NewSkeletonAsset->PathFileName = SourcePath;
-	NewSkeletonAsset->Bones = std::move(FEditorFbxImporter::Bones);
-
-	USkeleton* Skeleton = UObjectManager::Get().CreateObject<USkeleton>();
-	Skeleton->SetAssetPathFileName(SkeletonPackagePath);
-	Skeleton->SetSkeletonAsset(NewSkeletonAsset.release());
-
-	if (!SaveSkeletonPackage(Skeleton, SkeletonPackagePath, SourcePath))
-	{
-		return false;
-	}
-	FSkeletonManager::Get().RegisterSkeleton(SkeletonPackagePath, Skeleton);
-
-	TArray<FString> MeshNames;
-	MeshNames.reserve(FEditorFbxImporter::ImportedSkeletalMeshes.size());
-	for (const FEditorFbxImporter::FImportedSkeletalMesh& ImportedMesh : FEditorFbxImporter::ImportedSkeletalMeshes)
-	{
-		MeshNames.push_back(ImportedMesh.MeshName);
-	}
-
-	const bool bSingleMesh = MeshNames.size() <= 1;
-	const TArray<FString> UniqueNames = MakeUniqueMeshNames(MeshNames);
-
-	for (int32 MeshIndex = 0; MeshIndex < static_cast<int32>(FEditorFbxImporter::ImportedSkeletalMeshes.size()); ++MeshIndex)
-	{
-		FEditorFbxImporter::FImportedSkeletalMesh& ImportedMesh = FEditorFbxImporter::ImportedSkeletalMeshes[MeshIndex];
-		const FString MeshName = MeshIndex < static_cast<int32>(UniqueNames.size()) ? UniqueNames[MeshIndex] : ImportedMesh.MeshName;
-		const FString PackagePath = GetSkeletalMeshPackagePathForFbx(SourcePath, MeshName, bSingleMesh);
-
-		std::unique_ptr<FSkeletalMesh> NewMeshAsset = std::make_unique<FSkeletalMesh>();
-		NewMeshAsset->PathFileName = SourcePath;
-		NewMeshAsset->SkeletonPath = SkeletonPackagePath;
-		NewMeshAsset->MeshBindGlobal = ImportedMesh.MeshBindGlobal;
-		NewMeshAsset->Vertices = std::move(ImportedMesh.Vertices);
-		NewMeshAsset->Indices = std::move(ImportedMesh.Indices);
-		NewMeshAsset->Sections = std::move(ImportedMesh.Sections);
-
-		USkeletalMesh* SkeletalMesh = UObjectManager::Get().CreateObject<USkeletalMesh>();
-		SkeletalMesh->SetSkeletalMaterials(std::move(ImportedMesh.Materials));
-		SkeletalMesh->SetSkeletalMeshAsset(NewMeshAsset.release());
-		SkeletalMesh->SetSkeleton(Skeleton);
-
-		FMeshManager::SkeletalMeshCache.erase(PackagePath);
-		if (!SaveSkeletalMeshPackage(SkeletalMesh, PackagePath, SourcePath))
-		{
-			return false;
-		}
-
-		SkeletalMesh->InitResources(Device);
-		SkeletalMesh->SetAssetPathFileName(PackagePath);
-		FMeshManager::SkeletalMeshCache[PackagePath] = SkeletalMesh;
-		OutSkeletalMeshes.push_back(SkeletalMesh);
-	}
-
-	if (bRefreshAssetLists)
-	{
-		RefreshAssetLists();
-	}
-
-	UE_LOG("FBX skeletal meshes imported successfully. Source=%s Skeleton=%s MeshCount=%zu", FbxFilePath.c_str(), SkeletonPackagePath.c_str(), OutSkeletalMeshes.size());
-	return !OutSkeletalMeshes.empty();
+	return ImportSkeletalMeshesFromFbxInternal(FbxFilePath, Device, OutSkeletalMeshes, bRefreshAssetLists, nullptr, nullptr);
 #else
 	(void)FbxFilePath;
 	(void)Device;
@@ -651,138 +1163,7 @@ bool FEditorFbxImportService::ImportAnimSequencesFromFbx(const FString& FbxFileP
 bool FEditorFbxImportService::ImportAnimSequencesFromFbx(const FString& FbxFilePath, const FString& TargetSkeletonPath, TArray<UAnimSequence*>& OutAnimSequences, bool bRefreshAssetLists)
 {
 #if WITH_EDITOR
-	OutAnimSequences.clear();
-
-	if (GetLowerExtension(FbxFilePath) != L".fbx")
-	{
-		UE_LOG("FBX animation import failed: unsupported source extension. Path=%s", FbxFilePath.c_str());
-		return false;
-	}
-
-	const FString SourcePath = NormalizeProjectPath(FbxFilePath);
-	const bool bUseExplicitSkeleton = !TargetSkeletonPath.empty();
-	const FString SkeletonPackagePath = bUseExplicitSkeleton
-		? NormalizeProjectPath(TargetSkeletonPath)
-		: GetSkeletonPackagePathForFbx(SourcePath);
-
-	USkeleton* Skeleton = nullptr;
-	FSkeletonAsset* TargetSkeletonAsset = nullptr;
-	FAssetImportMetadata SkeletonMetadata;
-	if (FAssetPackage::ReadMetadata(SkeletonPackagePath, EAssetPackageType::Skeleton, SkeletonMetadata))
-	{
-		Skeleton = FSkeletonManager::Get().Load(SkeletonPackagePath);
-		if (Skeleton && Skeleton->GetSkeletonAsset() && !Skeleton->GetSkeletonAsset()->Bones.empty())
-		{
-			TargetSkeletonAsset = Skeleton->GetSkeletonAsset();
-		}
-		else
-		{
-			Skeleton = nullptr;
-		}
-	}
-
-	if (bUseExplicitSkeleton && !TargetSkeletonAsset)
-	{
-		UE_LOG("FBX animation import failed: target Skeleton is invalid. Source=%s Skeleton=%s", FbxFilePath.c_str(), SkeletonPackagePath.c_str());
-		return false;
-	}
-
-	FSkeletonAsset ParsedSkeleton;
-	TArray<FEditorFbxImporter::FImportedAnimSequence> ImportedSequences;
-	if (!FEditorFbxImporter::ImportAnimations(SourcePath, TargetSkeletonAsset, ParsedSkeleton, ImportedSequences))
-	{
-		UE_LOG("FBX animation import failed: importer could not parse animation source. Path=%s", FbxFilePath.c_str());
-		return false;
-	}
-
-	if (ImportedSequences.empty())
-	{
-		UE_LOG("FBX animation import skipped: source has no AnimStack. Path=%s", FbxFilePath.c_str());
-		return false;
-	}
-
-	if (!Skeleton && !bUseExplicitSkeleton)
-	{
-		if (ParsedSkeleton.Bones.empty())
-		{
-			UE_LOG("FBX animation import failed: no valid Skeleton package and source did not contain bones. Path=%s", FbxFilePath.c_str());
-			return false;
-		}
-
-		std::unique_ptr<FSkeletonAsset> NewSkeletonAsset = std::make_unique<FSkeletonAsset>();
-		NewSkeletonAsset->PathFileName = SourcePath;
-		NewSkeletonAsset->Bones = std::move(ParsedSkeleton.Bones);
-
-		Skeleton = UObjectManager::Get().CreateObject<USkeleton>();
-		Skeleton->SetAssetPathFileName(SkeletonPackagePath);
-		Skeleton->SetSkeletonAsset(NewSkeletonAsset.release());
-
-		if (!SaveSkeletonPackage(Skeleton, SkeletonPackagePath, SourcePath))
-		{
-			return false;
-		}
-		FSkeletonManager::Get().RegisterSkeleton(SkeletonPackagePath, Skeleton);
-		TargetSkeletonAsset = Skeleton->GetSkeletonAsset();
-	}
-
-	if (!TargetSkeletonAsset)
-	{
-		TargetSkeletonAsset = Skeleton ? Skeleton->GetSkeletonAsset() : nullptr;
-	}
-
-	if (!TargetSkeletonAsset)
-	{
-		UE_LOG("FBX animation import failed: resolved Skeleton is invalid. Path=%s", FbxFilePath.c_str());
-		return false;
-	}
-
-	TArray<FString> StackNames;
-	StackNames.reserve(ImportedSequences.size());
-	for (const FEditorFbxImporter::FImportedAnimSequence& ImportedSequence : ImportedSequences)
-	{
-		StackNames.push_back(ImportedSequence.StackName);
-	}
-
-	const bool bSingleStack = StackNames.size() <= 1;
-	const TArray<FString> UniqueNames = MakeUniqueMeshNames(StackNames);
-
-	for (int32 SequenceIndex = 0; SequenceIndex < static_cast<int32>(ImportedSequences.size()); ++SequenceIndex)
-	{
-		FEditorFbxImporter::FImportedAnimSequence& ImportedSequence = ImportedSequences[SequenceIndex];
-		const FString StackName = SequenceIndex < static_cast<int32>(UniqueNames.size()) ? UniqueNames[SequenceIndex] : ImportedSequence.StackName;
-		const FString PackagePath = GetAnimSequencePackagePathForFbx(SourcePath, StackName, bSingleStack);
-
-		UAnimSequence* AnimSequence = UObjectManager::Get().CreateObject<UAnimSequence>();
-		UAnimDataModel* DataModel = UObjectManager::Get().CreateObject<UAnimDataModel>(AnimSequence);
-		DataModel->SetPlayLength(ImportedSequence.PlayLength);
-		DataModel->SetFrameRate(ImportedSequence.FrameRate);
-		DataModel->SetNumberOfFrames(ImportedSequence.NumberOfFrames);
-		DataModel->SetNumberOfKeys(ImportedSequence.NumberOfKeys);
-		DataModel->SetBoneAnimationTracks(std::move(ImportedSequence.Tracks));
-
-		AnimSequence->SetAssetPathFileName(PackagePath);
-		AnimSequence->SetSkeleton(Skeleton);
-		AnimSequence->SetSequenceLength(ImportedSequence.PlayLength);
-		AnimSequence->SetRateScale(1.0f);
-		AnimSequence->SetLooping(true);
-		AnimSequence->SetDataModel(DataModel);
-
-		if (!SaveAnimSequencePackage(AnimSequence, PackagePath, SourcePath))
-		{
-			return false;
-		}
-
-		FAnimSequenceManager::Get().RegisterAnimSequence(PackagePath, AnimSequence);
-		OutAnimSequences.push_back(AnimSequence);
-	}
-
-	if (bRefreshAssetLists)
-	{
-		ScanFbxSourceFiles();
-	}
-
-	UE_LOG("FBX animation sequences imported successfully. Source=%s Skeleton=%s SequenceCount=%zu", FbxFilePath.c_str(), SkeletonPackagePath.c_str(), OutAnimSequences.size());
-	return !OutAnimSequences.empty();
+	return ImportAnimSequencesFromFbxInternal(FbxFilePath, TargetSkeletonPath, OutAnimSequences, bRefreshAssetLists, nullptr, nullptr);
 #else
 	(void)FbxFilePath;
 	(void)TargetSkeletonPath;

@@ -26,10 +26,6 @@ private:
 
 	void AddComponentToActor(AActor* Actor, UClass* ComponentClass);
 
-	static FString OpenObjFileDialog();
-	static FString OpenStaticMeshFileDialog();
-	static FString OpenFbxFileDialog();
-
 	UActorComponent* SelectedComponent = nullptr;
 	AActor* LastSelectedActor = nullptr;
 	bool bActorSelected = true; // true: Actor details, false: Component details
@@ -37,7 +33,4 @@ private:
 
 	char RenameBuffer[256] = {};
 	bool bShowDuplicateWarning = false;
-	FString PendingStaticMeshImportPath;
-	FString* PendingStaticMeshImportTarget = nullptr;
-	int32 PendingStaticFbxSkinnedMeshPolicy = 0;
 };

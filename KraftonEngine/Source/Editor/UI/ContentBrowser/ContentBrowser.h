@@ -5,6 +5,7 @@
 #include <memory>
 #include "ContentBrowserContext.h"
 #include "ContentBrowserElement.h"
+#include "EditorFbxImportDialog.h"
 #include "Mesh/MeshManager.h"
 
 class FEditorContentBrowserWidget final : public FEditorWidget
@@ -32,7 +33,6 @@ private:
 	void BeginFbxImport(const FString& SourcePath);
 	void RenderFbxImportPopup();
 	bool ExecuteObjImport(const FString& SourcePath);
-	bool ExecuteFbxImport();
 	void RefreshImportedAssetLists();
 
 	TArray<FContentItem> ReadDirectory(std::wstring Path);
@@ -46,12 +46,5 @@ private:
 	TArray<std::shared_ptr<ContentBrowserElement>> CachedBrowserElements;
 	TMap<FString, std::wstring> IconFileMap;
 
-	FString PendingImportSourcePath;
-	bool bOpenFbxImportPopup = false;
-	bool bImportFbxStaticMesh = true;
-	bool bImportFbxSkeletalMesh = true;
-	bool bImportFbxAnimations = true;
-	int32 PendingStaticFbxSkinnedMeshPolicy = 1;
-	int32 SelectedTargetSkeletonIndex = 0;
-	TArray<FMeshAssetListItem> TargetSkeletonOptions;
+	FEditorFbxImportDialog FbxImportDialog;
 };

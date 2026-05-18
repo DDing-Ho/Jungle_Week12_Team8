@@ -297,6 +297,20 @@ void DirectoryElement::OnDoubleLeftClicked(ContentBrowserContext& Context)
 	Context.bPendingContentRefresh = true;
 }
 
+void SourceFileElement::OnDoubleLeftClicked(ContentBrowserContext& Context)
+{
+	FString Extension = FPaths::ToUtf8(ContentItem.Path.extension());
+	std::transform(Extension.begin(), Extension.end(), Extension.begin(), ::tolower);
+	if (Extension == ".fbx" && Context.OnImportFbxSource)
+	{
+		const FString SourcePath = FPaths::MakeProjectRelative(FPaths::ToUtf8(ContentItem.Path.generic_wstring()));
+		Context.OnImportFbxSource(SourcePath);
+		return;
+	}
+
+	ShellExecuteW(nullptr, L"open", ContentItem.Path.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
+}
+
 void SceneElement::OnDoubleLeftClicked(ContentBrowserContext& Context)
 {
 	std::filesystem::path ScenePath = ContentItem.Path;
