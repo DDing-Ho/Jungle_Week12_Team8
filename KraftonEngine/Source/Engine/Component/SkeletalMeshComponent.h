@@ -30,5 +30,7 @@ private:
 	// AnimationInstance의 포즈 BoneEditLocalMatrices에 복사
 	void ApplyPoseToComponent(const FPoseContext& Pose);
 
+	void SolveTwoBoneIK(FPoseContext& Pose, int RootBoneIndex, int MidBoneIndex, int EndBoneIndex, const FVector& TargetPosition, const FVector& PolePosition);
+
 	UAnimInstance* AnimInstance = nullptr;
 };

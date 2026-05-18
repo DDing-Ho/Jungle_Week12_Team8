@@ -45,6 +45,8 @@ struct FPoseContext
 	// 부모 bone 기준의 Local Transform (Skeleton bone 순서와 동일한 index로 접근)
 	TArray<FTransform> BoneLocalTransforms;
 
+	// TODO: IK를 위한 TArray<FMatrix> GlobalTransforms 추가 해야함.
+
 	void Reset()
 	{
 		BoneLocalTransforms.clear();
@@ -68,4 +70,19 @@ struct FAnimNotifyEvent
 		Ar << Notify.NotifyName;
 		return Ar;
 	}
+};
+
+struct FTwoBoneIKChain
+{
+	/** UpperArm or Thigh */
+	int RootBoneIndex;
+
+	/** LowerArm or Calf */
+	int MidBoneIndex;
+
+	/** Hand or Foot */
+	int EndBoneIndex;
+
+	FVector TargetPosition;
+	FVector PolePosition;
 };
