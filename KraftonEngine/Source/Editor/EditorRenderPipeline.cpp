@@ -14,6 +14,7 @@
 #include "Profiling/GPUProfiler.h"
 #include "Engine/Render/Types/ForwardLightData.h"
 #include "Engine/Render/Types/MinimalViewInfo.h"
+#include "Engine/Render/Types/RenderFeatureSettings.h"
 #include "Component/Light/LightComponentBase.h"
 #include "Core/ProjectSettings.h"
 #include "Math/MathUtils.h"
@@ -290,6 +291,7 @@ void FEditorRenderPipeline::BuildFrame(FLevelEditorViewportClient* VC, const FMi
 	Frame.bIsLightView = VC->IsViewingFromLight();
 	Frame.WorldType = World->GetWorldType();
 	Frame.SetRenderOptions(VC->GetRenderOptions());
+	Frame.SkinningMode = FRenderFeatureSettings::Get().GetSkinningMode();
 	Frame.OcclusionCulling = &GetOcclusionForViewport(VC);
 	Frame.LODContext = World->PrepareLODContext();
 
@@ -378,6 +380,7 @@ void FEditorRenderPipeline::RenderPreviewViewport(IEditorPreviewViewportClient* 
 	Frame.WorldType = World->GetWorldType();
 
 	Frame.SetRenderOptions(VC->GetRenderOptions());
+	Frame.SkinningMode = FRenderFeatureSettings::Get().GetSkinningMode();
 
 	FScene& Scene = World->GetScene();
 	Scene.ClearFrameData();

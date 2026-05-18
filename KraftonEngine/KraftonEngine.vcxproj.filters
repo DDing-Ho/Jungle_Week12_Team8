@@ -1184,6 +1184,9 @@
     <ClCompile Include="Source\Engine\Render\Types\MinimalViewInfo.cpp">
       <Filter>Source\Engine\Render\Types</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Render\Types\RenderFeatureSettings.cpp">
+      <Filter>Source\Engine\Render\Types</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\Resource\ResourceManager.cpp">
       <Filter>Source\Engine\Resource</Filter>
     </ClCompile>
@@ -2151,6 +2154,9 @@
       <Filter>Source\Engine\Render\Types</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Render\Types\RenderConstants.h">
+      <Filter>Source\Engine\Render\Types</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Render\Types\RenderFeatureSettings.h">
       <Filter>Source\Engine\Render\Types</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Render\Types\RenderStateTypes.h">

@@ -556,6 +556,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\lua\bin\lua51.dll" "$(OutDir)"</Command>
     <ClCompile Include="Source\Engine\Render\Shadow\ShadowAtlasQuadTree.cpp" />
     <ClCompile Include="Source\Engine\Render\Types\FrameContext.cpp" />
     <ClCompile Include="Source\Engine\Render\Types\MinimalViewInfo.cpp" />
+    <ClCompile Include="Source\Engine\Render\Types\RenderFeatureSettings.cpp" />
     <ClCompile Include="Source\Engine\Resource\ResourceManager.cpp" />
     <ClCompile Include="Source\Engine\Runtime\ActorPlacementRegistry.cpp" />
     <ClCompile Include="Source\Engine\Runtime\Engine.cpp" />
@@ -881,6 +882,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\lua\bin\lua51.dll" "$(OutDir)"</Command>
     <ClInclude Include="Source\Engine\Render\Types\MinimalViewInfo.h" />
     <ClInclude Include="Source\Engine\Render\Types\POVProvider.h" />
     <ClInclude Include="Source\Engine\Render\Types\RenderConstants.h" />
+    <ClInclude Include="Source\Engine\Render\Types\RenderFeatureSettings.h" />
     <ClInclude Include="Source\Engine\Render\Types\RenderStateTypes.h" />
     <ClInclude Include="Source\Engine\Render\Types\RenderTypes.h" />
     <ClInclude Include="Source\Engine\Render\Types\ShadowSettings.h" />

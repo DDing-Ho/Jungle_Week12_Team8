@@ -8,6 +8,7 @@
 #include "Collision/ConvexVolume.h"
 #include "GameFramework/WorldContext.h"
 #include "GameFramework/CameraTypes.h"
+#include "Render/Types/RenderFeatureSettings.h"
 
 #include <d3d11.h>
 
@@ -70,6 +71,7 @@ struct FFrameContext
 
 	// Render Settings (Single Source of Truth)
 	FViewportRenderOptions RenderOptions;
+	ESkinningMode SkinningMode = ESkinningMode::CPU;
 
 	FVector    WireframeColor = FVector(0.0f, 0.0f, 0.7f);
 
