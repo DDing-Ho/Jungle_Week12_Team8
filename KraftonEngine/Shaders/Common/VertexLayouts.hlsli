@@ -32,6 +32,19 @@ struct VS_Input_PNCTT
     float4 tangent : TANGENT;
 };
 
+// FVertexPNCTBW (Position + Normal + Color + TexCoord + Tangent + BoneIndex + BoneWeight)
+// 사용: SkeletalMesh
+struct VS_Input_PNCTBW
+{
+    float3 position : POSITION;
+    float3 normal : NORMAL;
+    float4 color : COLOR;
+    float2 texcoord : TEXTCOORD;
+    float4 tangent : TANGENT;
+    int4 boneIndices : BONEINDICES;
+    float4 boneWeights : BONEWEIGHTS;
+};
+
 // FTextureVertex (Position + TexCoord)
 // 사용: Font, SubUV, OverlayFont
 struct VS_Input_PT

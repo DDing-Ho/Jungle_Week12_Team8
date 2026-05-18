@@ -13,6 +13,7 @@
 #include "Common/Functions.hlsli"
 #include "Common/VertexLayouts.hlsli"
 #include "Common/SystemSamplers.hlsli"
+#include "Common/Skinning.hlsli"
 
 #if !defined(LIGHTING_MODEL_UNLIT)
 #include "Common/ForwardLighting.hlsli"
@@ -63,32 +64,32 @@ struct UberVS_Output
 // =============================================================================
 // Vertex Shader
 // =============================================================================
-UberVS_Output VS(VS_Input_PNCTT input)
+UberVS_Output BuildUberVSOutput(float3 position, float3 normal, float4 color, float2 texcoord, float4 tangent)
 {
     UberVS_Output output;
     
     float3x3 M = (float3x3) Model;
 
-    float4 worldPos4 = mul(float4(input.position, 1.0f), Model);
+    float4 worldPos4 = mul(float4(position, 1.0f), Model);
     output.worldPos = worldPos4.xyz;
     output.position = mul(mul(worldPos4, View), Projection);
-    output.normal = normalize(mul(input.normal, (float3x3) NormalMatrix));
-    output.color = input.color * SectionColor;
-    output.texcoord = input.texcoord;
+    output.normal = normalize(mul(normal, (float3x3) NormalMatrix));
+    output.color = color * SectionColor;
+    output.texcoord = texcoord;
 
-    float3 T = normalize(mul(input.tangent.xyz, M));
+    float3 T = normalize(mul(tangent.xyz, M));
     T = normalize(T - output.normal * dot(output.normal, T));
-    output.tangent = float4(T, input.tangent.w);
+    output.tangent = float4(T, tangent.w);
 
 #if defined(LIGHTING_MODEL_GOURAUD) && LIGHTING_MODEL_GOURAUD
     float3 N =  output.normal;
 
     if (HasNormalMap > 0.5f)
     {
-        float3 B = normalize(cross(N, T) * input.tangent.w);
+        float3 B = normalize(cross(N, T) * tangent.w);
         float3x3 TBN = float3x3(T, B, N);
 
-        float3 tangentNormal = NormalTexture.SampleLevel(LinearWrapSampler, input.texcoord, 0).xyz * 2.0f - 1.0f;
+        float3 tangentNormal = NormalTexture.SampleLevel(LinearWrapSampler, texcoord, 0).xyz * 2.0f - 1.0f;
 
         N = normalize(mul(tangentNormal, TBN));
     }
@@ -100,6 +101,33 @@ UberVS_Output VS(VS_Input_PNCTT input)
 #endif
 
     return output;
+}
+
+UberVS_Output VS_Static(VS_Input_PNCTT input)
+{
+    return BuildUberVSOutput(input.position, input.normal, input.color, input.texcoord, input.tangent);
+}
+
+UberVS_Output VS_Skeletal(VS_Input_PNCTBW input)
+{
+    float3 position = input.position;
+    float3 normal = input.normal;
+    float4 tangent = input.tangent;
+
+    if (SkinningMode == 1 && GetSkinWeightSum(input.boneIndices, input.boneWeights) > 0.0f)
+    {
+        float4x4 skinMatrix = BuildSkinMatrix(input.boneIndices, input.boneWeights);
+        position = mul(float4(input.position, 1.0f), skinMatrix).xyz;
+        normal = normalize(mul(float4(input.normal, 0.0f), skinMatrix).xyz);
+        tangent.xyz = normalize(mul(float4(input.tangent.xyz, 0.0f), skinMatrix).xyz);
+    }
+
+    return BuildUberVSOutput(position, normal, input.color, input.texcoord, tangent);
+}
+
+UberVS_Output VS(VS_Input_PNCTT input)
+{
+    return VS_Static(input);
 }
 
 // =============================================================================

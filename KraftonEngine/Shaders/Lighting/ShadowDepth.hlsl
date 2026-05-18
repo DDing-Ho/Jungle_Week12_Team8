@@ -10,6 +10,7 @@
 
 #include "Common/ConstantBuffers.hlsli"
 #include "Common/VertexLayouts.hlsli"
+#include "Common/Skinning.hlsli"
 
 // b2: Light ViewProj — Shadow depth pass 전용
 cbuffer ShadowLightBuffer : register(b2)
@@ -22,17 +23,40 @@ cbuffer ShadowLightBuffer : register(b2)
 // =============================================================================
 // InputLayout은 VS_Input_PNCTT(StaticMesh)와 호환.
 // Normal/Color/TexCoord/Tangent는 무시하고 Position만 사용.
-PS_Input_Shadow VS(VS_Input_PNCTT input)
+PS_Input_Shadow BuildShadowVSOutput(float3 position)
 {
     PS_Input_Shadow output;
 
-    float4 worldPos = mul(float4(input.position, 1.0f), Model);
+    float4 worldPos = mul(float4(position, 1.0f), Model);
     float4 clipPos  = mul(worldPos, LightViewProj);
 
     output.position = clipPos;
     output.depth    = clipPos.z / clipPos.w; // Reversed-Z: near=1, far=0
 
     return output;
+}
+
+PS_Input_Shadow VS_Static(VS_Input_PNCTT input)
+{
+    return BuildShadowVSOutput(input.position);
+}
+
+PS_Input_Shadow VS_Skeletal(VS_Input_PNCTBW input)
+{
+    float3 position = input.position;
+
+    if (SkinningMode == 1 && GetSkinWeightSum(input.boneIndices, input.boneWeights) > 0.0f)
+    {
+        float4x4 skinMatrix = BuildSkinMatrix(input.boneIndices, input.boneWeights);
+        position = mul(float4(input.position, 1.0f), skinMatrix).xyz;
+    }
+
+    return BuildShadowVSOutput(position);
+}
+
+PS_Input_Shadow VS(VS_Input_PNCTT input)
+{
+    return VS_Static(input);
 }
 
 // =============================================================================
