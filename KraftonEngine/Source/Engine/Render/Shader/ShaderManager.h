@@ -10,25 +10,49 @@
 struct FShaderKey
 {
 	FString Path;
+	FString VSEntryName = "VS";
+	FString PSEntryName = "PS";
 	uint64  PathHash = 0;
 	uint64  DefinesHash = 0;
+	uint64  VSEntryHash = 0;
+	uint64  PSEntryHash = 0;
 
 	FShaderKey(const FString& InPath)
 		: Path(InPath)
+		, VSEntryName("VS")
+		, PSEntryName("PS")
 		, PathHash(std::hash<FString>{}(InPath))
 		, DefinesHash(0)
+		, VSEntryHash(std::hash<FString>{}(VSEntryName))
+		, PSEntryHash(std::hash<FString>{}(PSEntryName))
 	{}
 
 	FShaderKey(const FString& InPath, const D3D_SHADER_MACRO* InDefines)
 		: Path(InPath)
+		, VSEntryName("VS")
+		, PSEntryName("PS")
 		, PathHash(std::hash<FString>{}(InPath))
 		, DefinesHash(HashDefines(InDefines))
+		, VSEntryHash(std::hash<FString>{}(VSEntryName))
+		, PSEntryHash(std::hash<FString>{}(PSEntryName))
+	{}
+
+	FShaderKey(const FString& InPath, const FString& InVSEntryName, const FString& InPSEntryName, const D3D_SHADER_MACRO* InDefines = nullptr)
+		: Path(InPath)
+		, VSEntryName(InVSEntryName)
+		, PSEntryName(InPSEntryName)
+		, PathHash(std::hash<FString>{}(InPath))
+		, DefinesHash(HashDefines(InDefines))
+		, VSEntryHash(std::hash<FString>{}(InVSEntryName))
+		, PSEntryHash(std::hash<FString>{}(InPSEntryName))
 	{}
 
 	bool operator==(const FShaderKey& Other) const
 	{
 		return PathHash == Other.PathHash
-			&& DefinesHash == Other.DefinesHash;
+			&& DefinesHash == Other.DefinesHash
+			&& VSEntryHash == Other.VSEntryHash
+			&& PSEntryHash == Other.PSEntryHash;
 	}
 
 private:
@@ -56,7 +80,11 @@ namespace std
 	{
 		size_t operator()(const FShaderKey& K) const
 		{
-			return static_cast<size_t>(K.PathHash ^ (K.DefinesHash * 0x9e3779b97f4a7c15ULL));
+			uint64 H = K.PathHash;
+			H ^= K.DefinesHash * 0x9e3779b97f4a7c15ULL;
+			H ^= K.VSEntryHash * 0xbf58476d1ce4e5b9ULL;
+			H ^= K.PSEntryHash * 0x94d049bb133111ebULL;
+			return static_cast<size_t>(H);
 		}
 	};
 }
