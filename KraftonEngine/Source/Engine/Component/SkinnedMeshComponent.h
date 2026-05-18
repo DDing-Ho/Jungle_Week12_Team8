@@ -60,13 +60,17 @@ public:
 
 	void GetCurrentBoneGlobalTransforms(TArray<FTransform>& OutGlobals) const;
 	void GetCurrentBoneGlobalMatrices(TArray<FMatrix>& OutGlobals) const;
-	const TArray<FVertexPNCTT>& GetSkinnedVertices() const { return SkinnedVertices; }
+	const TArray<FMatrix>& GetCurrentSkinMatrices() const;
+	uint64 GetSkinMatrixRevision() const { return SkinMatrixRevision; }
+	const TArray<FVertexPNCTBW>& GetSkinnedVertices() const { return SkinnedVertices; }
 	uint64 GetSkinnedRevision() const { return SkinnedRevision; }
+	void UpdateSkinMatrices() const;
+	void EnsureCPUSkinnedVertices() const;
 	FMeshBuffer* GetMeshBuffer() const override;
 	FMeshDataView GetMeshDataView() const override;
 
 protected:
-	// Tick/skinning 섹션: animation system 없이 현재 bone edit pose를 매 frame CPU skinning 결과로 반영한다.
+	// Tick/skinning 섹션: skin matrix와 CPU vertex skinning을 분리해 필요한 경로만 계산한다.
 	void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction& ThisTickFunction) override;
 
 	void InitSkinningCache();
@@ -86,6 +90,12 @@ protected:
 	bool bUseBoneEditPose = false;
 
 	// SceneProxy는 이 결과와 revision만 보고 dynamic vertex buffer를 갱신한다.
-	TArray<FVertexPNCTT> SkinnedVertices;
-	uint64 SkinnedRevision = 0;
+	mutable TArray<FVertexPNCTBW> SkinnedVertices;
+	mutable uint64 SkinnedRevision = 0;
+	mutable bool bSkinnedVerticesDirty = true;
+
+	// GPU/CPU skinning이 공유하는 skin matrix cache.
+	mutable TArray<FMatrix> CurrentSkinMatrices;
+	mutable uint64 SkinMatrixRevision = 0;
+	mutable bool bSkinMatricesDirty = true;
 };

@@ -52,13 +52,15 @@ bool FSkeletalMeshSceneProxy::PrepareDrawBuffer(ID3D11Device* Device, ID3D11Devi
 	FSkeletalMesh* Asset = Mesh ? Mesh->GetSkeletalMeshAsset() : nullptr;
 	if (!Asset || !Asset->RenderBuffer || !Asset->RenderBuffer->IsValid()) return false;
 
-	const TArray<FVertexPNCTT>& SkinnedVertices = SMC->GetSkinnedVertices();
+	SMC->EnsureCPUSkinnedVertices();
+
+	const TArray<FVertexPNCTBW>& SkinnedVertices = SMC->GetSkinnedVertices();
 	const uint32 VertexCount = static_cast<uint32>(SkinnedVertices.size());
 	if (VertexCount == 0) return false;
 
 	if (bDynamicBufferNeedsCreate || !DynamicVertexBuffer.GetBuffer())
 	{
-		DynamicVertexBuffer.Create(Device, CachedDynamicVertexCount ? CachedDynamicVertexCount : VertexCount, sizeof(FVertexPNCTT));
+		DynamicVertexBuffer.Create(Device, CachedDynamicVertexCount ? CachedDynamicVertexCount : VertexCount, sizeof(FVertexPNCTBW));
 		bDynamicBufferNeedsCreate = false;
 	}
 

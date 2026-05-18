@@ -75,8 +75,8 @@ void USkeletalMeshComponent::ApplyPoseToComponent(const FPoseContext& Pose)
 	}
 
 	bUseBoneEditPose = true;
-	UpdateCPUSkinning();
-	++SkinnedRevision;
+	UpdateSkinMatrices();
+	MarkWorldBoundsDirty();
 }
 
 void USkeletalMeshComponent::HandleAnimNotify(const FAnimNotifyEvent& Notify)
