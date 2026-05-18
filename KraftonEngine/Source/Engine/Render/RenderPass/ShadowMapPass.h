@@ -15,6 +15,7 @@ class FSceneEnvironment;
 class FScene;
 class FPrimitiveSceneProxy;
 class FSpatialPartition;
+struct FPrimitiveDrawOptions;
 
 /*
 	FShadowMapPass — 라이트 타입별 Shadow Depth 렌더링 패스.
@@ -51,7 +52,8 @@ private:
 	void RenderPointShadows(const FPassContext& Ctx, FShadowMapResources& Res);
 
 	// ── 공용: frustum culling + depth-only draw ──
-	void DrawShadowCasters(ID3D11DeviceContext* DC, FScene& Scene, FSystemResources& Resources, const FConvexVolume& LightFrustum, FSpatialPartition* Partition = nullptr);
+	void DrawShadowCasters(ID3D11DeviceContext* DC, FScene& Scene, FSystemResources& Resources,
+		const FPrimitiveDrawOptions& Options, const FConvexVolume& LightFrustum, FSpatialPartition* Partition = nullptr);
 	void DrawShadowCasters(const FPassContext& Ctx, const FConvexVolume& LightFrustum);
 
 	// ── 리소스 Ensure: FilterMode에 따라 depth-only / VSM moment 리소스 분기 ──
