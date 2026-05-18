@@ -140,8 +140,8 @@ bool FSkeletalMeshSceneProxy::PrepareDrawCommandBindings(ID3D11Device* Device, I
 
 	FSkeletalRenderConstants Constants = {};
 	Constants.SkinningMode = static_cast<uint32>(Options.SkinningMode);
-	Constants.HeatmapMode = Options.bWeightBoneHeatMap ? 1u : 0u;
-	Constants.SelectedBoneIndex = Options.WeightBoneHeatMapBoneIndex;
+	Constants.HeatmapMode = Options.bHeatMap ? 1u : 0u;
+	Constants.SelectedBoneIndex = Options.bHeatMap ? Options.BoneIndex : -1;
 	SkeletalRenderCB.Update(Context, &Constants, sizeof(Constants));
 
 	OutCommand.Skinning.SkeletalRenderCB = &SkeletalRenderCB;

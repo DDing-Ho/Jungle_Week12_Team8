@@ -87,6 +87,6 @@ struct FViewportRenderOptions
 	bool Enable25DCulling = true;
 
 	// Bone Weight Heatmap
-	bool bBoneWeightHeatmap = false;
-	int32 BoneWeightHeatmapBoneIndex = -1;
+	bool bHeatmap = false;
+	int32 BoneIndex = -1;
 };

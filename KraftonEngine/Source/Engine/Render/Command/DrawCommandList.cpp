@@ -1,4 +1,4 @@
-#include "DrawCommandList.h"
+﻿#include "DrawCommandList.h"
 
 #include <algorithm>
 #include <cstring>
@@ -44,8 +44,12 @@ void FStateCache::Cleanup(ID3D11DeviceContext* Ctx)
 	{
 		ID3D11Buffer* nullCB = nullptr;
 		ID3D11ShaderResourceView* nullSRV = nullptr;
+
 		Ctx->VSSetConstantBuffers(ECBSlot::SkeletalRender, 1, &nullCB);
+		Ctx->PSSetConstantBuffers(ECBSlot::SkeletalRender, 1, &nullCB);
+
 		Ctx->VSSetShaderResources(ESystemTexSlot::SkinMatrices, 1, &nullSRV);
+
 		Skinning = {};
 	}
 }
@@ -246,7 +250,10 @@ void FDrawCommandList::SubmitCommand(const FDrawCommand& Cmd,
 		if (bForce || Cmd.Skinning.SkeletalRenderCB != Cache.Skinning.SkeletalRenderCB || !Cache.Skinning.bEnabled)
 		{
 			ID3D11Buffer* RawCB = Cmd.Skinning.SkeletalRenderCB ? Cmd.Skinning.SkeletalRenderCB->GetBuffer() : nullptr;
+			// VS: SkinningMode, SkinMatrices
+			// PS: HeatmapMode, SelectedBoneIndex
 			Ctx->VSSetConstantBuffers(ECBSlot::SkeletalRender, 1, &RawCB);
+			Ctx->PSSetConstantBuffers(ECBSlot::SkeletalRender, 1, &RawCB);
 			Cache.Skinning.SkeletalRenderCB = Cmd.Skinning.SkeletalRenderCB;
 		}
 

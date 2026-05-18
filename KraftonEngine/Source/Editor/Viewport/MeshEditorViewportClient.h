@@ -58,6 +58,10 @@ public:
 	EBoneDebugDrawMode GetBoneDebugDrawMode() const;
 	void SetBoneDebugDrawMode(EBoneDebugDrawMode InDrawMode);
 
+	// --- Bone Weight Heatmap Section ---
+	bool IsBoneWeightHeatmapEnabled() const;
+	void SetBoneWeightHeatmapEnabled(bool bEnabled);
+
 	void ApplyTransformSettingsToGizmo();
 
 private:

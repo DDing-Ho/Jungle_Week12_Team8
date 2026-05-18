@@ -171,6 +171,17 @@ void FMeshEditorViewportClient::SetSelectedBone(USkeletalMesh* Mesh, int32 BoneI
 	SelectedMesh = Mesh;
 	SelectedBoneIndex = BoneIndex;
 
+	// Selected Bone이 없으면 heatmap 비활성화
+	if (SelectedBoneIndex >= 0)
+	{
+		RenderOptions.BoneIndex = SelectedBoneIndex;
+	}
+	else
+	{
+		RenderOptions.bHeatmap = false;
+		RenderOptions.BoneIndex = -1;
+	}
+
 	if (Gizmo && PreviewMeshComponent && BoneIndex >= 0)
 	{
 		BoneTarget.SetBone(PreviewMeshComponent, BoneIndex);
@@ -211,6 +222,17 @@ void FMeshEditorViewportClient::SetBoneDebugDrawMode(EBoneDebugDrawMode InDrawMo
 	{
 		BoneDebugComponent->SetDrawMode(InDrawMode);
 	}
+}
+
+bool FMeshEditorViewportClient::IsBoneWeightHeatmapEnabled() const
+{
+	return RenderOptions.bHeatmap;
+}
+
+void FMeshEditorViewportClient::SetBoneWeightHeatmapEnabled(bool bEnabled)
+{
+	RenderOptions.bHeatmap = bEnabled && SelectedBoneIndex >= 0;
+	RenderOptions.BoneIndex = RenderOptions.bHeatmap ? SelectedBoneIndex : -1;
 }
 
 void FMeshEditorViewportClient::TickShortcuts()

@@ -80,8 +80,13 @@ void FDrawCommandBuilder::BeginCollect(const FFrameContext& Frame)
 {
 	DrawCommandList.Reset();
 	CollectViewMode = Frame.RenderOptions.ViewMode;
-	CollectPrimitiveDrawOptions = {};
-	CollectPrimitiveDrawOptions.SkinningMode = Frame.SkinningMode;
+
+	// FPrimitiveDrawOptions 설정
+	DrawOptions = {};
+	DrawOptions.SkinningMode = Frame.SkinningMode;
+	DrawOptions.bHeatMap = Frame.RenderOptions.bHeatmap && Frame.RenderOptions.BoneIndex >= 0;
+	DrawOptions.BoneIndex= DrawOptions.bHeatMap ? Frame.RenderOptions.BoneIndex : -1;
+
 	bHasSelectionMaskCommands = false;
 
 	// 동적 지오메트리 초기화
@@ -135,7 +140,7 @@ void FDrawCommandBuilder::BuildCommandForProxy(FScene& Scene, const FPrimitiveSc
 	// if (!Proxy.GetMeshBuffer() || !Proxy.GetMeshBuffer()->IsValid()) return;
 	ID3D11DeviceContext* Ctx = CachedContext;
 
-	const bool bUseGpuSkinning = Proxy.WantsGpuSkinning(CollectPrimitiveDrawOptions);
+	const bool bUseGpuSkinning = Proxy.WantsGpuSkinning(DrawOptions);
 
 	FDrawCommandBuffer ProxyBuffer;
 	if (bUseGpuSkinning)
@@ -206,7 +211,7 @@ void FDrawCommandBuilder::BuildCommandForProxy(FScene& Scene, const FPrimitiveSc
 				ApplyMaterialRenderState(Cmd.RenderState, Mat, BaseRenderState);
 		}
 
-		if (!Proxy.PrepareDrawCommandBindings(CachedDevice, Ctx, CollectPrimitiveDrawOptions, Cmd))
+		if (!Proxy.PrepareDrawCommandBindings(CachedDevice, Ctx, DrawOptions, Cmd))
 		{
 			continue;
 		}

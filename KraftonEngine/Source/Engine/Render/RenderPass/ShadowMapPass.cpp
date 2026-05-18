@@ -780,8 +780,8 @@ void FShadowMapPass::DrawShadowCasters(const FPassContext& Ctx, const FConvexVol
 
 	FPrimitiveDrawOptions Options = {};
 	Options.SkinningMode = Ctx.Frame.SkinningMode;
-	Options.bWeightBoneHeatMap = false;
-	Options.WeightBoneHeatMapBoneIndex = -1;
+	Options.bHeatMap = false;
+	Options.BoneIndex = -1;
 	DrawShadowCasters(Ctx.Device.GetDeviceContext(), *Ctx.Scene, Ctx.Resources, Options, LightFrustum, Partition);
 }
 
