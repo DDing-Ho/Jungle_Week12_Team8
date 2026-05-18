@@ -115,6 +115,7 @@ private:
 	void HandleCSMBlendRange(const TArray<FString>& Args);
 	void HandleShadowBias(const TArray<FString>& Args);
 	void HandleShadowFilter(const TArray<FString>& Args);
+	void HandleSkinningMode(const TArray<FString>& Args);
 	void HandleCauseCrash(const TArray<FString>& Args);
 	void PrintCSMCascadeRanges();
 
