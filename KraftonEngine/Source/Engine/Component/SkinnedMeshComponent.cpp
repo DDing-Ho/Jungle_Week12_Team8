@@ -7,6 +7,7 @@
 #include "Collision/RayUtils.h"
 #include "Core/Log.h"
 #include "Profiling/Stats.h"
+#include "Render/Types/RenderFeatureSettings.h"
 
 namespace
 {
@@ -79,6 +80,7 @@ void USkinnedMeshComponent::SetSkeletalMesh(USkeletalMesh* InMesh)
 {
 	// 먼저 pointer/path/material slot을 맞춰 editor와 runtime이 같은 mesh 상태를 보게 한다.
 	SkeletalMesh = InMesh;
+	ResetBoneBounds();
 
 	if (InMesh)
 	{
@@ -140,7 +142,6 @@ void USkinnedMeshComponent::SetSkeletalMesh(USkeletalMesh* InMesh)
 	{
 		SkinnedVertices.clear();
 		CurrentSkinMatrices.clear();
-		bSkinMatricesDirty = false;
 		bSkinnedVerticesDirty = false;
 		++SkinMatrixRevision;
 		++SkinnedRevision;
@@ -161,48 +162,148 @@ USkeletalMesh* USkinnedMeshComponent::GetSkeletalMesh() const
 	return SkeletalMesh;
 }
 
-// Bounds 섹션: SkeletalMesh culling은 asset local bounds가 아니라 실제 CPU-skinned vertices를 기준으로 한다.
-void USkinnedMeshComponent::UpdateWorldAABB() const
+void USkinnedMeshComponent::ResetBoneBounds() const
 {
-	UPrimitiveComponent::UpdateWorldAABB();
-	// 부하가 너무 심해서 잠시 주석 처리
-	// EnsureCPUSkinnedVertices();
+	BoneBounds.clear();
+	UnweightedBounds = FBoundingBox();
+	bBoneBoundsDirty = true;
+}
 
-	// 아직 skinning 결과가 없으면 primitive 기본 bounds로 fallback해 빈 mesh/로드 실패 경로를 안전하게 둔다.
-	if (SkinnedVertices.empty())
+void USkinnedMeshComponent::BuildBoneBounds() const
+{
+	ResetBoneBounds();
+
+	USkeletalMesh* Mesh = GetSkeletalMesh();
+	if (!Mesh || !Mesh->GetSkeletalMeshAsset())
+	{
+		bBoneBoundsDirty = false;
+		return;
+	}
+
+	FSkeletalMesh* Asset = Mesh->GetSkeletalMeshAsset();
+	FSkeletonAsset* SkeletonAsset = Mesh->GetSkeletonAsset();
+	if (!SkeletonAsset || Asset->Vertices.empty())
+	{
+		bBoneBoundsDirty = false;
+		return;
+	}
+
+	const int32 BoneCount = static_cast<int32>(SkeletonAsset->Bones.size());
+	BoneBounds.resize(BoneCount);
+
+	for (const FVertexPNCTBW& Vertex : Asset->Vertices)
+	{
+		bool bHasValidBoneWeight = false;
+
+		for (int32 WeightIndex = 0; WeightIndex < 4; ++WeightIndex)
+		{
+			const int32 BoneIndex = Vertex.BoneIndices[WeightIndex];
+			const float BoneWeight = Vertex.BoneWeights[WeightIndex];
+
+			if (BoneWeight <= 0.0f) continue;
+			if (BoneIndex < 0 || BoneIndex >= BoneCount) continue;
+
+			// SkeletalMesh AABB는 전체 vertex CPU skinning 대신 bone별 influence bounds로 보수적으로 근사한다.
+			BoneBounds[BoneIndex].Expand(Vertex.Position);
+			bHasValidBoneWeight = true;
+		}
+
+		if (!bHasValidBoneWeight)
+		{
+			// weight가 없는 vertex는 CPU skinning fallback과 맞춰 MeshBindGlobal 기준으로 따로 포함한다.
+			UnweightedBounds.Expand(Vertex.Position);
+		}
+	}
+
+	bBoneBoundsDirty = false;
+}
+
+void USkinnedMeshComponent::ExpandWorldBounds(
+	const FBoundingBox& LocalBounds,
+	const FMatrix& LocalToWorld,
+	FBoundingBox& WorldBounds) const
+{
+	FVector Corners[8];
+	LocalBounds.GetCorners(Corners);
+
+	for (const FVector& Corner : Corners)
+	{
+		WorldBounds.Expand(LocalToWorld.TransformPositionWithW(Corner));
+	}
+}
+
+// Bone Local Bounds 기반 AABB 근사 코드
+void USkinnedMeshComponent::UpdateWorldAABBFromBoneBounds() const
+{
+	SCOPE_STAT_CAT("UpdateWorldAABBFromBoneBounds", "Skinning");
+	USkeletalMesh* Mesh = GetSkeletalMesh();
+	if (!Mesh || !Mesh->GetSkeletalMeshAsset())
 	{
 		return;
 	}
 
-	const FMatrix& WorldMatrix = CachedWorldMatrix;
-
-	// 이미 component local로 skinning된 vertex를 world matrix로 변환해 octree/query bounds를 만든다.
-	if (FRenderFeatureSettings::Get().GetSkinningMode() == ESkinningMode::CPU)
+	FSkeletalMesh* Asset = Mesh->GetSkeletalMeshAsset();
+	FSkeletonAsset* SkeletonAsset = Mesh->GetSkeletonAsset();
+	if (!SkeletonAsset || Asset->Vertices.empty())
 	{
-		FVector WorldMin = WorldMatrix.TransformPositionWithW(SkinnedVertices[0].Position);
-		FVector WorldMax = WorldMin;
+		return;
+	}
 
-		for (const FVertexPNCTBW& Vertex : SkinnedVertices)
-		{
-			const FVector WorldPos = WorldMatrix.TransformPositionWithW(Vertex.Position);
+	const int32 BoneCount = static_cast<int32>(SkeletonAsset->Bones.size());
 
-			WorldMin.X = std::min(WorldMin.X, WorldPos.X);
-			WorldMin.Y = std::min(WorldMin.Y, WorldPos.Y);
-			WorldMin.Z = std::min(WorldMin.Z, WorldPos.Z);
+	// SkeletalMesh가 변경된 경우 Bone Bound를 다시 계산한다.
+	if (bBoneBoundsDirty || static_cast<int32>(BoneBounds.size()) != BoneCount)
+	{
+		BuildBoneBounds();
+	}
 
-			WorldMax.X = std::max(WorldMax.X, WorldPos.X);
-			WorldMax.Y = std::max(WorldMax.Y, WorldPos.Y);
-			WorldMax.Z = std::max(WorldMax.Z, WorldPos.Z);
-		}
+	if (static_cast<int32>(CurrentSkinMatrices.size()) != BoneCount)
+	{
+		UpdateSkinMatrices();
+	}
 
-		FVector Center = (WorldMin + WorldMax) * 0.5f;
-		FVector Extent = (WorldMax - WorldMin) * 0.5f;
+	FBoundingBox WorldBounds;
 
-		WorldAABBMinLocation = Center - Extent;
-		WorldAABBMaxLocation = Center + Extent;
-		bWorldAABBDirty = false;
-		bHasValidWorldAABB = true;
-	}	
+	const int32 CachedBoneBoundsCount = static_cast<int32>(BoneBounds.size());
+	for (int32 BoneIndex = 0; BoneIndex < BoneCount; ++BoneIndex)
+	{
+		if (BoneIndex >= CachedBoneBoundsCount) continue;
+		if (BoneIndex >= static_cast<int32>(CurrentSkinMatrices.size())) continue;
+		if (!BoneBounds[BoneIndex].IsValid()) continue;
+
+		const FMatrix BoneBoundToWorld = CurrentSkinMatrices[BoneIndex] * CachedWorldMatrix;
+		ExpandWorldBounds(BoneBounds[BoneIndex], BoneBoundToWorld, WorldBounds);
+	}
+
+	if (UnweightedBounds.IsValid())
+	{
+		const FMatrix UnweightedToWorld = Asset->MeshBindGlobal * CachedWorldMatrix;
+		ExpandWorldBounds(UnweightedBounds, UnweightedToWorld, WorldBounds);
+	}
+
+	if (!WorldBounds.IsValid())
+	{
+		return;
+	}
+
+	WorldAABBMinLocation = WorldBounds.Min;
+	WorldAABBMaxLocation = WorldBounds.Max;
+	bWorldAABBDirty = false;
+	bHasValidWorldAABB = true;
+}
+
+// Bounds 섹션: CPU Skinning은 실제 skinned vertex로, GPU Skinning은 bone별 influence bounds로 계산한다.
+void USkinnedMeshComponent::UpdateWorldAABB() const
+{
+	UPrimitiveComponent::UpdateWorldAABB();
+
+	if (!SkeletalMesh || !SkeletalMesh->GetSkeletalMeshAsset())
+	{
+		return;
+	}
+
+	// 매 프레임 전체 vertex를 skinning하지 않고 bone별 influence bounds의 8개 corner만 변환한다.
+	UpdateWorldAABBFromBoneBounds();
 }
 
 // Bone edit 섹션: setter가 호출되기 전까지는 asset pose를 그대로 쓰고, 수정 순간에 component-local 복사본을 만든다.
@@ -549,6 +650,8 @@ void USkinnedMeshComponent::BuildBoneEditGlobalMatrices(TArray<FMatrix>& OutGlob
 // Cache 초기화는 resize까지만 담당하고, 실제 vertex 내용 갱신은 EnsureCPUSkinnedVertices에 모은다.
 void USkinnedMeshComponent::InitSkinningCache()
 {
+	ResetBoneBounds();
+
 	USkeletalMesh* Mesh = GetSkeletalMesh();
 	if (!Mesh || !Mesh->GetSkeletalMeshAsset())
 	{
@@ -564,11 +667,6 @@ void USkinnedMeshComponent::InitSkinningCache()
 
 const TArray<FMatrix>& USkinnedMeshComponent::GetCurrentSkinMatrices() const
 {
-	if (bSkinMatricesDirty)
-	{
-		UpdateSkinMatrices();
-	}
-
 	return CurrentSkinMatrices;
 }
 
@@ -580,7 +678,6 @@ void USkinnedMeshComponent::UpdateSkinMatrices() const
 	if (!Mesh || !Mesh->GetSkeletalMeshAsset())
 	{
 		CurrentSkinMatrices.clear();
-		bSkinMatricesDirty = false;
 		bSkinnedVerticesDirty = true;
 		++SkinMatrixRevision;
 		return;
@@ -591,7 +688,6 @@ void USkinnedMeshComponent::UpdateSkinMatrices() const
 	if (!SkeletonAsset)
 	{
 		CurrentSkinMatrices.clear();
-		bSkinMatricesDirty = false;
 		bSkinnedVerticesDirty = true;
 		++SkinMatrixRevision;
 		return;
@@ -612,7 +708,6 @@ void USkinnedMeshComponent::UpdateSkinMatrices() const
 		}
 	}
 
-	bSkinMatricesDirty = false;
 	bSkinnedVerticesDirty = true;
 	++SkinMatrixRevision;
 }
@@ -647,7 +742,7 @@ void USkinnedMeshComponent::EnsureCPUSkinnedVertices() const
 		return;
 	}
 
-	if (bSkinMatricesDirty || CurrentSkinMatrices.size() != SkeletonAsset->Bones.size())
+	if (CurrentSkinMatrices.size() != SkeletonAsset->Bones.size())
 	{
 		UpdateSkinMatrices();
 	}
@@ -902,7 +997,12 @@ bool USkinnedMeshComponent::LineTraceComponent(const FRay& Ray, FHitResult& OutH
 	}
 
 	FSkeletalMesh* Asset = SkeletalMesh->GetSkeletalMeshAsset();
-	EnsureCPUSkinnedVertices();
+
+	// GPU일때만 Picking 정확성을 위해 CPU Skinning으로 정점 정보를 한번 업데이트 한다.
+	if (FRenderFeatureSettings::Get().GetSkinningMode() == ESkinningMode::GPU)
+	{
+		EnsureCPUSkinnedVertices();
+	}
 
 	if (!Asset || Asset->Indices.empty() || SkinnedVertices.empty())
 	{

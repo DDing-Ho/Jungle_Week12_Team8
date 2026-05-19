@@ -202,6 +202,7 @@ void FOverlayStatSystem::BuildSkinningLines(TArray<FString>& OutLines) const
 		"PrepareGPUSkinningDrawBuffer",
 		"UploadSkinMatrices",
 		"PrepareSkinningBindings",
+		"UpdateAABB (SkeletalMesh)",
 	};
 
 	const TArray<FStatEntry>& Snapshot = FStatManager::Get().GetSnapshot();

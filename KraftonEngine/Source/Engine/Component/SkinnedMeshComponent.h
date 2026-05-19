@@ -78,6 +78,13 @@ protected:
 
 	void InitSkinningCache();
 	void UpdateCPUSkinning();
+	// --- SkeletalMesh AABB Section ---
+	// Vertices로 하지 않고, Bone Local Bounds를 통해 근사한다.
+	void ResetBoneBounds() const;
+	void BuildBoneBounds() const;
+	void UpdateWorldAABBFromBoneBounds() const;
+	void ExpandWorldBounds(const FBoundingBox& LocalBounds, const FMatrix& LocalToWorld, FBoundingBox& WorldBounds) const;
+
 	void BuildBoneEditGlobalTransforms(TArray<FTransform>& OutGlobals) const;
 	void BuildBoneEditGlobalMatrices(TArray<FMatrix>& OutGlobals) const;
 
@@ -101,8 +108,12 @@ protected:
 	// GPU/CPU skinning이 공유하는 skin matrix cache.
 	mutable TArray<FMatrix> CurrentSkinMatrices;
 	mutable uint64 SkinMatrixRevision = 0;
-	mutable bool bSkinMatricesDirty = true;
 
 	uint32 TargetRootBoneIndex = 0;
 	bool bIgnoreRootMotion = true;
+
+	// SkeletalMesh AABB는 전체 vertex CPU skinning 대신 bone별 influence bounds로 보수적으로 근사한다.
+	mutable TArray<FBoundingBox> BoneBounds;
+	mutable FBoundingBox UnweightedBounds;
+	mutable bool bBoneBoundsDirty = true;
 };
