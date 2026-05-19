@@ -34,14 +34,37 @@ public:
 	void Serialize(FArchive& Ar) override;
 	void PostEditProperty(const char* PropertyName) override;
 
+	UFUNCTION(Lua)
+	void			SetMoveInput(float ForwardValue, float RightValue);
+	UFUNCTION(Lua)
+	void			AddMoveInput(float ForwardValue, float RightValue);
+	UFUNCTION(Lua)
+	void			ClearMoveInput();
+	UFUNCTION(Lua)
+	void			SetLookInput(float DeltaX, float DeltaY);
+	UFUNCTION(Lua)
+	void			AddLookInput(float DeltaX, float DeltaY);
+	UFUNCTION(Lua)
+	void			ClearLookInput();
+	UFUNCTION(Lua)
+	void			Jump();
+	UFUNCTION(Lua)
+	void			StopMovementImmediately();
+	UFUNCTION(Lua)
+	void			SetControllerDesiredYaw(float InYawDegrees);
+
 	const FVector&	GetVelocity() const;
 	void			SetVelocity(const FVector& InVelocity);
 	EMovementMode	GetMovementMode() const;
 	void			SetMovementMode(EMovementMode NewMovementMode);
 	float			GetControllerDesiredYaw() const;
+	UFUNCTION(Lua)
 	float			GetSpeed2D() const;
+	UFUNCTION(Lua)
 	bool			IsWalking() const;
+	UFUNCTION(Lua)
 	bool			IsFalling() const;
+	UFUNCTION(Lua)
 	bool			IsMovingOnGround() const;
 
 private:

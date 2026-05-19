@@ -2,6 +2,7 @@
 #include "Component/PrimitiveComponent.h"
 #include "Serialization/Archive.h"
 
+#include <algorithm>
 #include <cmath>
 #include <cstring>
 
@@ -50,6 +51,74 @@ void UCharacterMovementComponent::PostEditProperty(const char* PropertyName)
 	}
 
 	UpdatedPrimitive = Cast<UPrimitiveComponent>(GetUpdatedComponent());
+}
+
+void UCharacterMovementComponent::SetMoveInput(float ForwardValue, float RightValue)
+{
+	// Character/Lua 쪽에서 이번 프레임에 사용할 이동 입력을 직접 지정합니다.
+	MoveForwardInput = std::clamp(ForwardValue, -1.0f, 1.0f);
+	MoveRightInput = std::clamp(RightValue, -1.0f, 1.0f);
+}
+
+void UCharacterMovementComponent::AddMoveInput(float ForwardValue, float RightValue)
+{
+	// 여러 입력 소스가 값을 더할 수 있으므로 누적 후 -1~1 범위로 제한합니다.
+	MoveForwardInput = std::clamp(MoveForwardInput + ForwardValue, -1.0f, 1.0f);
+	MoveRightInput = std::clamp(MoveRightInput + RightValue, -1.0f, 1.0f);
+}
+
+void UCharacterMovementComponent::ClearMoveInput()
+{
+	MoveForwardInput = 0.0f;
+	MoveRightInput = 0.0f;
+}
+
+void UCharacterMovementComponent::SetLookInput(float DeltaX, float DeltaY)
+{
+	// Look 입력은 회전 단계에서 매 프레임 소비할 델타값입니다.
+	LookInputX = DeltaX;
+	LookInputY = DeltaY;
+}
+
+void UCharacterMovementComponent::AddLookInput(float DeltaX, float DeltaY)
+{
+	LookInputX += DeltaX;
+	LookInputY += DeltaY;
+}
+
+void UCharacterMovementComponent::ClearLookInput()
+{
+	LookInputX = 0.0f;
+	LookInputY = 0.0f;
+}
+
+void UCharacterMovementComponent::Jump()
+{
+	if (!IsMovingOnGround())
+	{
+		return;
+	}
+
+	// 실제 낙하 물리는 이후 단계에서 처리하고, 여기서는 점프 상태 전환만 준비합니다.
+	Velocity.Z = JumpZVelocity;
+	SetMovementMode(MOVE_Falling);
+}
+
+void UCharacterMovementComponent::StopMovementImmediately()
+{
+	Velocity = FVector::ZeroVector;
+	Acceleration = FVector::ZeroVector;
+
+	UpdatedPrimitive = Cast<UPrimitiveComponent>(GetUpdatedComponent());
+	if (UpdatedPrimitive)
+	{
+		UpdatedPrimitive->SetLinearVelocity(FVector::ZeroVector);
+	}
+}
+
+void UCharacterMovementComponent::SetControllerDesiredYaw(float InYawDegrees)
+{
+	ControllerDesiredYawDegrees = InYawDegrees;
 }
 
 const FVector& UCharacterMovementComponent::GetVelocity() const
