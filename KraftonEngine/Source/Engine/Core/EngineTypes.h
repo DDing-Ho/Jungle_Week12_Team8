@@ -140,3 +140,14 @@ enum EEngineShowFlags : uint32
 
 	SF_All = SF_Primitives | SF_Grid | SF_BoundingBox | SF_BillboardText | SF_Gizmo
 };
+
+// ============================================================
+// EMovementMode — CMC 움직임 분기
+// ============================================================
+enum EMovementMode
+{
+	MOVE_None,			// movement disabled
+	MOVE_Walking,		// Walking on a surface
+	MOVE_Falling,		// Falling under the effects of gravity
+	MOVE_Max
+};
