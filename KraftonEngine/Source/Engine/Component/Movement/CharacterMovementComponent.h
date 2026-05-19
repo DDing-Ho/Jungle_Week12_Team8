@@ -72,6 +72,7 @@ private:
 	void			PhysFalling(float DeltaTime);
 	void			UpdateVelocityWalking(float DeltaTime);
 	void			UpdateVelocityFalling(float DeltaTime);
+	void			UpdateRotation(float DeltaTime);
 	FVector			GetCurrentMoveDirection() const;
 	FVector			GetPlanarForward() const;
 	FVector			GetPlanarRight() const;

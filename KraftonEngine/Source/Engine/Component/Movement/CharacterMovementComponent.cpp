@@ -1,10 +1,68 @@
 ﻿#include "CharacterMovementComponent.h"
 #include "Component/PrimitiveComponent.h"
+#include "Math/Quat.h"
 #include "Serialization/Archive.h"
 
 #include <algorithm>
 #include <cmath>
 #include <cstring>
+
+namespace
+{
+	float ClampFloat(float Value, float MinValue, float MaxValue)
+	{
+		return std::max(MinValue, std::min(MaxValue, Value));
+	}
+
+	// -180.0f ~ 180.0f 사이로 Degree 정규화
+	float NormalizeAxisDegrees(float AngleDegrees)
+	{
+		AngleDegrees = std::fmod(AngleDegrees, 360.0f);
+		if (AngleDegrees > 180.0f)
+		{
+			AngleDegrees -= 360.0f;
+		}
+		else if (AngleDegrees <= -180.0f)
+		{
+			AngleDegrees += 360.0f;
+		}
+		return AngleDegrees;
+	}
+
+	float FindDeltaAngleDegrees(float CurrentDegrees, float TargetDegrees)
+	{
+		return NormalizeAxisDegrees(TargetDegrees - CurrentDegrees);
+	}
+
+	float DirectionToYawDegrees(const FVector& Direction)
+	{
+		// Z-up LH 기준: +X가 Yaw 0도, +Y가 Yaw 90도입니다.
+		return std::atan2(Direction.Y, Direction.X) * RAD_TO_DEG;
+	}
+
+	FQuat MakeYawQuatDegrees(float YawDegrees)
+	{
+		return FQuat::FromAxisAngle(FVector::UpVector, YawDegrees * DEG_TO_RAD).GetNormalized();
+	}
+
+	void SetWorldYaw(USceneComponent* Component, float WorldYawDegrees)
+	{
+		if (!Component)
+		{
+			return;
+		}
+
+		const FQuat WorldYawQuat = MakeYawQuatDegrees(WorldYawDegrees);
+		if (USceneComponent* Parent = Component->GetParent())
+		{
+			const FQuat ParentWorldQuat = FQuat::FromMatrix(Parent->GetWorldMatrix());
+			Component->SetRelativeRotation((WorldYawQuat * ParentWorldQuat.Inverse()).GetNormalized());
+			return;
+		}
+
+		Component->SetRelativeRotation(WorldYawQuat);
+	}
+}
 
 void UCharacterMovementComponent::BeginPlay()
 {
@@ -35,6 +93,7 @@ void UCharacterMovementComponent::TickComponent(float DeltaTime, ELevelTick Tick
 		break;
 	}
 
+	UpdateRotation(DeltaTime);
 	ClearLookInput();
 }
 
@@ -252,6 +311,64 @@ void UCharacterMovementComponent::UpdateVelocityFalling(float DeltaTime)
 
 	Velocity.Z += GravityZ * DeltaTime;
 	LimitVelocity2D(MaxWalkSpeed);
+}
+
+void UCharacterMovementComponent::UpdateRotation(float DeltaTime)
+{
+	if (!UpdatedPrimitive)
+	{
+		return;
+	}
+
+	bool bHasTargetYaw = false;
+	float TargetYawDegrees = 0.0f;
+
+	if (bOrientRotationToMovement)
+	{
+		FVector VelocityDirection(Velocity.X, Velocity.Y, 0.0f);
+		if (!VelocityDirection.IsNearlyZero())
+		{
+			VelocityDirection.Normalize();
+			TargetYawDegrees = DirectionToYawDegrees(VelocityDirection);
+			bHasTargetYaw = true;
+		}
+	}
+	else if (bUseControllerDesiredRotation)
+	{
+		// 컨트롤러 회전 모드에서는 Look X 입력을 목표 Yaw에 누적합니다.
+		ControllerDesiredYawDegrees = NormalizeAxisDegrees(ControllerDesiredYawDegrees + LookInputX * MouseSensitivity);
+		TargetYawDegrees = ControllerDesiredYawDegrees;
+		bHasTargetYaw = true;
+	}
+
+	if (!bHasTargetYaw)
+	{
+		return;
+	}
+
+	FVector CurrentForward = UpdatedPrimitive->GetForwardVector();
+	CurrentForward.Z = 0.0f;
+	if (CurrentForward.IsNearlyZero())
+	{
+		CurrentForward = FVector::ForwardVector;
+	}
+	else
+	{
+		CurrentForward.Normalize();
+	}
+
+	const float CurrentYawDegrees = DirectionToYawDegrees(CurrentForward);
+	float NewYawDegrees = TargetYawDegrees;
+
+	if (RotationRateYaw >= 0.0f)
+	{
+		const float DeltaYawDegrees = FindDeltaAngleDegrees(CurrentYawDegrees, TargetYawDegrees);
+		const float MaxYawStep = RotationRateYaw * DeltaTime;
+		const float AppliedYawStep = ClampFloat(DeltaYawDegrees, -MaxYawStep, MaxYawStep);
+		NewYawDegrees = CurrentYawDegrees + AppliedYawStep;
+	}
+
+	SetWorldYaw(UpdatedPrimitive, NormalizeAxisDegrees(NewYawDegrees));
 }
 
 FVector UCharacterMovementComponent::GetCurrentMoveDirection() const
