@@ -2,8 +2,10 @@
 
 #include "Animation/AnimDataModel.h"
 #include "Animation/AnimSequence.h"
+#include "Animation/AnimSequenceManager.h"
 #include "Animation/Notify.h"
 #include "Animation/NotifyRegistry.h"
+#include "Asset/AssetPackage.h"
 #include "Component/Light/DirectionalLightComponent.h"
 #include "Component/SkeletalMeshComponent.h"
 #include "Core/Property/FEnumProperty.h"
@@ -17,6 +19,7 @@
 #include "Mesh/SkeletalMeshAsset.h"
 #include "Mesh/SkeletonAsset.h"
 #include "Object/FUObjectArray.h"
+#include "Platform/Paths.h"
 #include "Runtime/Engine.h"
 #include "Slate/SlateApplication.h"
 #include "UI/Toolbar/ViewportToolbar.h"
@@ -25,6 +28,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
+#include <filesystem>
 #include <imgui.h>
 
 namespace
@@ -38,6 +42,19 @@ namespace
 			Result.insert(static_cast<size_t>(InsertPos), ",");
 		}
 		return Result;
+	}
+
+	FString GetAnimSequenceDisplayName(const FString& AnimSequencePath)
+	{
+		std::filesystem::path Path(FPaths::ToWide(AnimSequencePath));
+		FString Name = FPaths::ToUtf8(Path.stem().generic_wstring());
+		const FString Suffix = "_AnimSequence";
+		if (Name.length() > Suffix.length() &&
+			Name.compare(Name.length() - Suffix.length(), Suffix.length(), Suffix) == 0)
+		{
+			Name.erase(Name.length() - Suffix.length());
+		}
+		return Name;
 	}
 
 	// Notify 프로퍼티 1개를 타입별로 렌더링. 변경 여부 반환.
@@ -172,6 +189,11 @@ void FAnimSequenceEditorWidget::Open(UObject* Object)
 		return;
 	}
 
+	if (IsOpen())
+	{
+		ReleasePreviewWorld();
+	}
+
 	FAssetEditorWidget::Open(Object);
 
 	AnimSequence = Cast<UAnimSequence>(EditedObject);
@@ -242,6 +264,7 @@ void FAnimSequenceEditorWidget::InitializeFromAnimSequence()
 	PreviousTime = 0.0f;
 	bPlaying = false;
 	bLooping = AnimSequence ? AnimSequence->IsLooping() : true;
+	TimelinePlayRate = 1.0f;
 
 	SelectedNotifyIndex = -1;
 	DraggingNotifyIndex = -1;
@@ -251,10 +274,100 @@ void FAnimSequenceEditorWidget::InitializeFromAnimSequence()
 	// Notify는 아직 AnimSequenceBase에 정식 저장 구조가 없기 때문에 에디터 미리보기 배열만 초기화합니다.
 	// TODO(AnimNotify): 추후 AnimSequenceBase의 Notifies로 이동 필요.
 	PreviewNotifyMarkers.clear();
+	RelatedAnimSequences.clear();
 
 	// Bone override도 asset 원본에 저장하지 않는 preview-local 상태입니다.
 	// 새 sequence를 열 때 이전 override가 남으면 다른 Skeleton index에 잘못 적용될 수 있어 반드시 비웁니다.
 	EditorBoneOverrides.clear();
+
+	RefreshRelatedAnimSequences();
+}
+
+void FAnimSequenceEditorWidget::RefreshRelatedAnimSequences()
+{
+	RelatedAnimSequences.clear();
+
+	if (!AnimSequence)
+	{
+		return;
+	}
+
+	const FString& SkeletonPath = AnimSequence->GetSkeletonPath();
+	if (SkeletonPath.empty())
+	{
+		return;
+	}
+	// Asset/ 부터 순회 시작
+	const std::filesystem::path AssetRoot(FPaths::AssetDir());
+	if (!std::filesystem::exists(AssetRoot))
+	{
+		return;
+	}
+
+	// .uasset 확장자 + 헤더 정보 읽어보고 AnimSequence 타입이 아닌경우 패스
+	for (const auto& Entry : std::filesystem::recursive_directory_iterator(AssetRoot))
+	{
+		if (!Entry.is_regular_file() || Entry.path().extension() != L".uasset")
+		{
+			continue;
+		}
+
+		const FString PackagePath = FPaths::ToUtf8(
+			Entry.path().lexically_relative(FPaths::RootDir()).generic_wstring());
+
+		EAssetPackageType PackageType = EAssetPackageType::Unknown;
+		if (!FAssetPackage::GetPackageType(PackagePath, PackageType) ||
+			PackageType != EAssetPackageType::AnimSequence)
+		{
+			continue;
+		}
+
+		UAnimSequence* CandidateSequence = FAnimSequenceManager::Get().Load(PackagePath);
+		if (!CandidateSequence)
+		{
+			continue;
+		}
+
+		if (CandidateSequence->GetSkeletonPath() != SkeletonPath)
+		{
+			continue;
+		}
+
+		FRelatedAnimSequenceItem Item;
+		Item.Path = CandidateSequence->GetAssetPathFileName();
+		Item.Name = GetAnimSequenceDisplayName(Item.Path);
+		Item.Sequence = CandidateSequence;
+		RelatedAnimSequences.push_back(Item);
+	}
+
+	std::sort(
+		RelatedAnimSequences.begin(),
+		RelatedAnimSequences.end(),
+		[](const FRelatedAnimSequenceItem& A, const FRelatedAnimSequenceItem& B)
+		{
+			return A.Name < B.Name;
+		});
+}
+
+void FAnimSequenceEditorWidget::OpenRelatedAnimSequence(const FString& AnimSequencePath)
+{
+	if (!AnimSequence || AnimSequencePath.empty())
+	{
+		return;
+	}
+
+	if (AnimSequence->GetAssetPathFileName() == AnimSequencePath)
+	{
+		return;
+	}
+
+	UAnimSequence* SequenceToOpen = FAnimSequenceManager::Get().Load(AnimSequencePath);
+	if (!SequenceToOpen)
+	{
+		return;
+	}
+
+	Open(SequenceToOpen);
 }
 
 USkeletalMesh* FAnimSequenceEditorWidget::FindPreviewSkeletalMesh()
@@ -698,6 +811,10 @@ void FAnimSequenceEditorWidget::Render(float DeltaTime)
 
 	ImGui::BeginChild("AnimSequenceBoneDetails", ImVec2(DetailsWidth, 0), true);
 	RenderBoneDetailsPanel();
+	ImGui::Spacing();
+	ImGui::Separator();
+	ImGui::Spacing();
+	RenderRelatedAnimSequenceList();
 	ImGui::EndChild();
 
 	ImGui::EndChild();
@@ -734,6 +851,44 @@ void FAnimSequenceEditorWidget::CollectPreviewViewports(TArray<IEditorPreviewVie
 	{
 		OutClients.push_back(const_cast<FMeshEditorViewportClient*>(&ViewportClient));
 	}
+}
+// --- 동일한 Bone을 공유하는 Sequence list Render ImGui 묶음---
+void FAnimSequenceEditorWidget::RenderRelatedAnimSequenceList()
+{
+	ImGui::Text("Anim Sequences");
+	ImGui::Separator();
+
+	if (RelatedAnimSequences.empty())
+	{
+		ImGui::TextDisabled("No related sequences.");
+		return;
+	}
+
+	const FString CurrentPath = AnimSequence ? AnimSequence->GetAssetPathFileName() : FString();
+	const float ListHeight = std::clamp(ImGui::GetContentRegionAvail().y * 0.35f, 120.0f, 260.0f);
+
+	ImGui::BeginChild("##RelatedAnimSequenceList", ImVec2(0.0f, ListHeight), true);
+	for (const FRelatedAnimSequenceItem& Item : RelatedAnimSequences)
+	{
+		const bool bSelected = Item.Path == CurrentPath;
+		if (ImGui::Selectable(Item.Name.c_str(), bSelected, ImGuiSelectableFlags_AllowDoubleClick))
+		{
+			if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
+			{
+				OpenRelatedAnimSequence(Item.Path);
+				ImGui::EndChild();
+				return;
+			}
+		}
+
+		if (ImGui::IsItemHovered())
+		{
+			ImGui::BeginTooltip();
+			ImGui::TextUnformatted(Item.Name.c_str());
+			ImGui::EndTooltip();
+		}
+	}
+	ImGui::EndChild();
 }
 
 void FAnimSequenceEditorWidget::RenderSkeletonTree(const FSkeletonAsset* SkeletonAsset, int32 BoneIndex)
@@ -996,6 +1151,96 @@ void FAnimSequenceEditorWidget::RenderStatsOverlay(ImDrawList* DrawList, const I
 }
 
 // ----- Timeline 관련 계산 기능 ----------
+float FAnimSequenceEditorWidget::GetTimelineFrameStep() const
+{
+	float FrameRate = AnimSequence ? AnimSequence->GetSamplingFrameRate() : 0.0f;
+	if (FrameRate <= 0.0f)
+	{
+		if (const UAnimDataModel* DataModel = AnimSequence ? AnimSequence->GetDataModel() : nullptr)
+		{
+			FrameRate = DataModel->GetFrameRate();
+		}
+	}
+
+	return FrameRate > 0.0f ? (1.0f / FrameRate) : (1.0f / 30.0f);
+}
+
+void FAnimSequenceEditorWidget::SetTimelineTime(float NewTime)
+{
+	const float ClampedTime = std::clamp(NewTime, 0.0f, std::max(0.0f, PlayLength));
+
+	if (SingleNodeInstance)
+	{
+		SingleNodeInstance->Stop();
+		SingleNodeInstance->SetCurrentTime(ClampedTime);
+		CurrentTime = SingleNodeInstance->GetCurrentTickTime();
+	}
+	else
+	{
+		bPlaying = false;
+		PreviousTime = CurrentTime;
+		CurrentTime = ClampedTime;
+	}
+}
+
+void FAnimSequenceEditorWidget::StopTimelinePlayback()
+{
+	if (SingleNodeInstance)
+	{
+		SingleNodeInstance->Stop();
+		CurrentTime = SingleNodeInstance->GetCurrentTickTime();
+	}
+	else
+	{
+		bPlaying = false;
+	}
+}
+
+void FAnimSequenceEditorWidget::PlayTimeline(float PlayRate)
+{
+	if (PlayLength <= 0.0f)
+	{
+		return;
+	}
+
+	TimelinePlayRate = PlayRate;
+
+	if (SingleNodeInstance)
+	{
+		if (PlayRate > 0.0f && CurrentTime >= PlayLength)
+		{
+			SingleNodeInstance->SetCurrentTime(0.0f);
+		}
+		else if (PlayRate < 0.0f && CurrentTime <= 0.0f)
+		{
+			SingleNodeInstance->SetCurrentTime(PlayLength);
+		}
+
+		SingleNodeInstance->SetPlayRate(PlayRate);
+		SingleNodeInstance->SetLooping(bLooping);
+		SingleNodeInstance->Play(bLooping);
+		CurrentTime = SingleNodeInstance->GetCurrentTickTime();
+	}
+	else
+	{
+		if (PlayRate > 0.0f && CurrentTime >= PlayLength)
+		{
+			CurrentTime = 0.0f;
+		}
+		else if (PlayRate < 0.0f && CurrentTime <= 0.0f)
+		{
+			CurrentTime = PlayLength;
+		}
+
+		bPlaying = true;
+	}
+}
+
+void FAnimSequenceEditorWidget::StepTimelineFrame(int32 FrameOffset)
+{
+	SetTimelineTime(CurrentTime + GetTimelineFrameStep() * static_cast<float>(FrameOffset));
+}
+
 void FAnimSequenceEditorWidget::TickTimeline(float DeltaTime)
 {
 	PreviousTime = CurrentTime;
@@ -1008,20 +1253,25 @@ void FAnimSequenceEditorWidget::TickTimeline(float DeltaTime)
 
 	// Tick에서는 Timeline 시간이 먼저 진행되고, 그 다음 단계에서 CurrentTime 기준 pose가 평가됩니다.
 	// 이렇게 순서를 고정해야 UI의 playhead, Notify marker trigger 판단, PreviewComponent pose가 같은 시간을 보게 됩니다.
-	CurrentTime += DeltaTime;
+	CurrentTime += DeltaTime * TimelinePlayRate;
 
 	if (bLooping)
 	{
-		while (CurrentTime > PlayLength)
+		while (CurrentTime > PlayLength) // 정방향 재생
 		{
 			CurrentTime -= PlayLength;
+		}
+		while (CurrentTime < 0.0f)		// 역방향 재생
+		{
+			CurrentTime += PlayLength;
 		}
 	}
 	else
 	{
 		CurrentTime = std::clamp(CurrentTime, 0.0f, PlayLength);
 
-		if (CurrentTime >= PlayLength)
+		if ((TimelinePlayRate >= 0.0f && CurrentTime >= PlayLength) ||
+			(TimelinePlayRate < 0.0f && CurrentTime <= 0.0f))
 		{
 			bPlaying = false;
 		}
@@ -1044,80 +1294,79 @@ void FAnimSequenceEditorWidget::RenderTimelinePanel()
 
 	// Timeline은 AnimSequence editor의 핵심 상태 표시 영역이므로 PlayLength가 0이어도 숨기지 않습니다.
 	// 길이가 0인 asset은 컨트롤만 비활성화하고, 아래 ruler를 0초 기준으로 그려 metadata 문제를 바로 확인할 수 있게 합니다.
-	const bool bCurrentlyPlaying = SingleNodeInstance ? SingleNodeInstance->IsPlaying() : bPlaying;
+	const bool bCanPlay = bHasTimelineLength;
+	const float ButtonWidth = 28.0f;
 
-	ImGui::BeginDisabled(!bHasTimelineLength);
-	if (ImGui::Button(bCurrentlyPlaying ? "Pause" : "Play"))
+	auto DrawTimelineButton = [&](const char* Label, const char* Tooltip, const ImVec2& Size) -> bool
 	{
-		if (SingleNodeInstance)
+		const bool bClicked = ImGui::Button(Label, Size);
+		if (ImGui::IsItemHovered())
 		{
-			if (bCurrentlyPlaying)
-				SingleNodeInstance->Stop();
-			else
-				SingleNodeInstance->Play(bLooping);
+			ImGui::BeginTooltip();
+			ImGui::TextUnformatted(Tooltip);
+			ImGui::EndTooltip();
 		}
-		else
-		{
-			bPlaying = !bPlaying;
-		}
+		return bClicked;
+	};
+
+	ImGui::BeginDisabled(!bCanPlay);
+	if (DrawTimelineButton("|<##FirstFrame", "첫 프레임", ImVec2(ButtonWidth, 0.0f)))
+	{
+		SetTimelineTime(0.0f);
 	}
 	ImGui::EndDisabled();
 
-	ImGui::SameLine();
+	ImGui::SameLine(0.0f, 3.0f);
 
-	if (ImGui::Button("First"))
+	ImGui::BeginDisabled(!bCanPlay);
+	if (DrawTimelineButton("<|##PreviousFrame", "이전 프레임", ImVec2(ButtonWidth, 0.0f)))
 	{
-		if (SingleNodeInstance)
-		{
-			SingleNodeInstance->Stop();
-			SingleNodeInstance->SetCurrentTime(0.0f);
-			CurrentTime = 0.0f;
-		}
-		else
-		{
-			bPlaying = false;
-			PreviousTime = CurrentTime;
-			CurrentTime = 0.0f;
-		}
-	}
-
-	ImGui::SameLine();
-
-	ImGui::BeginDisabled(!bHasTimelineLength);
-	if (ImGui::Button("Last"))
-	{
-		if (SingleNodeInstance)
-		{
-			SingleNodeInstance->Stop();
-			SingleNodeInstance->SetCurrentTime(PlayLength);
-			CurrentTime = PlayLength;
-		}
-		else
-		{
-			bPlaying = false;
-			PreviousTime = CurrentTime;
-			CurrentTime = PlayLength;
-		}
+		StepTimelineFrame(-1);
 	}
 	ImGui::EndDisabled();
 
-	ImGui::SameLine();
+	ImGui::SameLine(0.0f, 3.0f);
 
-	if (ImGui::Button("Stop"))
+	ImGui::BeginDisabled(!bCanPlay);
+	if (DrawTimelineButton("<##ReversePlay", "역재생", ImVec2(ButtonWidth, 0.0f)))
 	{
-		if (SingleNodeInstance)
-		{
-			SingleNodeInstance->Stop();
-			SingleNodeInstance->SetCurrentTime(0.0f);
-			CurrentTime = 0.0f;
-		}
-		else
-		{
-			bPlaying = false;
-			PreviousTime = CurrentTime;
-			CurrentTime = 0.0f;
-		}
+		PlayTimeline(-1.0f);
 	}
+	ImGui::EndDisabled();
+
+	ImGui::SameLine(0.0f, 3.0f);
+
+	if (DrawTimelineButton("||##Pause", "일시정지", ImVec2(ButtonWidth, 0.0f)))
+	{
+		StopTimelinePlayback();
+	}
+
+	ImGui::SameLine(0.0f, 3.0f);
+
+	ImGui::BeginDisabled(!bCanPlay);
+	if (DrawTimelineButton(">##ForwardPlay", "정재생", ImVec2(ButtonWidth, 0.0f)))
+	{
+		PlayTimeline(1.0f);
+	}
+	ImGui::EndDisabled();
+
+	ImGui::SameLine(0.0f, 3.0f);
+
+	ImGui::BeginDisabled(!bCanPlay);
+	if (DrawTimelineButton("|>##NextFrame", "다음 프레임", ImVec2(ButtonWidth, 0.0f)))
+	{
+		StepTimelineFrame(1);
+	}
+	ImGui::EndDisabled();
+
+	ImGui::SameLine(0.0f, 3.0f);
+
+	ImGui::BeginDisabled(!bCanPlay);
+	if (DrawTimelineButton(">|##LastFrame", "마지막 프레임", ImVec2(ButtonWidth, 0.0f)))
+	{
+		SetTimelineTime(PlayLength);
+	}
+	ImGui::EndDisabled();
 
 	ImGui::SameLine();
 	if (ImGui::Checkbox("Loop", &bLooping))

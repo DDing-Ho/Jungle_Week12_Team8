@@ -40,6 +40,7 @@ public:
 
 private:
 	void RenderSkeletonTree(const FSkeletonAsset* SkeletonAsset, int32 BoneIndex);
+	void RenderRelatedAnimSequenceList();
 	void RenderViewportPanel(float Deltatime);
 	void RenderBoneDetailsPanel();
 	void RenderStatsOverlay(ImDrawList* DrawList, const ImVec2& ViewportPos) const;
@@ -47,6 +48,8 @@ private:
 
 	void SetSelectedBones(int32 BoneIndex);
 	void InitializeFromAnimSequence();
+	void RefreshRelatedAnimSequences();
+	void OpenRelatedAnimSequence(const FString& AnimSequencePath);
 	USkeletalMesh* FindPreviewSkeletalMesh();
 	void InitializePreviewWorld();
 	void ReleasePreviewWorld();
@@ -57,6 +60,11 @@ private:
 
 	// --------------- Time line Section -----------------
 	void TickTimeline(float DeltaTime);
+	float GetTimelineFrameStep() const;
+	void SetTimelineTime(float NewTime);
+	void StopTimelinePlayback();
+	void PlayTimeline(float PlayRate);
+	void StepTimelineFrame(int32 FrameOffset);
 
 	void DrawNotifyTrack(
 		ImDrawList* DrawList,
@@ -108,6 +116,7 @@ private:
 	float PlayLength = 0.0f;
 	bool bPlaying = false;
 	bool bLooping = true;
+	float TimelinePlayRate = 1.0f;  // 역재생용
 
 	// ============================================================
 	// Timeline View State
@@ -137,6 +146,16 @@ private:
 	};
 
 	TArray<FEditorBoneOverride> EditorBoneOverrides;
+
+	// --- Bone을 공유하는 Sequence 목록을 저장해둔다 ---
+	struct FRelatedAnimSequenceItem
+	{
+		FString Name;
+		FString Path;
+		UAnimSequence* Sequence = nullptr;
+	};
+
+	TArray<FRelatedAnimSequenceItem> RelatedAnimSequences;
 
 	bool bPendingClose = false;
 };

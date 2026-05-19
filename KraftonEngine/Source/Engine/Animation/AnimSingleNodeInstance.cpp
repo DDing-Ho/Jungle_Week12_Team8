@@ -17,6 +17,7 @@ void UAnimSingleNodeInstance::SetAnimation(UAnimationAsset* Asset)
 	ResetNotifyState();
 	Sequence = Cast<UAnimSequence>(Asset);
 	CurrentTime = 0.0f;
+	PlayRate = 1.0f;
 	bPlaying = false;
 }
 
@@ -51,11 +52,17 @@ void UAnimSingleNodeInstance::NativeUpdateAnimation(float DeltaSeconds)
 	float Length = Sequence->GetPlayLength();
 	if (bLooping)
 	{
-		while (CurrentTime >= Length) CurrentTime -= Length;
+		while (CurrentTime >= Length) CurrentTime -= Length;	// 정방향 재생
+		while (CurrentTime < 0.0f) CurrentTime += Length;		// 역방향 재생
 	}
-	else if (CurrentTime >= Length)
+	else if (PlayRate >= 0.0f && CurrentTime >= Length)	
 	{
 		CurrentTime = Length;
+		bPlaying = false;
+	}
+	else if (PlayRate < 0.0f && CurrentTime <= 0.0f)
+	{
+		CurrentTime = 0.0f;
 		bPlaying = false;
 	}
 }
