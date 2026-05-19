@@ -2,6 +2,7 @@
 #include "Component/PrimitiveComponent.h"
 #include "Serialization/Archive.h"
 
+#include <cmath>
 #include <cstring>
 
 void UCharacterMovementComponent::BeginPlay()
@@ -49,4 +50,54 @@ void UCharacterMovementComponent::PostEditProperty(const char* PropertyName)
 	}
 
 	UpdatedPrimitive = Cast<UPrimitiveComponent>(GetUpdatedComponent());
+}
+
+const FVector& UCharacterMovementComponent::GetVelocity() const
+{
+	return Velocity;
+}
+
+void UCharacterMovementComponent::SetVelocity(const FVector& InVelocity)
+{
+	Velocity = InVelocity;
+}
+
+EMovementMode UCharacterMovementComponent::GetMovementMode() const
+{
+	return MovementMode;
+}
+
+void UCharacterMovementComponent::SetMovementMode(EMovementMode NewMovementMode)
+{
+	MovementMode = NewMovementMode;
+	if (MovementMode == MOVE_Walking)
+	{
+		// 지상 이동으로 전환되면 낙하 속도는 더 이상 유지하지 않습니다.
+		Velocity.Z = 0.0f;
+	}
+}
+
+float UCharacterMovementComponent::GetControllerDesiredYaw() const
+{
+	return ControllerDesiredYawDegrees;
+}
+
+float UCharacterMovementComponent::GetSpeed2D() const
+{
+	return std::sqrt(Velocity.X * Velocity.X + Velocity.Y * Velocity.Y);
+}
+
+bool UCharacterMovementComponent::IsWalking() const
+{
+	return MovementMode == MOVE_Walking;
+}
+
+bool UCharacterMovementComponent::IsFalling() const
+{
+	return MovementMode == MOVE_Falling;
+}
+
+bool UCharacterMovementComponent::IsMovingOnGround() const
+{
+	return IsWalking();
 }

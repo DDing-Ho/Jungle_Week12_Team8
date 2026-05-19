@@ -34,8 +34,31 @@ public:
 	void Serialize(FArchive& Ar) override;
 	void PostEditProperty(const char* PropertyName) override;
 
+	const FVector&	GetVelocity() const;
+	void			SetVelocity(const FVector& InVelocity);
+	EMovementMode	GetMovementMode() const;
+	void			SetMovementMode(EMovementMode NewMovementMode);
+	float			GetControllerDesiredYaw() const;
+	float			GetSpeed2D() const;
+	bool			IsWalking() const;
+	bool			IsFalling() const;
+	bool			IsMovingOnGround() const;
+
 private:
 	UPrimitiveComponent* UpdatedPrimitive = nullptr;
+
+	// 런타임 이동 상태입니다. 저장/에디터 노출 대상이 아니므로 UPROPERTY로 만들지 않습니다.
+	FVector Velocity = FVector::ZeroVector;
+	FVector Acceleration = FVector::ZeroVector;
+
+	// 외부 Character/Lua/Controller가 이후 단계에서 주입할 입력 누적값입니다.
+	float MoveForwardInput = 0.0f;
+	float MoveRightInput = 0.0f;
+	float LookInputX = 0.0f;
+	float LookInputY = 0.0f;
+
+	// 컨트롤러 방향 회전 모드에서 사용할 목표 월드 Yaw입니다.
+	float ControllerDesiredYawDegrees = 0.0f;
 
 	// 현재 캐릭터 이동 상태
 	UPROPERTY(Edit, Category="Character Movement", DisplayName="Movement Mode", Type=Enum, EnumNames=GCharacterMovementModeNames, EnumCount=4, EnumSize=sizeof(EMovementMode))
