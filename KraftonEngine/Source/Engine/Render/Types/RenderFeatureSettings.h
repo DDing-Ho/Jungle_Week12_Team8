@@ -24,5 +24,5 @@ public:
 	void SetSkinningMode(ESkinningMode InMode) { SkinningMode = InMode; }
 
 private:
-	ESkinningMode SkinningMode = ESkinningMode::CPU;
+	ESkinningMode SkinningMode = ESkinningMode::GPU;
 };
