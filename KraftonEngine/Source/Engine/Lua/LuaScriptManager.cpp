@@ -17,6 +17,7 @@
 #include "Viewport/GameViewportClient.h"
 #include "Input/InputSystem.h"
 #include "GameFramework/AActor.h"
+#include "GameFramework/Character.h"
 #include "GameFramework/Pawn.h"
 #include "GameFramework/PlayerController.h"
 #include "GameFramework/PlayerCameraManager.h"
@@ -955,6 +956,12 @@ void FLuaScriptManager::RegisterActorBindings(sol::state& Lua)
 		"GetFloatingPawnMovement", [](AActor& Actor)
 	{
 		return Actor.GetComponentByClass<UFloatingPawnMovementComponent>();
+	},
+
+		"GetCharacterMovement", [](AActor& Actor) -> UCharacterMovementComponent*
+	{
+		ACharacter* Character = Cast<ACharacter>(&Actor);
+		return Character ? Character->GetCharacterMovement() : nullptr;
 	},
 
 		"GetCamera", [](AActor& Actor)
