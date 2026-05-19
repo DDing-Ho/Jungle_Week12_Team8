@@ -6,14 +6,6 @@
 #include "Math/Matrix.h"
 #include "Math/Quat.h"
 
-IMPLEMENT_CLASS(URotatingMovementComponent, UMovementComponent)
-
-BEGIN_CLASS_PROPERTIES(URotatingMovementComponent)
-	REGISTER_PROPERTY(RotationRate, "Rotation Rate", EPropertyType::Rotator, "Movement", CPF_Edit)
-	PROPERTY_BOOL(bRotationInLocalSpace, "Rotation In Local Space", "Movement", CPF_Edit)
-	PROPERTY_VEC3(PivotTranslation, "Pivot Translation", "Movement", CPF_Edit)
-END_CLASS_PROPERTIES(URotatingMovementComponent)
-
 void URotatingMovementComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction& ThisTickFunction)
 {
 	UMovementComponent::TickComponent(DeltaTime, TickType, ThisTickFunction);

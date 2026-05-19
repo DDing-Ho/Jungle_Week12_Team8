@@ -3,8 +3,6 @@
 #include "Component/BillboardComponent.h"
 #include "Materials/MaterialManager.h"
 
-IMPLEMENT_CLASS(AHeightFogActor, AActor)
-
 AHeightFogActor::AHeightFogActor()
 {
 }

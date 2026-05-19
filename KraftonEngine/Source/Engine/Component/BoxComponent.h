@@ -2,11 +2,13 @@
 #pragma once
 
 #include "ShapeComponent.h"
+#include "BoxComponent.generated.h"
 
+UCLASS()
 class UBoxComponent : public UShapeComponent
 {
 public:
-	DECLARE_CLASS(UBoxComponent, UShapeComponent)
+	GENERATED_BODY(UBoxComponent)
 
 	void SetBoxExtent(const FVector& InExtent);
 	FVector GetScaledBoxExtent() const;
@@ -19,5 +21,6 @@ public:
 	void Serialize(FArchive& Ar) override;
 
 protected:
+	UPROPERTY(Edit, Category="Shape", DisplayName="Box Extent")
 	FVector BoxExtent = { 1.0f, 1.0f, 1.0f };
 };

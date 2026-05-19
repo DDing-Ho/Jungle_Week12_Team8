@@ -5,6 +5,7 @@
 
 class UActorComponent;
 class AActor;
+struct FSoftObjectPath;
 
 class FEditorPropertyWidget : public FEditorWidget
 {
@@ -20,11 +21,19 @@ private:
 	void RenderDetails(AActor* PrimaryActor, const TArray<AActor*>& SelectedActors);
 	void RenderComponentProperties(AActor* Actor, const TArray<AActor*>& SelectedActors);
 	void RenderActorProperties(AActor* PrimaryActor, const TArray<AActor*>& SelectedActors);
-	bool RenderPropertyWidget(TArray<class FProperty>& Props, int32& Index);
+	bool RenderPropertyWidget(
+		const TArray<const class FProperty*>& Props,
+		int32& Index,
+		void* Container,
+		bool bNotifyPostEdit = true,
+		const FString* NameOverride = nullptr);
 
 	void PropagatePropertyChange(const FString& PropName, const TArray<AActor*>& SelectedActors);
 
 	void AddComponentToActor(AActor* Actor, UClass* ComponentClass);
+
+	static FString OpenStaticMeshFileDialog();
+	static FString OpenFbxFileDialog();
 
 	UActorComponent* SelectedComponent = nullptr;
 	AActor* LastSelectedActor = nullptr;
@@ -33,4 +42,7 @@ private:
 
 	char RenameBuffer[256] = {};
 	bool bShowDuplicateWarning = false;
+	FString PendingStaticMeshImportPath;
+	FSoftObjectPath* PendingStaticMeshImportTarget = nullptr;
+	int32 PendingStaticFbxSkinnedMeshPolicy = 0;
 };

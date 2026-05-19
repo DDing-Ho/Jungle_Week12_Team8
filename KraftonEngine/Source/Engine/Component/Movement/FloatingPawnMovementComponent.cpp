@@ -10,13 +10,6 @@
 #include <algorithm>
 #include <cstring>
 
-IMPLEMENT_CLASS(UFloatingPawnMovementComponent, UMovementComponent)
-
-BEGIN_CLASS_PROPERTIES(UFloatingPawnMovementComponent)
-	PROPERTY_FLOAT(Speed, "Speed", "Movement", 0.0f, 100.0f, 0.1f, CPF_Edit)
-	PROPERTY_FLOAT(MouseSensitivity, "MouseSensitivity", "Movement", 0.0f, 10.0f, 0.01f, CPF_Edit)
-END_CLASS_PROPERTIES(UFloatingPawnMovementComponent)
-
 namespace
 {
 	void AddWorldRotation(USceneComponent* Component, const FQuat& DeltaWorldQuat)

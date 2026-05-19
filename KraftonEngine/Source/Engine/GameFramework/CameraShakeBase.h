@@ -2,6 +2,7 @@
 
 #include "Object/Object.h"
 #include "GameFramework/CameraTypes.h"
+#include "CameraShakeBase.generated.h"
 
 class APlayerCameraManager;
 
@@ -13,15 +14,16 @@ class APlayerCameraManager;
 //   - 데이터 기반 예시: UPerlinNoiseCameraShake, UWaveOscillatorCameraShake
 //   - Curve 기반 예시:  USequenceCameraShake (float curve asset 사용)
 //
-// 인스턴스는 CameraManager::StartCameraShake 가 UObjectManager 로 생성하고
+// 인스턴스는 CameraManager::StartCameraShake 가 GUObjectArray 로 생성하고
 // 매 프레임 매니저가 UpdateAndApplyCameraShake 를 호출한다. IsFinished()==true
 // 가 되면 매니저에서 제거된다.
 // UE: UCameraShakeBase
 // ============================================================
+UCLASS()
 class UCameraShakeBase : public UObject
 {
 public:
-	DECLARE_CLASS(UCameraShakeBase, UObject)
+	GENERATED_BODY(UCameraShakeBase)
 
 	UCameraShakeBase() = default;
 	~UCameraShakeBase() override = default;

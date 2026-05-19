@@ -1004,7 +1004,7 @@ bool FEditorObjImportService::ImportStaticMeshFromObj(const FString& ObjFilePath
 	const FString SourcePath = NormalizeProjectPath(ObjFilePath);
 	const FString PackagePath = GetStaticMeshPackagePathForObj(ObjFilePath);
 
-	UStaticMesh* StaticMesh = UObjectManager::Get().CreateObject<UStaticMesh>();
+	UStaticMesh* StaticMesh = GUObjectArray.CreateObject<UStaticMesh>();
 	NewMeshAsset->PathFileName = SourcePath;
 	StaticMesh->SetStaticMaterials(std::move(ParsedMaterials));
 	StaticMesh->SetStaticMeshAsset(NewMeshAsset.release());

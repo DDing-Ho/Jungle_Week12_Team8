@@ -6,7 +6,6 @@
 #include "Engine/Profiling/MemoryStats.h"
 #include "Mesh/MeshSimplifier.h"
 
-IMPLEMENT_CLASS(UStaticMesh, UObject)
 
 UStaticMesh::~UStaticMesh()
 {
@@ -17,6 +16,15 @@ UStaticMesh::~UStaticMesh()
 			static_cast<uint32>(StaticMeshAsset->Indices.size() * sizeof(uint32));
 
 		MemoryStats::SubStaticMeshCPUMemory(CPUSize);
+
+		delete StaticMeshAsset;
+		StaticMeshAsset = nullptr;
+	}
+
+	auto It = FMeshManager::StaticMeshCache.find(AssetPathFileName);
+	if (It != FMeshManager::StaticMeshCache.end() && It->second == this)
+	{
+		FMeshManager::StaticMeshCache.erase(It);
 	}
 }
 

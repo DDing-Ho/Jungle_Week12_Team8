@@ -4,6 +4,7 @@
 #include "Core/CollisionTypes.h"
 #include "Core/CoreTypes.h"
 #include "Math/Vector.h"
+#include "ProjectileMovementComponent.generated.h"
 
 enum class EProjectileHitBehavior : int32
 {
@@ -12,10 +13,11 @@ enum class EProjectileHitBehavior : int32
 	Destroy = 2,
 };
 
+UCLASS()
 class UProjectileMovementComponent : public UMovementComponent
 {
 public:
-	DECLARE_CLASS(UProjectileMovementComponent, UMovementComponent)
+	GENERATED_BODY(UProjectileMovementComponent)
 
 	UProjectileMovementComponent() = default;
 	~UProjectileMovementComponent() override = default;
@@ -38,7 +40,10 @@ protected:
 	virtual EProjectileHitBehavior GetHitBehavior() const;
 	virtual bool HandleBlockingHit(USceneComponent* UpdatedSceneComponent, const FVector& CurrentLocation, const FVector& MoveDelta, const FHitResult& HitResult);
 
+	UPROPERTY(Edit, Category="Movement")
 	FVector Velocity = FVector(0.0f, 0.0f, 0.0f);
+	UPROPERTY(Edit, Category="Movement", DisplayName="Initial Speed", Min=0.0f, Max=0.0f, Speed=10.0f)
 	float InitialSpeed = 10.0f;
+	UPROPERTY(Edit, Category="Movement", DisplayName="Max Speed", Min=0.0f, Max=0.0f, Speed=10.0f)
 	float MaxSpeed = 100.0f;
 };

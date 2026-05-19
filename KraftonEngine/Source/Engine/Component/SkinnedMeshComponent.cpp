@@ -8,14 +8,6 @@
 #include "Core/Log.h"
 #include "Profiling/Stats.h"
 
-IMPLEMENT_CLASS(USkinnedMeshComponent, UMeshComponent)
-HIDE_FROM_COMPONENT_LIST(USkinnedMeshComponent)
-
-BEGIN_CLASS_PROPERTIES(USkinnedMeshComponent)
-	REGISTER_PROPERTY(SkeletalMeshPath, "Skeletal Mesh", EPropertyType::SkeletalMeshRef, "Mesh", CPF_Edit)
-	PROPERTY_ARRAY(MaterialSlots, "Materials", "Materials", CPF_Edit | CPF_FixedSize, FMaterialSlot, EPropertyType::MaterialSlot, (void)0)
-END_CLASS_PROPERTIES(USkinnedMeshComponent)
-
 namespace
 {
 	constexpr float MatrixDecomposeTolerance = 1.0e-6f;
@@ -90,7 +82,7 @@ void USkinnedMeshComponent::SetSkeletalMesh(USkeletalMesh* InMesh)
 
 	if (InMesh)
 	{
-		SkeletalMeshPath = InMesh->GetAssetPathFileName();
+		SkeletalMesh.SetPath(InMesh->GetAssetPathFileName());
 		const TArray<FSkeletalMaterial>& DefaultMaterials = SkeletalMesh->GetSkeletalMaterials();
 
 		OverrideMaterials.resize(DefaultMaterials.size());
@@ -108,7 +100,7 @@ void USkinnedMeshComponent::SetSkeletalMesh(USkeletalMesh* InMesh)
 	}
 	else
 	{
-		SkeletalMeshPath = "None";
+		SkeletalMesh.Reset();
 		OverrideMaterials.clear();
 		MaterialSlots.clear();
 	}
@@ -792,7 +784,7 @@ void USkinnedMeshComponent::Serialize(FArchive& Ar)
 {
 	UMeshComponent::Serialize(Ar);
 	// asset pointer는 session마다 달라질 수 있어 path와 slot path만 직렬화한다.
-	Ar << SkeletalMeshPath;
+	Ar << SkeletalMesh;
 	Ar << MaterialSlots;
 }
 
@@ -801,10 +793,10 @@ void USkinnedMeshComponent::PostDuplicate()
 {
 	UMeshComponent::PostDuplicate();
 
-	if (!SkeletalMeshPath.empty() && SkeletalMeshPath != "None")
+	if (!SkeletalMesh.IsNull())
 	{
 		ID3D11Device* Device = GEngine->GetRenderer().GetFD3DDevice().GetDevice();
-		USkeletalMesh* Loaded = FMeshManager::LoadSkeletalMesh(SkeletalMeshPath, Device);
+		USkeletalMesh* Loaded = FMeshManager::LoadSkeletalMesh(SkeletalMesh.GetPath().ToString(), Device);
 		if (Loaded)
 		{
 			TArray<FMaterialSlot> SavedSlots = MaterialSlots;
@@ -842,10 +834,10 @@ void USkinnedMeshComponent::PostEditProperty(const char* PropertyName)
 	if (strcmp(PropertyName, "Skeletal Mesh") == 0)
 	{
 		// mesh path 변경도 코드 경로와 같은 SetSkeletalMesh를 통과시켜 skinning과 dirty 처리를 통일한다.
-		if (!SkeletalMeshPath.empty() && SkeletalMeshPath != "None")
+		if (!SkeletalMesh.IsNull())
 		{
 			ID3D11Device* Device = GEngine->GetRenderer().GetFD3DDevice().GetDevice();
-			USkeletalMesh* Loaded = FMeshManager::LoadSkeletalMesh(SkeletalMeshPath, Device);
+			USkeletalMesh* Loaded = FMeshManager::LoadSkeletalMesh(SkeletalMesh.GetPath().ToString(), Device);
 
 			SetSkeletalMesh(Loaded);
 		}

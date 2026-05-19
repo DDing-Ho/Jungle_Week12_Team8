@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Object/Object.h"
+#include "CameraModifier.generated.h"
 
 class APlayerCameraManager;
 struct FMinimalViewInfo;
@@ -16,10 +17,11 @@ struct FMinimalViewInfo;
 // 변형은 서브클래스가 ModifyCamera 를 override.
 // UE: UCameraModifier
 // ============================================================
+UCLASS()
 class UCameraModifier : public UObject
 {
 public:
-	DECLARE_CLASS(UCameraModifier, UObject)
+	GENERATED_BODY(UCameraModifier)
 
 	UCameraModifier() = default;
 	~UCameraModifier() override = default;

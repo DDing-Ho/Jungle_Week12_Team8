@@ -367,7 +367,7 @@ UStaticMesh* FMeshManager::LoadStaticMesh(const FString& PathFileName, ID3D11Dev
 		return nullptr;
 	}
 
-	UStaticMesh* StaticMesh = UObjectManager::Get().CreateObject<UStaticMesh>();
+	UStaticMesh* StaticMesh = GUObjectArray.CreateObject<UStaticMesh>();
 	if (!LoadStaticMeshBinary(StaticMesh, CacheKey))
 	{
 		return nullptr;
@@ -386,46 +386,21 @@ UStaticMesh* FMeshManager::LoadStaticMesh(const FString& PathFileName, ID3D11Dev
 	return StaticMesh;
 }
 
-void FMeshManager::ReleaseAllGPU()
+UStaticMesh* FMeshManager::FindStaticMesh(const FString& PathFileName)
 {
-	// Static Mesh
-	for (auto& [Key, Mesh] : StaticMeshCache)
+	if (PathFileName.empty() || !IsAssetPackagePath(PathFileName))
 	{
-		if (Mesh)
-		{
-			FStaticMesh* Asset = Mesh->GetStaticMeshAsset();
-			if (Asset && Asset->RenderBuffer)
-			{
-				Asset->RenderBuffer->Release();
-				Asset->RenderBuffer.reset();
-			}
-			// LOD 버퍼도 해제
-			for (uint32 LOD = 1; LOD < UStaticMesh::MAX_LOD_COUNT; ++LOD)
-			{
-				FMeshBuffer* LODBuffer = Mesh->GetLODMeshBuffer(LOD);
-				if (LODBuffer)
-				{
-					LODBuffer->Release();
-				}
-			}
-		}
+		return nullptr;
 	}
-	StaticMeshCache.clear();
 
-	// Skeletal Mesh
-	for (auto& [Key, Mesh] : SkeletalMeshCache)
+	const FString CacheKey = GetStaticMeshBinaryFilePath(PathFileName);
+	if (CacheKey.empty())
 	{
-		if (Mesh)
-		{
-			FSkeletalMesh* Asset = Mesh->GetSkeletalMeshAsset();
-			if (Asset && Asset->RenderBuffer)
-			{
-				Asset->RenderBuffer->Release();
-				Asset->RenderBuffer.reset();
-			}
-		}
+		return nullptr;
 	}
-	SkeletalMeshCache.clear();
+
+	auto It = StaticMeshCache.find(CacheKey);
+	return It != StaticMeshCache.end() ? It->second : nullptr;
 }
 
 USkeletalMesh* FMeshManager::LoadSkeletalMesh(const FString& PathFileName, ID3D11Device* InDevice)
@@ -456,7 +431,7 @@ USkeletalMesh* FMeshManager::LoadSkeletalMesh(const FString& PathFileName, ID3D1
 		return nullptr;
 	}
 
-	USkeletalMesh* SkeletalMesh = UObjectManager::Get().CreateObject<USkeletalMesh>();
+	USkeletalMesh* SkeletalMesh = GUObjectArray.CreateObject<USkeletalMesh>();
 	if (!LoadSkeletalMeshBinary(SkeletalMesh, CacheKey))
 	{
 		return nullptr;
@@ -479,4 +454,21 @@ USkeletalMesh* FMeshManager::LoadSkeletalMesh(const FString& PathFileName, ID3D1
 	SkeletalMeshCache[CacheKey] = SkeletalMesh;
 
 	return SkeletalMesh;
+}
+
+USkeletalMesh* FMeshManager::FindSkeletalMesh(const FString& PathFileName)
+{
+	if (PathFileName.empty() || !IsAssetPackagePath(PathFileName))
+	{
+		return nullptr;
+	}
+
+	const FString CacheKey = GetSkeletalMeshBinaryFilePath(PathFileName);
+	if (CacheKey.empty())
+	{
+		return nullptr;
+	}
+
+	auto It = SkeletalMeshCache.find(CacheKey);
+	return It != SkeletalMeshCache.end() ? It->second : nullptr;
 }

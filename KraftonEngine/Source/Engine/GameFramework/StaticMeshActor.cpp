@@ -8,8 +8,6 @@
 #include "Core/Log.h"
 #include "Core/CollisionTypes.h"
 
-IMPLEMENT_CLASS(AStaticMeshActor, AActor)
-
 void AStaticMeshActor::BeginPlay()
 {
 	Super::BeginPlay();

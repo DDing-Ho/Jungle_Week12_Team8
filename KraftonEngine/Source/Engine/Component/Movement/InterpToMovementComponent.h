@@ -1,7 +1,9 @@
 ﻿#pragma once
 #include "MovementComponent.h"
 #include "Math/Vector.h"
+#include "InterpToMovementComponent.generated.h"
 
+UENUM()
 enum class EInterpBehaviour {
 	OneShot,
 	OneShotReverse,
@@ -9,10 +11,10 @@ enum class EInterpBehaviour {
 	PingPong,
 };
 
+UCLASS()
 class UInterpToMovementComponent : public UMovementComponent {
 public:
-	DECLARE_CLASS(UInterpToMovementComponent, UMovementComponent)
-
+	GENERATED_BODY(UInterpToMovementComponent)
 	UInterpToMovementComponent() = default;
 
 	// Overrides
@@ -69,19 +71,26 @@ private:
 	void				FaceTargetDir(float DeltaTime);
 
 private:
+	UPROPERTY(Edit, Category="Movement", DisplayName="Interpolation Behaviour")
 	EInterpBehaviour	InterpBehaviour = EInterpBehaviour::OneShot;
+
+	UPROPERTY(Edit, Category="Movement", DisplayName="Control Points")
 	TArray<FVector>		ControlPoints;
+
+	UPROPERTY(Edit, Category="Movement", DisplayName = "Interp Duration", Min = 0.1, Max = 2048.0, Speed = 0.1)
+	float				Duration = 5.0f;		// Does not store an "array" of duration
+
+	UPROPERTY(Edit, Category="Movement", DisplayName = "Orient to Target Direction")
+	bool				bFaceTargetDir = true;
+
 	uint32				CurrentPointID = 0;
 	uint32				NextPointID = 0;
-	float				Duration = 5.0f;		// Does not store an "array" of duration
 	float				RotateDuration = 0.f;
 	float				Elapsed = 0.f;
 	float				TotalDistance = 0;
 	float				NextDistRatio = 0;
 	bool				bisLerping = false;
 	bool				bPing = true;
-	bool				bFaceTargetDir = true;
-
 	float				TargetPitch = 0.f;
 	float				TargetYaw = 0.f;
 };

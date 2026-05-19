@@ -4,8 +4,6 @@
 #include "Component/CameraComponent.h"
 #include "Serialization/Archive.h"
 
-IMPLEMENT_CLASS(APawn, AActor)
-
 void APawn::PossessedBy(APlayerController* PC)
 {
 	Controller = PC;

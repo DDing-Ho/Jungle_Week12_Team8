@@ -2,11 +2,13 @@
 #pragma once
 
 #include "ShapeComponent.h"
+#include "SphereComponent.generated.h"
 
+UCLASS()
 class USphereComponent : public UShapeComponent
 {
 public:
-	DECLARE_CLASS(USphereComponent, UShapeComponent)
+	GENERATED_BODY(USphereComponent)
 
 	void SetSphereRadius(float InRadius);
 	float GetScaledSphereRadius() const;
@@ -18,5 +20,6 @@ public:
 	void Serialize(FArchive& Ar) override;
 
 protected:
+	UPROPERTY(Edit, Category="Shape", DisplayName="Sphere Radius", Min=0.01f, Max=10000.0f, Speed=1.0f)
 	float SphereRadius = 2.0f;
 };

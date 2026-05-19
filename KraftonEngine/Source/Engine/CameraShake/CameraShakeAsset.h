@@ -2,6 +2,7 @@
 #include "Object/Object.h"
 #include "Math/Vector.h"
 #include "Math/Rotator.h"
+#include "CameraShakeAsset.generated.h"
 
 class FArchive;
 
@@ -36,10 +37,11 @@ struct FWaveOscillatorCameraShakeAssetData
 	float FOVFrequency = 8.0f;
 };
 
+UCLASS()
 class UCameraShakeAsset : public UObject
 {
 public:
-	DECLARE_CLASS(UCameraShakeAsset, UObject)
+	GENERATED_BODY(UCameraShakeAsset)
 
 	UCameraShakeAsset() = default;
 	~UCameraShakeAsset() override;

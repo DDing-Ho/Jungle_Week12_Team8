@@ -14,17 +14,6 @@
 #include "Materials/Material.h"
 #include <algorithm>
 
-IMPLEMENT_CLASS(UDecalComponent, UPrimitiveComponent)
-
-BEGIN_CLASS_PROPERTIES(UDecalComponent)
-	REGISTER_PROPERTY(MaterialSlot, "Material", EPropertyType::MaterialSlot, "Rendering", CPF_Edit)
-	REGISTER_PROPERTY(Color, "Color", EPropertyType::Vec4, "Rendering", CPF_Edit)
-	PROPERTY_FLOAT(FadeInDelay, "FadeInDelay", "Rendering", 0.0f, 0.0f, 0.1f, CPF_Edit)
-	PROPERTY_FLOAT(FadeInDuration, "FadeInDuration", "Rendering", 0.0f, 0.0f, 0.1f, CPF_Edit)
-	PROPERTY_FLOAT(FadeOutDelay, "FadeOutDelay", "Rendering", 0.0f, 0.0f, 0.1f, CPF_Edit)
-	PROPERTY_FLOAT(FadeOutDuration, "FadeOutDuration", "Rendering", 0.0f, 0.0f, 0.1f, CPF_Edit)
-END_CLASS_PROPERTIES(UDecalComponent)
-
 void UDecalComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction& ThisTickFunction)
 {
 	if (TickType == ELevelTick::LEVELTICK_All)

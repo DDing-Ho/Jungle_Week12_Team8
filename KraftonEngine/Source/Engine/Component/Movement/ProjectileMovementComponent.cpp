@@ -43,14 +43,6 @@ namespace
 	}
 }
 
-IMPLEMENT_CLASS(UProjectileMovementComponent, UMovementComponent)
-
-BEGIN_CLASS_PROPERTIES(UProjectileMovementComponent)
-	PROPERTY_VEC3(Velocity, "Velocity", "Movement", CPF_Edit)
-	PROPERTY_FLOAT(InitialSpeed, "Initial Speed", "Movement", 0.0f, 0.0f, 10.0f, CPF_Edit)
-	PROPERTY_FLOAT(MaxSpeed, "Max Speed", "Movement", 0.0f, 0.0f, 10.0f, CPF_Edit)
-END_CLASS_PROPERTIES(UProjectileMovementComponent)
-
 void UProjectileMovementComponent::BeginPlay()
 {
 	UMovementComponent::BeginPlay();

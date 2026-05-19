@@ -6,13 +6,6 @@
 #include "Render/Types/LightFrustumUtils.h"
 #include <cmath>
 
-IMPLEMENT_CLASS(USpotLightComponent, UPointLightComponent)
-
-BEGIN_CLASS_PROPERTIES(USpotLightComponent)
-	PROPERTY_FLOAT(InnerConeAngle, "InnerConeAngle", "Lighting", 0.0f, 89.0f, 0.1f, CPF_Edit)
-	PROPERTY_FLOAT(OuterConeAngle, "OuterConeAngle", "Lighting", 0.0f, 89.0f, 0.1f, CPF_Edit)
-END_CLASS_PROPERTIES(USpotLightComponent)
-
 void USpotLightComponent::ContributeSelectedVisuals(FScene& Scene) const
 {
 	const FVector Apex = GetWorldLocation();

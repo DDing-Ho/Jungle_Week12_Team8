@@ -20,7 +20,7 @@ namespace json
 	class JSON;
 }
 
-#include "Core/PropertyTypes.h"
+#include "Core/Property/PropertyTypes.h"
 
 using std::string;
 

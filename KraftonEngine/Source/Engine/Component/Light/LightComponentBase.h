@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include "Component/SceneComponent.h"
 #include "Math/Matrix.h"
+#include "LightComponentBase.generated.h"
 
 enum class ELightComponentType : uint8
 {
@@ -20,10 +21,11 @@ struct FLightViewProjResult
 
 struct FMinimalViewInfo;
 
+UCLASS(HiddenInComponentList)
 class ULightComponentBase : public USceneComponent
 {
 public:
-	DECLARE_CLASS(ULightComponentBase, USceneComponent)
+	GENERATED_BODY(ULightComponentBase)
 
 	ULightComponentBase() { SetComponentTickEnabled(false); }
 
@@ -52,8 +54,12 @@ public:
 	class UBillboardComponent* EnsureEditorBillboard();
 
 protected:
+	UPROPERTY(Edit, Category="Lighting", Min=0.f, Max=50.f, Speed=0.05f)
 	float Intensity = 1.f;
+	UPROPERTY(Edit, Category="Lighting", DisplayName="Color", Type=Color4)
 	FVector4 LightColor = { 1.0f,1.0f,1.0f,1.0f };
+	UPROPERTY(Edit, Category="Lighting", DisplayName="Visible")
 	bool bVisible = true;
+	UPROPERTY(Edit, Category="Lighting", DisplayName="Cast Shadows")
 	bool bCastShadows = true;
 };

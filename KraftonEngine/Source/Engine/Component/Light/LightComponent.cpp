@@ -2,17 +2,6 @@
 #include "Serialization/Archive.h"
 #include "Object/ObjectFactory.h"
 
-IMPLEMENT_CLASS(ULightComponent, ULightComponentBase)
-HIDE_FROM_COMPONENT_LIST(ULightComponent)
-
-BEGIN_CLASS_PROPERTIES(ULightComponent)
-	PROPERTY_FLOAT(ShadowResolutionScale, "Shadow Resolution Scale", "Shadow", 0.1f, 4.0f, 0.1f, EPropertyFlags::CPF_Edit)
-	PROPERTY_FLOAT(ShadowBias, "Shadow Bias", "Shadow", -0.2f, 0.2f, 0.0001f, EPropertyFlags::CPF_Edit)
-	PROPERTY_FLOAT(ShadowSlopeBias, "Shadow Slope Bias", "Shadow", -0.2f, 0.2f, 0.0001f, EPropertyFlags::CPF_Edit)
-	PROPERTY_FLOAT(ShadowNormalBias, "Shadow Normal Bias", "Shadow", -0.2f, 0.2f, 0.0001f, EPropertyFlags::CPF_Edit)
-	PROPERTY_FLOAT(ShadowSharpen, "Shadow Sharpen", "Shadow", 0.f, 1.f, 0.06f, EPropertyFlags::CPF_Edit)
-END_CLASS_PROPERTIES(ULightComponent)
-
 void ULightComponent::Serialize(FArchive& Ar)
 {
 	ULightComponentBase::Serialize(Ar);

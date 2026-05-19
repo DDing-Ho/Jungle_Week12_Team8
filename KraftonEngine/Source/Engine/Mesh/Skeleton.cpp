@@ -3,7 +3,6 @@
 #include "Object/ObjectFactory.h"
 #include "Serialization/Archive.h"
 
-IMPLEMENT_CLASS(USkeleton, UObject)
 
 void USkeleton::Serialize(FArchive& Ar)
 {

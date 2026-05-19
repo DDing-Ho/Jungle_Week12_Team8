@@ -26,12 +26,12 @@ UFloatCurveAsset* FFloatCurveManager::Load(const FString& Path)
 	FAssetImportMetadata Metadata;
 	Ar << Metadata;
 
-	UFloatCurveAsset* NewAsset = UObjectManager::Get().CreateObject<UFloatCurveAsset>();
+	UFloatCurveAsset* NewAsset = GUObjectArray.CreateObject<UFloatCurveAsset>();
 	NewAsset->Serialize(Ar);
 
 	if (!Ar.IsValid())
 	{
-		UObjectManager::Get().DestroyObject(NewAsset);
+		GUObjectArray.DestroyObject(NewAsset);
 		return nullptr;
 	}
 

@@ -5,7 +5,6 @@
 
 
 
-IMPLEMENT_CLASS(UUserWidget, UObject)
 
 
 void UUserWidget::Initialize(APlayerController* InOwningPlayer, const FString& InDocumentPath)

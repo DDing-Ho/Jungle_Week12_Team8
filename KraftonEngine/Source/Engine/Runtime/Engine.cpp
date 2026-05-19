@@ -20,7 +20,6 @@
 #include "UI/UIManager.h"
 #include "Audio/AudioManager.h"
 
-DEFINE_CLASS(UEngine, UObject)
 
 UEngine* GEngine = nullptr;
 
@@ -99,8 +98,6 @@ void UEngine::Shutdown()
 	FLogManager::Get().Shutdown();
 	RenderPipeline.reset();
 	FResourceManager::Get().ReleaseGPUResources();
-	UTexture2D::ReleaseAllGPU();
-	FMeshManager::ReleaseAllGPU();
 	FMeshBufferManager::Get().Release();
 	Renderer.Release();
 }
@@ -202,7 +199,7 @@ FWorldContext& UEngine::CreateWorldContext(EWorldType Type, const FName& Handle,
 	Context.WorldType = Type;
 	Context.ContextHandle = Handle;
 	Context.ContextName = Name.empty() ? Handle.ToString() : Name;
-	Context.World = UObjectManager::Get().CreateObject<UWorld>();
+	Context.World = GUObjectArray.CreateObject<UWorld>();
 	WorldList.push_back(Context);
 	return WorldList.back();
 }
@@ -214,7 +211,7 @@ void UEngine::DestroyWorldContext(const FName& Handle)
 		if (it->ContextHandle == Handle)
 		{
 			it->World->EndPlay();
-			UObjectManager::Get().DestroyObject(it->World);
+			GUObjectArray.DestroyObject(it->World);
 			WorldList.erase(it);
 			return;
 		}

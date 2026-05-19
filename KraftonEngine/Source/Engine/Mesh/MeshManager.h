@@ -33,11 +33,14 @@ public:
 
 	static USkeletalMesh* LoadSkeletalMesh(const FString& PathFileName , ID3D11Device* InDevice);
 
+	// Cache-only lookup. Returns the already-loaded mesh for PathFileName, or nullptr
+	// if it has not been loaded yet. Does no I/O and does not touch the GPU device.
+	static UStaticMesh*   FindStaticMesh(const FString& PathFileName);
+	static USkeletalMesh* FindSkeletalMesh(const FString& PathFileName);
+
 	static const TArray<FMeshAssetListItem>& GetAvailableStaticMeshFiles() { return AvailableStaticMeshFiles; };
 	static const TArray<FMeshAssetListItem>& GetAvailableSkeletalMeshFiles() { return AvailableSkeletalMeshFiles; };
 
-	// 캐시된 StaticMesh GPU 리소스 해제 (Shutdown 시 Device 해제 전 호출)
-	static void ReleaseAllGPU();
 	static void ScanMeshAssets();
 	static FString GetStaticMeshBinaryFilePath(const FString& SourcePath);
 	static FString GetSkeletalMeshBinaryFilePath(const FString& SourcePath);

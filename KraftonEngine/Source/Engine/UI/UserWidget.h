@@ -2,6 +2,7 @@
 
 #include "Object/Object.h"
 #include "Core/Log.h"
+#include "UserWidget.generated.h"
 #include <sol/sol.hpp>
 #include <utility>
 
@@ -48,10 +49,11 @@ private:
 	sol::protected_function Callback;
 };
 
+UCLASS()
 class UUserWidget : public UObject
 {
 public:
-	DECLARE_CLASS(UUserWidget, UObject)
+	GENERATED_BODY(UUserWidget)
 
 	UUserWidget() = default;
 	~UUserWidget() override = default;

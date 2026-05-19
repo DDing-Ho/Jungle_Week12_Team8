@@ -1,56 +1,55 @@
 ﻿#include "UClass.h"
 #include "Serialization/Archive.h"
 
-//void UClass::Serialize(FArchive& Ar)
-//{
-//	for (uint32 i = 0; i < Properties.size(); i++)
-//	{
-//		FProperty* Property = Properties[i];
-//		if (!Property || (Property->PropertyFlag & EPropertyFlags::CPF_Transient) != 0) continue;
-//		Ar << Property->ValuePtr;
-//	}
-//}
+UClass UClass::StaticClassInstance(
+	"UClass",
+	UStruct::StaticClass(),
+	sizeof(UClass),
+	CF_None,
+	CASTCLASS_UClass
+);
 
-void UClass::HideInheritedProperty(FString InName)
+FClassRegistrar UClass::s_Registrar(&UClass::StaticClassInstance);
+
+void UClass::RegisterClassesAsStaticObjects()
 {
-	HiddenProperties.insert(InName);
-}
-
-bool UClass::IsPropertyHidden(FString InName) const
-{
-	return HiddenProperties.contains(InName);
-}
-
-void UClass::GetEditableProperties(TArray<FProperty>& OutProps) const
-{
-	GetEditablePropertiesFor(OutProps, this);
-}
-
-void UClass::GetNonTransientProperties(TArray<FProperty>& OutProps) const
-{
-	GetNonTransientPropertiesFor(OutProps, this);
-}
-
-void UClass::GetEditablePropertiesFor(TArray<FProperty>& OutProps, const UClass* TargetClass) const
-{
-	if (SuperClass) SuperClass->GetEditablePropertiesFor(OutProps, TargetClass);
-
-	for (uint32 i = 0; i < Properties.size(); i++)
+	for (UClass* C : GetAllClasses())
 	{
-		FProperty* Property = Properties[i];
-		if (!Property || TargetClass->IsPropertyHidden(Property->Name)) continue;
-		if (Property->PropertyFlag & EPropertyFlags::CPF_Edit) OutProps.push_back(*Property);
+		if (!C) continue;
+		if (const char* Name = C->GetName())
+		{
+			C->SetFName(FName(Name));
+		}
+		GUObjectArray.AddStaticObject(C);
 	}
 }
 
-void UClass::GetNonTransientPropertiesFor(TArray<FProperty>& OutProps, const UClass* TargetClass) const
+void UClass::Bind()
 {
-	if (SuperClass) SuperClass->GetNonTransientPropertiesFor(OutProps, TargetClass);
+	if (bBound) return;
 
-	for (uint32 i = 0; i < Properties.size(); i++)
+	ClassCastFlags = OwnClassCastFlags;
+	if (UClass* Super = GetSuperClass())
 	{
-		FProperty* Property = Properties[i];
-		if (!Property || TargetClass->IsPropertyHidden(Property->Name)) continue;
-		if ((Property->PropertyFlag & EPropertyFlags::CPF_Transient) == 0) OutProps.push_back(*Property);
+		Super->Bind();
+		ClassCastFlags |= Super->ClassCastFlags;
 	}
+	bBound = true;
+}
+
+bool UClass::IsChildOf(const UClass* Other)
+{
+	if (Other == nullptr) return false;
+	if (this == Other)    return true;
+
+	// Fast path is valid only for classes that own a unique cast bit.
+	const uint32 OtherOwnCast = Other->OwnClassCastFlags;
+	if (OtherOwnCast != CASTCLASS_None)
+	{
+		Bind();
+		return (ClassCastFlags & OtherOwnCast) == OtherOwnCast;
+	}
+
+	// SLOW PATH: walk the SuperStruct chain by pointer-equality.
+	return UStruct::IsChildOf(Other);
 }

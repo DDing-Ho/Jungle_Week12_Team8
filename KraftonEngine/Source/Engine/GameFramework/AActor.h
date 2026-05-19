@@ -3,6 +3,7 @@
 #include "Object/ObjectFactory.h"
 #include "Component/SceneComponent.h"
 #include "Core/TickFunction.h"
+#include "AActor.generated.h"
 
 class FArchive;
 
@@ -14,11 +15,12 @@ class UWorld;
 class ULevel;
 class UPrimitiveComponent;
 
+UCLASS(Actor)
 class AActor : public UObject
 {
     friend struct FActorTickFunction;
 public:
-	DECLARE_CLASS(AActor, UObject)
+	GENERATED_BODY(AActor)
 	AActor();
 	~AActor() override;
 
@@ -31,7 +33,7 @@ public:
 	void Serialize(FArchive& Ar) override;
 	UObject* Duplicate(UObject* NewOuter = nullptr) const override;
 
-	void GetEditableProperties(TArray<FProperty>& OutProps) override;
+	void GetEditableProperties(TArray<const FProperty*>& OutProps) override;
 	void PostEditProperty(const char* PropertyName) override;
 
 	// 컴포넌트 생성 + Owner 설정 + 등록 + 렌더 상태 생성
@@ -39,7 +41,7 @@ public:
 	T* AddComponent() {
 		static_assert(std::is_base_of_v<UActorComponent, T>,
 			"AddComponent<T>: T must derive from UActorComponent");
-		T* Comp = UObjectManager::Get().CreateObject<T>(this);
+		T* Comp = GUObjectArray.CreateObject<T>(this);
 		Comp->SetOwner(this);
 		OwnedComponents.push_back(Comp);
 		bPrimitiveCacheDirty = true;
@@ -123,9 +125,6 @@ protected:
 
 	USceneComponent* RootComponent = nullptr;
 
-	FVector PendingActorLocation = FVector(0, 0, 0);
-	FRotator PendingActorRotation = FRotator(0, 0, 0);
-	FVector PendingActorScale = FVector(1, 1, 1);
 	bool PendingActorVisible = true;
 
 	bool bVisible = true;

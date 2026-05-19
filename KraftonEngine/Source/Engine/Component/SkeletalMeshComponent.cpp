@@ -5,8 +5,6 @@
 #include "GameFramework/AActor.h"
 #include <cctype>
 
-IMPLEMENT_CLASS(USkeletalMeshComponent, USkinnedMeshComponent)
-
 FPrimitiveSceneProxy* USkeletalMeshComponent::CreateSceneProxy()
 {
 	return new FSkeletalMeshSceneProxy(this);

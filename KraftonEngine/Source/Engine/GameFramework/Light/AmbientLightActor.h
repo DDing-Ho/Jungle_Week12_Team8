@@ -1,14 +1,16 @@
 #pragma once
 
 #include "GameFramework/AActor.h"
+#include "AmbientLightActor.generated.h"
 
 class UAmbientLightComponent;
 class UBillboardComponent;
 
+UCLASS(Actor)
 class AAmbientLightActor : public AActor
 {
 public:
-	DECLARE_CLASS(AAmbientLightActor, AActor)
+	GENERATED_BODY(AAmbientLightActor)
 
 	void InitDefaultComponents();
 

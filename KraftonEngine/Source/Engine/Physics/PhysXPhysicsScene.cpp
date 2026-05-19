@@ -324,7 +324,7 @@ static void SetupFilterData(PxShape* Shape, UPrimitiveComponent* Comp)
 	Filter.word2 = 0;
 	Filter.word3 = Comp->GetOwner() ? Comp->GetOwner()->GetUUID() : 0;
 
-	for (int32 Ch = 0; Ch < static_cast<int32>(ECollisionChannel::ActiveCount); ++Ch)
+	for (int32 Ch = 0; Ch < NumActiveCollisionChannels; ++Ch)
 	{
 		ECollisionResponse R = Comp->GetCollisionResponseToChannel(static_cast<ECollisionChannel>(Ch));
 		if (R == ECollisionResponse::Block)   Filter.word1 |= (1u << Ch);
@@ -755,7 +755,7 @@ PxShape* FPhysXPhysicsScene::AddShapeForComponent(FBodyMapping& Mapping, UPrimit
 	if (!bShouldBeTrigger)
 	{
 		bool bHasAnyBlockResponse = false;
-		for (int32 Ch = 0; Ch < static_cast<int32>(ECollisionChannel::ActiveCount); ++Ch)
+		for (int32 Ch = 0; Ch < NumActiveCollisionChannels; ++Ch)
 		{
 			if (Comp->GetCollisionResponseToChannel(static_cast<ECollisionChannel>(Ch)) == ECollisionResponse::Block)
 			{

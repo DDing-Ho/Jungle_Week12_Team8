@@ -4,39 +4,38 @@
       "Name" : "AStaticMeshActor_5",
       "NonSceneComponents" : [],
       "Properties" : {
-        "Location" : [0.000000, 0.000000, 0.000000],
-        "Rotation" : [-0.000000, 0.000000, 0.000000],
-        "Scale" : [30.000000, 30.000000, 1.000000],
-        "Tags" : "",
-        "Visible" : true
+
       },
       "RootComponent" : {
         "Children" : [],
         "ClassName" : "UStaticMeshComponent",
         "Properties" : {
+          "Auto Activate" : true,
           "Cast Shadow" : true,
-          "Center Of Mass Offset" : [0.000000, 0.000000, 0.000000],
+          "Cast Shadow as Two-Sided" : false,
+          "Center of Mass" : [0.000000, 0.000000, 0.000000],
           "Collision Enabled" : 0,
-          "Collision Responses" : {
+          "Generate Overlap Events" : false,
+          "Is Visible" : true,
+          "Mass (Kg)" : 1.000000,
+          "Materials" : [{
+              "Path" : "Asset/Mesh/CubeGrid/SM_CubeGrid_M_CubeGrid.mat"
+            }],
+          "Object Type" : 0,
+          "RelativeTransform" : {
+            "Location" : [0.000000, 0.000000, 0.000000],
+            "Scale" : [50.000000, 50.000000, 1.000000]
+          },
+          "Response Container" : {
             "Pawn" : 2,
             "Projectile" : 2,
             "Trigger" : 2,
             "WorldDynamic" : 2,
             "WorldStatic" : 2
           },
-          "Element 0" : {
-            "Path" : "Asset/Mesh/CubeGrid/SM_CubeGrid_M_CubeGrid.mat"
-          },
-          "Generate Overlap Events" : false,
-          "Location" : [0.000000, 0.000000, 0.000000],
-          "Mass (kg)" : 1.000000,
-          "Object Type" : 0,
           "Rotation" : [0.000000, 0.000000, 0.000000],
-          "Scale" : [30.000000, 30.000000, 1.000000],
           "Simulate Physics" : false,
           "Static Mesh" : "Asset/Mesh/CubeGrid/SM_CubeGrid_StaticMesh.uasset",
-          "Two Sided Shadow" : false,
-          "Visible" : true,
           "bEditorOnly" : false,
           "bTickEnable" : true
         }
@@ -46,39 +45,38 @@
       "Name" : "ADirectionalLightActor_1",
       "NonSceneComponents" : [],
       "Properties" : {
-        "Location" : [0.000000, 0.000000, 8.191914],
-        "Rotation" : [45.000004, -45.000004, 0.000000],
-        "Scale" : [1.000000, 1.000000, 1.000000],
-        "Tags" : "",
-        "Visible" : true
+
       },
       "RootComponent" : {
         "Children" : [{
             "Children" : [],
             "ClassName" : "UBillboardComponent",
             "Properties" : {
+              "Auto Activate" : true,
               "Cast Shadow" : true,
-              "Center Of Mass Offset" : [0.000000, 0.000000, 0.000000],
+              "Cast Shadow as Two-Sided" : false,
+              "Center of Mass" : [0.000000, 0.000000, 0.000000],
               "Collision Enabled" : 0,
-              "Collision Responses" : {
+              "Generate Overlap Events" : false,
+              "Is Visible" : true,
+              "Mass (Kg)" : 1.000000,
+              "Material" : {
+                "Path" : "Asset/Materials/Editor/DirectionalLight.mat"
+              },
+              "Object Type" : 0,
+              "RelativeTransform" : {
+                "Location" : [0.000000, 0.000000, 0.000000],
+                "Scale" : [1.000000, 1.000000, 1.000000]
+              },
+              "Response Container" : {
                 "Pawn" : 2,
                 "Projectile" : 2,
                 "Trigger" : 2,
                 "WorldDynamic" : 2,
                 "WorldStatic" : 2
               },
-              "Generate Overlap Events" : false,
-              "Location" : [0.000000, 0.000000, 0.000000],
-              "Mass (kg)" : 1.000000,
-              "Material" : {
-                "Path" : "Asset/Materials/Editor/DirectionalLight.mat"
-              },
-              "Object Type" : 0,
               "Rotation" : [0.000000, 0.000000, 0.000000],
-              "Scale" : [1.000000, 1.000000, 1.000000],
               "Simulate Physics" : false,
-              "Two Sided Shadow" : false,
-              "Visible" : true,
               "bEditorOnly" : true,
               "bTickEnable" : true
             },
@@ -86,12 +84,15 @@
           }],
         "ClassName" : "UDirectionalLightComponent",
         "Properties" : {
+          "Auto Activate" : true,
           "Cast Shadows" : true,
           "Color" : [1.000000, 1.000000, 1.000000, 1.000000],
           "Intensity" : 1.000000,
-          "Location" : [0.000000, 0.000000, 8.191914],
+          "RelativeTransform" : {
+            "Location" : [8.050000, -8.050001, 11.384422],
+            "Scale" : [1.000000, 1.000000, 1.000000]
+          },
           "Rotation" : [45.000000, -45.000000, 0.000000],
-          "Scale" : [1.000000, 1.000000, 1.000000],
           "Shadow Bias" : -0.000100,
           "Shadow Normal Bias" : -0.002000,
           "Shadow Resolution Scale" : 1.000000,
@@ -112,47 +113,46 @@
             "Auto Register Updated" : true,
             "Control Points" : [[0.000000, 0.000000, 0.000000], [0.400000, 0.800000, 0.400000], [-0.900000, 0.700000, 0.500000]],
             "Interp Duration" : 5.000000,
-            "Interp Mode" : 3,
-            "Orient To Movement" : true,
+            "Interpolation Behaviour" : 3,
+            "Orient to Target Direction" : true,
             "Updated Component" : "",
             "bEditorOnly" : false,
             "bTickEnable" : true
           }
         }],
       "Properties" : {
-        "Location" : [-3.205277, -2.917898, 1.707360],
-        "Rotation" : [12.015314, -30.556568, 13.652402],
-        "Scale" : [1.000000, 1.000000, 1.000000],
-        "Tags" : "",
-        "Visible" : true
+
       },
       "RootComponent" : {
         "Children" : [],
         "ClassName" : "UStaticMeshComponent",
         "Properties" : {
+          "Auto Activate" : true,
           "Cast Shadow" : true,
-          "Center Of Mass Offset" : [0.000000, 0.000000, 0.000000],
+          "Cast Shadow as Two-Sided" : false,
+          "Center of Mass" : [0.000000, 0.000000, 0.000000],
           "Collision Enabled" : 0,
-          "Collision Responses" : {
+          "Generate Overlap Events" : false,
+          "Is Visible" : true,
+          "Mass (Kg)" : 1.000000,
+          "Materials" : [{
+              "Path" : "Asset/Mesh/BasicShape/Cube_BasicShapeMaterial.mat"
+            }],
+          "Object Type" : 0,
+          "RelativeTransform" : {
+            "Location" : [-4.494799, 4.786318, 4.007234],
+            "Scale" : [1.000000, 1.000000, 1.000000]
+          },
+          "Response Container" : {
             "Pawn" : 2,
             "Projectile" : 2,
             "Trigger" : 2,
             "WorldDynamic" : 2,
             "WorldStatic" : 2
           },
-          "Element 0" : {
-            "Path" : "Asset/Mesh/BasicShape/Cube_BasicShapeMaterial.mat"
-          },
-          "Generate Overlap Events" : false,
-          "Location" : [-3.205277, -2.917898, 1.707360],
-          "Mass (kg)" : 1.000000,
-          "Object Type" : 0,
           "Rotation" : [12.015320, -30.556564, 13.652405],
-          "Scale" : [1.000000, 1.000000, 1.000000],
           "Simulate Physics" : false,
           "Static Mesh" : "Asset/Mesh/BasicShape/Cube_StaticMesh.uasset",
-          "Two Sided Shadow" : false,
-          "Visible" : true,
           "bEditorOnly" : false,
           "bTickEnable" : true
         }
@@ -162,39 +162,38 @@
       "Name" : "AAmbientLightActor_1",
       "NonSceneComponents" : [],
       "Properties" : {
-        "Location" : [0.000000, 0.000000, 10.000000],
-        "Rotation" : [-0.000000, 0.000000, 0.000000],
-        "Scale" : [1.000000, 1.000000, 1.000000],
-        "Tags" : "",
-        "Visible" : true
+
       },
       "RootComponent" : {
         "Children" : [{
             "Children" : [],
             "ClassName" : "UBillboardComponent",
             "Properties" : {
+              "Auto Activate" : true,
               "Cast Shadow" : true,
-              "Center Of Mass Offset" : [0.000000, 0.000000, 0.000000],
+              "Cast Shadow as Two-Sided" : false,
+              "Center of Mass" : [0.000000, 0.000000, 0.000000],
               "Collision Enabled" : 0,
-              "Collision Responses" : {
+              "Generate Overlap Events" : false,
+              "Is Visible" : true,
+              "Mass (Kg)" : 1.000000,
+              "Material" : {
+                "Path" : "Asset/Materials/Editor/AmbientLight.mat"
+              },
+              "Object Type" : 0,
+              "RelativeTransform" : {
+                "Location" : [0.000000, 0.000000, 0.000000],
+                "Scale" : [1.000000, 1.000000, 1.000000]
+              },
+              "Response Container" : {
                 "Pawn" : 2,
                 "Projectile" : 2,
                 "Trigger" : 2,
                 "WorldDynamic" : 2,
                 "WorldStatic" : 2
               },
-              "Generate Overlap Events" : false,
-              "Location" : [0.000000, 0.000000, 0.000000],
-              "Mass (kg)" : 1.000000,
-              "Material" : {
-                "Path" : "Asset/Materials/Editor/AmbientLight.mat"
-              },
-              "Object Type" : 0,
               "Rotation" : [0.000000, 0.000000, 0.000000],
-              "Scale" : [1.000000, 1.000000, 1.000000],
               "Simulate Physics" : false,
-              "Two Sided Shadow" : false,
-              "Visible" : true,
               "bEditorOnly" : true,
               "bTickEnable" : true
             },
@@ -202,12 +201,20 @@
           }],
         "ClassName" : "UAmbientLightComponent",
         "Properties" : {
+          "Auto Activate" : true,
           "Cast Shadows" : true,
           "Color" : [1.000000, 1.000000, 1.000000, 1.000000],
           "Intensity" : 0.100000,
-          "Location" : [0.000000, 0.000000, 10.000000],
+          "RelativeTransform" : {
+            "Location" : [-4.000000, 0.000000, 9.300000],
+            "Scale" : [1.000000, 1.000000, 1.000000]
+          },
           "Rotation" : [0.000000, 0.000000, 0.000000],
-          "Scale" : [1.000000, 1.000000, 1.000000],
+          "Shadow Bias" : -0.000100,
+          "Shadow Normal Bias" : -0.002000,
+          "Shadow Resolution Scale" : 1.000000,
+          "Shadow Sharpen" : 0.670000,
+          "Shadow Slope Bias" : 0.000100,
           "Visible" : true,
           "bEditorOnly" : false,
           "bTickEnable" : true
@@ -218,39 +225,38 @@
       "Name" : "APointLightActor_1",
       "NonSceneComponents" : [],
       "Properties" : {
-        "Location" : [-0.114756, -4.615559, 6.626549],
-        "Rotation" : [-0.000000, 0.000000, 0.000000],
-        "Scale" : [1.000000, 1.000000, 1.000000],
-        "Tags" : "",
-        "Visible" : true
+
       },
       "RootComponent" : {
         "Children" : [{
             "Children" : [],
             "ClassName" : "UBillboardComponent",
             "Properties" : {
+              "Auto Activate" : true,
               "Cast Shadow" : true,
-              "Center Of Mass Offset" : [0.000000, 0.000000, 0.000000],
+              "Cast Shadow as Two-Sided" : false,
+              "Center of Mass" : [0.000000, 0.000000, 0.000000],
               "Collision Enabled" : 0,
-              "Collision Responses" : {
+              "Generate Overlap Events" : false,
+              "Is Visible" : true,
+              "Mass (Kg)" : 1.000000,
+              "Material" : {
+                "Path" : "Asset/Materials/Editor/PointLight.mat"
+              },
+              "Object Type" : 0,
+              "RelativeTransform" : {
+                "Location" : [0.000000, 0.000000, 0.000000],
+                "Scale" : [1.000000, 1.000000, 1.000000]
+              },
+              "Response Container" : {
                 "Pawn" : 2,
                 "Projectile" : 2,
                 "Trigger" : 2,
                 "WorldDynamic" : 2,
                 "WorldStatic" : 2
               },
-              "Generate Overlap Events" : false,
-              "Location" : [0.000000, 0.000000, 0.000000],
-              "Mass (kg)" : 1.000000,
-              "Material" : {
-                "Path" : "Asset/Materials/Editor/PointLight.mat"
-              },
-              "Object Type" : 0,
               "Rotation" : [0.000000, 0.000000, 0.000000],
-              "Scale" : [1.000000, 1.000000, 1.000000],
               "Simulate Physics" : false,
-              "Two Sided Shadow" : false,
-              "Visible" : true,
               "bEditorOnly" : true,
               "bTickEnable" : true
             },
@@ -259,13 +265,16 @@
         "ClassName" : "UPointLightComponent",
         "Properties" : {
           "AttenuationRadius" : 10.000000,
+          "Auto Activate" : true,
           "Cast Shadows" : true,
-          "Color" : [1.000000, 1.000000, 1.000000, 1.000000],
+          "Color" : [0.578059, 0.170735, 0.170735, 1.000000],
           "Intensity" : 2.400000,
           "LightFalloffExponent" : 0.840000,
-          "Location" : [-0.114756, -4.615559, 6.626549],
+          "RelativeTransform" : {
+            "Location" : [0.000000, 0.000000, 5.199981],
+            "Scale" : [1.000000, 1.000000, 1.000000]
+          },
           "Rotation" : [0.000000, 0.000000, 0.000000],
-          "Scale" : [1.000000, 1.000000, 1.000000],
           "Shadow Bias" : -0.000100,
           "Shadow Normal Bias" : -0.002000,
           "Shadow Resolution Scale" : 1.000000,
@@ -279,41 +288,53 @@
     }, {
       "ClassName" : "AStaticMeshActor",
       "Name" : "AStaticMeshActor_9",
-      "NonSceneComponents" : [],
+      "NonSceneComponents" : [{
+          "ClassName" : "UInterpToMovementComponent",
+          "Properties" : {
+            "Auto Activate" : true,
+            "Auto Register Updated" : true,
+            "Control Points" : [[0.000000, 0.000000, 0.000000], [-18.600000, 1.400000, 0.000000], [12.200000, 2.000000, 4.000000], [3.000000, 0.000000, 0.000000]],
+            "Interp Duration" : 5.000000,
+            "Interpolation Behaviour" : 3,
+            "Orient to Target Direction" : true,
+            "Updated Component" : "",
+            "bEditorOnly" : false,
+            "bTickEnable" : true
+          }
+        }],
       "Properties" : {
-        "Location" : [-2.347035, -7.132638, 1.610602],
-        "Rotation" : [-0.000000, 0.000000, 0.000000],
-        "Scale" : [1.000000, 1.000000, 1.000000],
-        "Tags" : "",
-        "Visible" : true
+
       },
       "RootComponent" : {
         "Children" : [],
         "ClassName" : "UStaticMeshComponent",
         "Properties" : {
+          "Auto Activate" : true,
           "Cast Shadow" : true,
-          "Center Of Mass Offset" : [0.000000, 0.000000, 0.000000],
+          "Cast Shadow as Two-Sided" : false,
+          "Center of Mass" : [0.000000, 0.000000, 0.000000],
           "Collision Enabled" : 0,
-          "Collision Responses" : {
+          "Generate Overlap Events" : false,
+          "Is Visible" : true,
+          "Mass (Kg)" : 1.000000,
+          "Materials" : [{
+              "Path" : "Asset/Mesh/BasicShape/Sphere_BasicShapeMaterial.mat"
+            }],
+          "Object Type" : 0,
+          "RelativeTransform" : {
+            "Location" : [5.400000, -5.400000, 2.000000],
+            "Scale" : [1.000000, 1.000000, 1.000000]
+          },
+          "Response Container" : {
             "Pawn" : 2,
             "Projectile" : 2,
             "Trigger" : 2,
             "WorldDynamic" : 2,
             "WorldStatic" : 2
           },
-          "Element 0" : {
-            "Path" : "Asset/Mesh/BasicShape/Sphere_BasicShapeMaterial.mat"
-          },
-          "Generate Overlap Events" : false,
-          "Location" : [-2.347035, -7.132638, 1.610602],
-          "Mass (kg)" : 1.000000,
-          "Object Type" : 0,
           "Rotation" : [0.000000, 0.000000, 0.000000],
-          "Scale" : [1.000000, 1.000000, 1.000000],
           "Simulate Physics" : false,
           "Static Mesh" : "Asset/Mesh/BasicShape/Sphere_StaticMesh.uasset",
-          "Two Sided Shadow" : false,
-          "Visible" : true,
           "bEditorOnly" : false,
           "bTickEnable" : true
         }
@@ -323,39 +344,38 @@
       "Name" : "ASpotLightActor_0",
       "NonSceneComponents" : [],
       "Properties" : {
-        "Location" : [1.661258, 9.227077, 5.513202],
-        "Rotation" : [61.853676, -89.514763, -43.256889],
-        "Scale" : [1.000000, 1.000000, 1.000000],
-        "Tags" : "",
-        "Visible" : true
+
       },
       "RootComponent" : {
         "Children" : [{
             "Children" : [],
             "ClassName" : "UBillboardComponent",
             "Properties" : {
+              "Auto Activate" : true,
               "Cast Shadow" : true,
-              "Center Of Mass Offset" : [0.000000, 0.000000, 0.000000],
+              "Cast Shadow as Two-Sided" : false,
+              "Center of Mass" : [0.000000, 0.000000, 0.000000],
               "Collision Enabled" : 0,
-              "Collision Responses" : {
+              "Generate Overlap Events" : false,
+              "Is Visible" : true,
+              "Mass (Kg)" : 1.000000,
+              "Material" : {
+                "Path" : "Asset/Materials/Editor/SpotLight.mat"
+              },
+              "Object Type" : 0,
+              "RelativeTransform" : {
+                "Location" : [0.000000, 0.000000, 0.000000],
+                "Scale" : [1.000000, 1.000000, 1.000000]
+              },
+              "Response Container" : {
                 "Pawn" : 2,
                 "Projectile" : 2,
                 "Trigger" : 2,
                 "WorldDynamic" : 2,
                 "WorldStatic" : 2
               },
-              "Generate Overlap Events" : false,
-              "Location" : [0.000000, 0.000000, 0.000000],
-              "Mass (kg)" : 1.000000,
-              "Material" : {
-                "Path" : "Asset/Materials/Editor/SpotLight.mat"
-              },
-              "Object Type" : 0,
               "Rotation" : [0.000000, 0.000000, 0.000000],
-              "Scale" : [1.000000, 1.000000, 1.000000],
               "Simulate Physics" : false,
-              "Two Sided Shadow" : false,
-              "Visible" : true,
               "bEditorOnly" : true,
               "bTickEnable" : true
             },
@@ -364,15 +384,18 @@
         "ClassName" : "USpotLightComponent",
         "Properties" : {
           "AttenuationRadius" : 20.000000,
+          "Auto Activate" : true,
           "Cast Shadows" : true,
           "Color" : [0.000000, 0.734177, 1.000000, 1.000000],
           "InnerConeAngle" : 8.500000,
           "Intensity" : 3.000000,
           "LightFalloffExponent" : 0.050000,
-          "Location" : [1.661258, 9.227077, 5.513202],
           "OuterConeAngle" : 36.500000,
+          "RelativeTransform" : {
+            "Location" : [0.000000, 0.000000, 0.000000],
+            "Scale" : [1.000000, 1.000000, 1.000000]
+          },
           "Rotation" : [61.853668, -89.514763, -43.256897],
-          "Scale" : [1.000000, 1.000000, 1.000000],
           "Shadow Bias" : -0.000100,
           "Shadow Normal Bias" : -0.002000,
           "Shadow Resolution Scale" : 1.000000,
@@ -386,107 +409,44 @@
     }, {
       "ClassName" : "ASkeletalMeshActor",
       "Name" : "ASkeletalMeshActor_0",
-      "NonSceneComponents" : [{
-          "ClassName" : "UTemporaryBoneAnimatorComponent",
-          "Properties" : {
-            "Enabled" : true,
-            "Rotation Amplitude" : [0.000000, 30.000000, 0.000000],
-            "Rotation Frequency" : [0.000000, 0.500000, 0.000000],
-            "Rotation Offset" : [0.000000, -30.000000, 0.000000],
-            "Rotation Phase" : [0.000000, 90.000000, 0.000000],
-            "Target Bone Name" : "Bip001 Spine"
-          }
-        }, {
-          "ClassName" : "UTemporaryBoneAnimatorComponent",
-          "Properties" : {
-            "Enabled" : true,
-            "Rotation Amplitude" : [0.000000, 15.000000, 0.000000],
-            "Rotation Frequency" : [0.000000, 0.500000, 0.000000],
-            "Rotation Offset" : [0.000000, -30.000000, 0.000000],
-            "Rotation Phase" : [0.000000, 50.000000, 0.000000],
-            "Target Bone Name" : "Bip001 Spine1"
-          }
-        }, {
-          "ClassName" : "UTemporaryBoneAnimatorComponent",
-          "Properties" : {
-            "Enabled" : true,
-            "Rotation Amplitude" : [0.000000, 10.000000, 0.000000],
-            "Rotation Frequency" : [0.000000, 0.500000, 0.000000],
-            "Rotation Offset" : [0.000000, -10.000000, 0.000000],
-            "Rotation Phase" : [0.000000, 60.000000, 0.000000],
-            "Target Bone Name" : "Bip001 Neck"
-          }
-        }, {
-          "ClassName" : "UTemporaryBoneAnimatorComponent",
-          "Properties" : {
-            "Enabled" : true,
-            "Rotation Amplitude" : [0.000000, 0.000000, 60.000000],
-            "Rotation Frequency" : [0.000000, 0.000000, 0.250000],
-            "Rotation Offset" : [0.000000, 0.000000, 0.000000],
-            "Rotation Phase" : [0.000000, 0.000000, 0.000000],
-            "Target Bone Name" : "Bip001 Pelvis"
-          }
-        }, {
-          "ClassName" : "UTemporaryBoneAnimatorComponent",
-          "Properties" : {
-            "Enabled" : true,
-            "Rotation Amplitude" : [80.000000, 0.000000, 0.000000],
-            "Rotation Frequency" : [0.000000, 0.000000, 0.000000],
-            "Rotation Offset" : [-50.000000, 0.000000, 0.000000],
-            "Rotation Phase" : [90.000000, 0.000000, 0.000000],
-            "Target Bone Name" : "Bip001 R UpperArm"
-          }
-        }, {
-          "ClassName" : "UTemporaryBoneAnimatorComponent",
-          "Properties" : {
-            "Enabled" : true,
-            "Rotation Amplitude" : [80.000000, 0.000000, 0.000000],
-            "Rotation Frequency" : [0.000000, 0.000000, 0.000000],
-            "Rotation Offset" : [50.000000, 0.000000, 0.000000],
-            "Rotation Phase" : [-90.000000, 0.000000, 0.000000],
-            "Target Bone Name" : "Bip001 L UpperArm"
-          }
-        }],
+      "NonSceneComponents" : [],
       "Properties" : {
-        "Location" : [5.480577, -2.606570, 0.947476],
-        "Rotation" : [0.000000, -24.313145, 0.000000],
-        "Scale" : [3.000000, 3.000000, 3.000000],
-        "Tags" : "",
-        "Visible" : true
+
       },
       "RootComponent" : {
         "Children" : [],
         "ClassName" : "USkeletalMeshComponent",
         "Properties" : {
+          "Auto Activate" : true,
           "Cast Shadow" : true,
-          "Center Of Mass Offset" : [0.000000, 0.000000, 0.000000],
+          "Cast Shadow as Two-Sided" : false,
+          "Center of Mass" : [0.000000, 0.000000, 0.000000],
           "Collision Enabled" : 0,
-          "Collision Responses" : {
+          "Generate Overlap Events" : false,
+          "Is Visible" : true,
+          "Mass (Kg)" : 1.000000,
+          "Materials" : [{
+              "Path" : "Asset/Mesh/hirasawa-yui/yui_KON001_Hirasawa_Yui.003.mat"
+            }, {
+              "Path" : "Asset/Mesh/hirasawa-yui/yui_KON001_Hirasawa_Yui_eye.003.mat"
+            }, {
+              "Path" : "Asset/Mesh/hirasawa-yui/yui_KON001_Hirasawa_Yui_face.003.mat"
+            }],
+          "Object Type" : 0,
+          "RelativeTransform" : {
+            "Location" : [10.935703, -4.940681, 0.900000],
+            "Scale" : [3.000000, 3.000000, 3.000000]
+          },
+          "Response Container" : {
             "Pawn" : 2,
             "Projectile" : 2,
             "Trigger" : 2,
             "WorldDynamic" : 2,
             "WorldStatic" : 2
           },
-          "Element 0" : {
-            "Path" : "Asset/Mesh/hirasawa-yui/yui_KON001_Hirasawa_Yui.003.mat"
-          },
-          "Element 1" : {
-            "Path" : "Asset/Mesh/hirasawa-yui/yui_KON001_Hirasawa_Yui_eye.003.mat"
-          },
-          "Element 2" : {
-            "Path" : "Asset/Mesh/hirasawa-yui/yui_KON001_Hirasawa_Yui_face.003.mat"
-          },
-          "Generate Overlap Events" : false,
-          "Location" : [5.480577, -2.606570, 0.947476],
-          "Mass (kg)" : 1.000000,
-          "Object Type" : 0,
           "Rotation" : [0.000000, -24.313141, 0.000000],
-          "Scale" : [3.000000, 3.000000, 3.000000],
           "Simulate Physics" : false,
           "Skeletal Mesh" : "Asset/Mesh/hirasawa-yui/yui_SkeletalMesh.uasset",
-          "Two Sided Shadow" : false,
-          "Visible" : true,
           "bEditorOnly" : false,
           "bTickEnable" : true
         }
@@ -496,39 +456,38 @@
       "Name" : "ASpotLightActor_1",
       "NonSceneComponents" : [],
       "Properties" : {
-        "Location" : [-0.847880, -7.020331, 6.941662],
-        "Rotation" : [45.774849, 66.692856, -3.998230],
-        "Scale" : [1.000000, 1.000000, 1.000000],
-        "Tags" : "",
-        "Visible" : true
+
       },
       "RootComponent" : {
         "Children" : [{
             "Children" : [],
             "ClassName" : "UBillboardComponent",
             "Properties" : {
+              "Auto Activate" : true,
               "Cast Shadow" : true,
-              "Center Of Mass Offset" : [0.000000, 0.000000, 0.000000],
+              "Cast Shadow as Two-Sided" : false,
+              "Center of Mass" : [0.000000, 0.000000, 0.000000],
               "Collision Enabled" : 0,
-              "Collision Responses" : {
+              "Generate Overlap Events" : false,
+              "Is Visible" : true,
+              "Mass (Kg)" : 1.000000,
+              "Material" : {
+                "Path" : "Asset/Materials/Editor/SpotLight.mat"
+              },
+              "Object Type" : 0,
+              "RelativeTransform" : {
+                "Location" : [0.000000, 0.000000, 0.000000],
+                "Scale" : [1.000000, 1.000000, 1.000000]
+              },
+              "Response Container" : {
                 "Pawn" : 2,
                 "Projectile" : 2,
                 "Trigger" : 2,
                 "WorldDynamic" : 2,
                 "WorldStatic" : 2
               },
-              "Generate Overlap Events" : false,
-              "Location" : [0.000000, 0.000000, 0.000000],
-              "Mass (kg)" : 1.000000,
-              "Material" : {
-                "Path" : "Asset/Materials/Editor/SpotLight.mat"
-              },
-              "Object Type" : 0,
               "Rotation" : [0.000000, 0.000000, 0.000000],
-              "Scale" : [1.000000, 1.000000, 1.000000],
               "Simulate Physics" : false,
-              "Two Sided Shadow" : false,
-              "Visible" : true,
               "bEditorOnly" : true,
               "bTickEnable" : true
             },
@@ -537,15 +496,18 @@
         "ClassName" : "USpotLightComponent",
         "Properties" : {
           "AttenuationRadius" : 10.890000,
+          "Auto Activate" : true,
           "Cast Shadows" : true,
           "Color" : [1.000000, 0.856593, 0.244726, 1.000000],
           "InnerConeAngle" : 20.000000,
           "Intensity" : 3.000000,
           "LightFalloffExponent" : 0.620000,
-          "Location" : [-0.847880, -7.020331, 6.941662],
           "OuterConeAngle" : 40.000000,
+          "RelativeTransform" : {
+            "Location" : [0.000000, 0.000000, 0.000000],
+            "Scale" : [1.000000, 1.000000, 1.000000]
+          },
           "Rotation" : [45.774841, 66.692856, -3.998230],
-          "Scale" : [1.000000, 1.000000, 1.000000],
           "Shadow Bias" : -0.000100,
           "Shadow Normal Bias" : -0.002000,
           "Shadow Resolution Scale" : 1.000000,
@@ -561,39 +523,38 @@
       "Name" : "AAmbientLightActor_2",
       "NonSceneComponents" : [],
       "Properties" : {
-        "Location" : [0.000000, 0.000000, 10.000000],
-        "Rotation" : [-0.000000, 0.000000, 0.000000],
-        "Scale" : [1.000000, 1.000000, 1.000000],
-        "Tags" : "",
-        "Visible" : true
+
       },
       "RootComponent" : {
         "Children" : [{
             "Children" : [],
             "ClassName" : "UBillboardComponent",
             "Properties" : {
+              "Auto Activate" : true,
               "Cast Shadow" : true,
-              "Center Of Mass Offset" : [0.000000, 0.000000, 0.000000],
+              "Cast Shadow as Two-Sided" : false,
+              "Center of Mass" : [0.000000, 0.000000, 0.000000],
               "Collision Enabled" : 0,
-              "Collision Responses" : {
+              "Generate Overlap Events" : false,
+              "Is Visible" : true,
+              "Mass (Kg)" : 1.000000,
+              "Material" : {
+                "Path" : "Asset/Materials/Editor/AmbientLight.mat"
+              },
+              "Object Type" : 0,
+              "RelativeTransform" : {
+                "Location" : [0.000000, 0.000000, 0.000000],
+                "Scale" : [1.000000, 1.000000, 1.000000]
+              },
+              "Response Container" : {
                 "Pawn" : 2,
                 "Projectile" : 2,
                 "Trigger" : 2,
                 "WorldDynamic" : 2,
                 "WorldStatic" : 2
               },
-              "Generate Overlap Events" : false,
-              "Location" : [0.000000, 0.000000, 0.000000],
-              "Mass (kg)" : 1.000000,
-              "Material" : {
-                "Path" : "Asset/Materials/Editor/AmbientLight.mat"
-              },
-              "Object Type" : 0,
               "Rotation" : [0.000000, 0.000000, 0.000000],
-              "Scale" : [1.000000, 1.000000, 1.000000],
               "Simulate Physics" : false,
-              "Two Sided Shadow" : false,
-              "Visible" : true,
               "bEditorOnly" : true,
               "bTickEnable" : true
             },
@@ -601,12 +562,20 @@
           }],
         "ClassName" : "UAmbientLightComponent",
         "Properties" : {
+          "Auto Activate" : true,
           "Cast Shadows" : true,
           "Color" : [1.000000, 1.000000, 1.000000, 1.000000],
           "Intensity" : 0.150000,
-          "Location" : [0.000000, 0.000000, 10.000000],
+          "RelativeTransform" : {
+            "Location" : [0.000000, 0.000000, 0.000000],
+            "Scale" : [1.000000, 1.000000, 1.000000]
+          },
           "Rotation" : [0.000000, 0.000000, 0.000000],
-          "Scale" : [1.000000, 1.000000, 1.000000],
+          "Shadow Bias" : -0.000100,
+          "Shadow Normal Bias" : -0.002000,
+          "Shadow Resolution Scale" : 1.000000,
+          "Shadow Sharpen" : 0.670000,
+          "Shadow Slope Bias" : 0.000100,
           "Visible" : true,
           "bEditorOnly" : false,
           "bTickEnable" : true
@@ -617,39 +586,38 @@
       "Name" : "AHeightFogActor_0",
       "NonSceneComponents" : [],
       "Properties" : {
-        "Location" : [0.000000, 0.000000, 12.000000],
-        "Rotation" : [-0.000000, 0.000000, 0.000000],
-        "Scale" : [1.000000, 1.000000, 1.000000],
-        "Tags" : "",
-        "Visible" : true
+
       },
       "RootComponent" : {
         "Children" : [{
             "Children" : [],
             "ClassName" : "UBillboardComponent",
             "Properties" : {
+              "Auto Activate" : true,
               "Cast Shadow" : true,
-              "Center Of Mass Offset" : [0.000000, 0.000000, 0.000000],
+              "Cast Shadow as Two-Sided" : false,
+              "Center of Mass" : [0.000000, 0.000000, 0.000000],
               "Collision Enabled" : 0,
-              "Collision Responses" : {
+              "Generate Overlap Events" : false,
+              "Is Visible" : true,
+              "Mass (Kg)" : 1.000000,
+              "Material" : {
+                "Path" : "Asset/Materials/Editor/HeightFog.mat"
+              },
+              "Object Type" : 0,
+              "RelativeTransform" : {
+                "Location" : [0.000000, 0.000000, 0.000000],
+                "Scale" : [1.000000, 1.000000, 1.000000]
+              },
+              "Response Container" : {
                 "Pawn" : 2,
                 "Projectile" : 2,
                 "Trigger" : 2,
                 "WorldDynamic" : 2,
                 "WorldStatic" : 2
               },
-              "Generate Overlap Events" : false,
-              "Location" : [0.000000, 0.000000, 0.000000],
-              "Mass (kg)" : 1.000000,
-              "Material" : {
-                "Path" : "Asset/Materials/Editor/HeightFog.mat"
-              },
-              "Object Type" : 0,
               "Rotation" : [0.000000, 0.000000, 0.000000],
-              "Scale" : [1.000000, 1.000000, 1.000000],
               "Simulate Physics" : false,
-              "Two Sided Shadow" : false,
-              "Visible" : true,
               "bEditorOnly" : true,
               "bTickEnable" : true
             },
@@ -657,15 +625,18 @@
           }],
         "ClassName" : "UHeightFogComponent",
         "Properties" : {
+          "Auto Activate" : true,
           "Cutoff Distance" : 0.000000,
           "Fog Density" : 0.003000,
           "Height Falloff" : 0.100000,
           "Inscattering Color" : [0.450000, 0.550000, 0.650000, 1.000000],
-          "Location" : [0.000000, 0.000000, 12.000000],
           "Max Opacity" : 1.000000,
+          "RelativeTransform" : {
+            "Location" : [0.000000, 0.000000, 11.200000],
+            "Scale" : [1.000000, 1.000000, 1.000000]
+          },
           "Rotation" : [0.000000, 0.000000, 0.000000],
-          "Scale" : [1.000000, 1.000000, 1.000000],
-          "Start Distance" : 30.000000,
+          "Start Distance" : 18.000000,
           "bEditorOnly" : false,
           "bTickEnable" : true
         }
@@ -675,39 +646,38 @@
       "Name" : "AStaticMeshActor_8",
       "NonSceneComponents" : [],
       "Properties" : {
-        "Location" : [1.519097, 5.845717, 1.831645],
-        "Rotation" : [-8.286393, 0.132538, -31.072220],
-        "Scale" : [1.000000, 1.000000, 1.000000],
-        "Tags" : "",
-        "Visible" : true
+
       },
       "RootComponent" : {
         "Children" : [],
         "ClassName" : "UStaticMeshComponent",
         "Properties" : {
+          "Auto Activate" : true,
           "Cast Shadow" : true,
-          "Center Of Mass Offset" : [0.000000, 0.000000, 0.000000],
+          "Cast Shadow as Two-Sided" : false,
+          "Center of Mass" : [0.000000, 0.000000, 0.000000],
           "Collision Enabled" : 0,
-          "Collision Responses" : {
+          "Generate Overlap Events" : false,
+          "Is Visible" : true,
+          "Mass (Kg)" : 1.000000,
+          "Materials" : [{
+              "Path" : "Asset/Mesh/BasicShape/Cube_BasicShapeMaterial.mat"
+            }],
+          "Object Type" : 0,
+          "RelativeTransform" : {
+            "Location" : [6.252362, 3.627299, 6.970701],
+            "Scale" : [1.000000, 1.000000, 1.000000]
+          },
+          "Response Container" : {
             "Pawn" : 2,
             "Projectile" : 2,
             "Trigger" : 2,
             "WorldDynamic" : 2,
             "WorldStatic" : 2
           },
-          "Element 0" : {
-            "Path" : "Asset/Mesh/BasicShape/Cube_BasicShapeMaterial.mat"
-          },
-          "Generate Overlap Events" : false,
-          "Location" : [1.519097, 5.845717, 1.831645],
-          "Mass (kg)" : 1.000000,
-          "Object Type" : 0,
           "Rotation" : [-8.286392, 0.132538, -31.072220],
-          "Scale" : [1.000000, 1.000000, 1.000000],
           "Simulate Physics" : false,
           "Static Mesh" : "Asset/Mesh/BasicShape/Cube_StaticMesh.uasset",
-          "Two Sided Shadow" : false,
-          "Visible" : true,
           "bEditorOnly" : false,
           "bTickEnable" : true
         }
@@ -715,63 +685,48 @@
     }, {
       "ClassName" : "ASkeletalMeshActor",
       "Name" : "ASkeletalMeshActor_2",
-      "NonSceneComponents" : [{
-          "ClassName" : "UTemporaryBoneAnimatorComponent",
-          "Properties" : {
-            "Enabled" : true,
-            "Rotation Amplitude" : [0.000000, 0.000000, 40.000000],
-            "Rotation Frequency" : [0.000000, 0.000000, 1.000000],
-            "Rotation Offset" : [0.000000, 0.000000, 30.000000],
-            "Rotation Phase" : [0.000000, 0.000000, -90.000000],
-            "Target Bone Name" : "chest"
-          }
-        }],
+      "NonSceneComponents" : [],
       "Properties" : {
-        "Location" : [10.694828, -8.653132, 0.994482],
-        "Rotation" : [0.000000, -80.009224, 0.000000],
-        "Scale" : [2.000000, 2.000000, 2.000000],
-        "Tags" : "",
-        "Visible" : true
+
       },
       "RootComponent" : {
         "Children" : [],
         "ClassName" : "USkeletalMeshComponent",
         "Properties" : {
+          "Auto Activate" : true,
           "Cast Shadow" : true,
-          "Center Of Mass Offset" : [0.000000, 0.000000, 0.000000],
+          "Cast Shadow as Two-Sided" : false,
+          "Center of Mass" : [0.000000, 0.000000, 0.000000],
           "Collision Enabled" : 0,
-          "Collision Responses" : {
+          "Generate Overlap Events" : false,
+          "Is Visible" : true,
+          "Mass (Kg)" : 1.000000,
+          "Materials" : [{
+              "Path" : "Asset/Mesh/Samba Dancing/Samba Dancing (10)_acc.002.mat"
+            }, {
+              "Path" : "Asset/Mesh/Samba Dancing/Samba Dancing (10)_cloth.002.mat"
+            }, {
+              "Path" : "Asset/Mesh/Samba Dancing/Samba Dancing (10)_b0.002.mat"
+            }, {
+              "Path" : "Asset/Mesh/Samba Dancing/Samba Dancing (10)_m.002.mat"
+            }, {
+              "Path" : "Asset/Mesh/Samba Dancing/Samba Dancing (10)_e.002.mat"
+            }],
+          "Object Type" : 0,
+          "RelativeTransform" : {
+            "Location" : [11.621058, 2.047176, 1.100000],
+            "Scale" : [2.000000, 2.000000, 2.000000]
+          },
+          "Response Container" : {
             "Pawn" : 2,
             "Projectile" : 2,
             "Trigger" : 2,
             "WorldDynamic" : 2,
             "WorldStatic" : 2
           },
-          "Element 0" : {
-            "Path" : "Asset/Mesh/Samba Dancing/Samba Dancing (10)_acc.002.mat"
-          },
-          "Element 1" : {
-            "Path" : "Asset/Mesh/Samba Dancing/Samba Dancing (10)_cloth.002.mat"
-          },
-          "Element 2" : {
-            "Path" : "Asset/Mesh/Samba Dancing/Samba Dancing (10)_b0.002.mat"
-          },
-          "Element 3" : {
-            "Path" : "Asset/Mesh/Samba Dancing/Samba Dancing (10)_m.002.mat"
-          },
-          "Element 4" : {
-            "Path" : "Asset/Mesh/Samba Dancing/Samba Dancing (10)_e.002.mat"
-          },
-          "Generate Overlap Events" : false,
-          "Location" : [10.694828, -8.653132, 0.994482],
-          "Mass (kg)" : 1.000000,
-          "Object Type" : 0,
           "Rotation" : [0.000000, -80.009224, 0.000000],
-          "Scale" : [2.000000, 2.000000, 2.000000],
           "Simulate Physics" : false,
           "Skeletal Mesh" : "Asset/Mesh/Samba Dancing/Samba Dancing (10)_SkeletalMesh.uasset",
-          "Two Sided Shadow" : false,
-          "Visible" : true,
           "bEditorOnly" : false,
           "bTickEnable" : true
         }
@@ -781,39 +736,38 @@
       "Name" : "AStaticMeshActor_125",
       "NonSceneComponents" : [],
       "Properties" : {
-        "Location" : [10.757595, -1.601472, 1.722572],
-        "Rotation" : [-27.286531, 31.608631, -10.822819],
-        "Scale" : [1.000000, 1.000000, 1.000000],
-        "Tags" : "",
-        "Visible" : true
+
       },
       "RootComponent" : {
         "Children" : [],
         "ClassName" : "UStaticMeshComponent",
         "Properties" : {
+          "Auto Activate" : true,
           "Cast Shadow" : true,
-          "Center Of Mass Offset" : [0.000000, 0.000000, 0.000000],
+          "Cast Shadow as Two-Sided" : false,
+          "Center of Mass" : [0.000000, 0.000000, 0.000000],
           "Collision Enabled" : 0,
-          "Collision Responses" : {
+          "Generate Overlap Events" : false,
+          "Is Visible" : true,
+          "Mass (Kg)" : 1.000000,
+          "Materials" : [{
+              "Path" : "Asset/Mesh/BasicShape/Cube_BasicShapeMaterial.mat"
+            }],
+          "Object Type" : 0,
+          "RelativeTransform" : {
+            "Location" : [9.220843, -10.702366, 4.157585],
+            "Scale" : [1.000000, 1.000000, 1.000000]
+          },
+          "Response Container" : {
             "Pawn" : 2,
             "Projectile" : 2,
             "Trigger" : 2,
             "WorldDynamic" : 2,
             "WorldStatic" : 2
           },
-          "Element 0" : {
-            "Path" : "Asset/Mesh/BasicShape/Cube_BasicShapeMaterial.mat"
-          },
-          "Generate Overlap Events" : false,
-          "Location" : [10.757595, -1.601472, 1.722572],
-          "Mass (kg)" : 1.000000,
-          "Object Type" : 0,
           "Rotation" : [-27.286530, 31.608643, -10.822815],
-          "Scale" : [1.000000, 1.000000, 1.000000],
           "Simulate Physics" : false,
           "Static Mesh" : "Asset/Mesh/BasicShape/Cube_StaticMesh.uasset",
-          "Two Sided Shadow" : false,
-          "Visible" : true,
           "bEditorOnly" : false,
           "bTickEnable" : true
         }
@@ -823,45 +777,42 @@
       "Name" : "ASkeletalMeshActor_57",
       "NonSceneComponents" : [],
       "Properties" : {
-        "Location" : [8.349896, -3.344031, 1.000000],
-        "Rotation" : [0.000000, -64.088791, 0.000000],
-        "Scale" : [2.000000, 2.000000, 2.000000],
-        "Tags" : "",
-        "Visible" : true
+
       },
       "RootComponent" : {
         "Children" : [],
         "ClassName" : "USkeletalMeshComponent",
         "Properties" : {
+          "Auto Activate" : true,
           "Cast Shadow" : true,
-          "Center Of Mass Offset" : [0.000000, 0.000000, 0.000000],
+          "Cast Shadow as Two-Sided" : false,
+          "Center of Mass" : [0.000000, 0.000000, 0.000000],
           "Collision Enabled" : 0,
-          "Collision Responses" : {
+          "Generate Overlap Events" : false,
+          "Is Visible" : true,
+          "Mass (Kg)" : 1.000000,
+          "Materials" : [{
+              "Path" : "Asset/Mesh/hirasawa-yui/yui_KON001_Hirasawa_Yui.003.mat"
+            }, {
+              "Path" : "Asset/Mesh/hirasawa-yui/yui_KON001_Hirasawa_Yui_eye.003.mat"
+            }, {
+              "Path" : "Asset/Mesh/hirasawa-yui/yui_KON001_Hirasawa_Yui_face.003.mat"
+            }],
+          "Object Type" : 0,
+          "RelativeTransform" : {
+            "Location" : [5.846572, 2.840355, 1.000001],
+            "Scale" : [3.000000, 3.000000, 3.000000]
+          },
+          "Response Container" : {
             "Pawn" : 2,
             "Projectile" : 2,
             "Trigger" : 2,
             "WorldDynamic" : 2,
             "WorldStatic" : 2
           },
-          "Element 0" : {
-            "Path" : "Asset/Mesh/hirasawa-yui/yui_KON001_Hirasawa_Yui.003.mat"
-          },
-          "Element 1" : {
-            "Path" : "Asset/Mesh/hirasawa-yui/yui_KON001_Hirasawa_Yui_eye.003.mat"
-          },
-          "Element 2" : {
-            "Path" : "Asset/Mesh/hirasawa-yui/yui_KON001_Hirasawa_Yui_face.003.mat"
-          },
-          "Generate Overlap Events" : false,
-          "Location" : [8.349896, -3.344031, 1.000000],
-          "Mass (kg)" : 1.000000,
-          "Object Type" : 0,
           "Rotation" : [0.000000, -64.088791, 0.000000],
-          "Scale" : [2.000000, 2.000000, 2.000000],
           "Simulate Physics" : false,
           "Skeletal Mesh" : "Asset/Mesh/hirasawa-yui/yui_SkeletalMesh.uasset",
-          "Two Sided Shadow" : false,
-          "Visible" : true,
           "bEditorOnly" : false,
           "bTickEnable" : true
         }
@@ -874,9 +825,9 @@
   "PerspectiveCamera" : {
     "FOV" : 1.047198,
     "FarClip" : 1000.000000,
-    "Location" : [-24.228544, -15.122900, 14.168142],
+    "Location" : [-6.686399, 11.333605, 24.175905],
     "NearClip" : 0.100000,
-    "Rotation" : [0.000000, 21.372032, 33.751770]
+    "Rotation" : [0.000000, 40.122131, -51.448151]
   },
   "Version" : 2,
   "WorldSettings" : {

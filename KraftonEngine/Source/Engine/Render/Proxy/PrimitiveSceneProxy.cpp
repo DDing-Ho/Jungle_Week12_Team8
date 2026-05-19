@@ -20,7 +20,7 @@ FPrimitiveSceneProxy::~FPrimitiveSceneProxy() noexcept
 {
 	if (DefaultMaterial)
 	{
-		UObjectManager::Get().DestroyObject(DefaultMaterial);
+		GUObjectArray.DestroyObject(DefaultMaterial);
 		DefaultMaterial = nullptr;
 	}
 }

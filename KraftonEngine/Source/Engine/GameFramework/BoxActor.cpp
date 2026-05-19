@@ -1,8 +1,6 @@
 ﻿#include "GameFramework/BoxActor.h"
 #include "Component/BoxComponent.h"
 
-IMPLEMENT_CLASS(ABoxActor, AActor)
-
 void ABoxActor::InitDefaultComponents()
 {
 	BoxComponent = AddComponent<UBoxComponent>();

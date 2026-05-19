@@ -3,15 +3,6 @@
 #include "Serialization/Archive.h"
 #include "GameFramework/AActor.h"
 
-IMPLEMENT_CLASS(UActorComponent, UObject)
-HIDE_FROM_COMPONENT_LIST(UActorComponent)
-
-BEGIN_CLASS_PROPERTIES(UActorComponent)
-	PROPERTY_BOOL(bAutoActivate, "Auto Activate", "Component", CPF_Edit)
-	PROPERTY_BOOL(bTickEnable, "bTickEnable", "Component", EPropertyFlags::CPF_Edit)
-	PROPERTY_BOOL(bEditorOnly, "bEditorOnly", "Component", EPropertyFlags::CPF_Edit)
-END_CLASS_PROPERTIES(UActorComponent)
-
 void UActorComponent::BeginPlay()
 {
 	if (bAutoActivate)
@@ -90,7 +81,7 @@ void UActorComponent::SetOwner(AActor* Actor)
 	PrimaryComponentTick.bStartWithTickEnabled = true;
 }
 
-void UActorComponent::GetEditableProperties(TArray<FProperty>& OutProps)
+void UActorComponent::GetEditableProperties(TArray<const FProperty*>& OutProps)
 {
 	UObject::GetEditableProperties(OutProps);
 }

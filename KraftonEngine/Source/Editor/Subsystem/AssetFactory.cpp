@@ -51,7 +51,7 @@ bool FAssetFactory::CreateFloatCurve(const FString& DirectoryPath, const FString
 
 	const std::filesystem::path AssetPath = BuildUniqueAssetPath(Directory, AssetName, L".uasset");
 
-	UFloatCurveAsset* NewAsset = UObjectManager::Get().CreateObject<UFloatCurveAsset>();
+	UFloatCurveAsset* NewAsset = GUObjectArray.CreateObject<UFloatCurveAsset>();
 	NewAsset->SetSourcePath(FPaths::ToUtf8(AssetPath.wstring()));
 
 	FFloatCurve& Curve = NewAsset->GetCurve();
@@ -61,7 +61,7 @@ bool FAssetFactory::CreateFloatCurve(const FString& DirectoryPath, const FString
 	Curve.SortKeys();
 
 	bool bSaved = FFloatCurveManager::Get().Save(NewAsset);
-	UObjectManager::Get().DestroyObject(NewAsset);
+	GUObjectArray.DestroyObject(NewAsset);
 
 	if (!bSaved)
 	{
@@ -82,13 +82,13 @@ bool FAssetFactory::CreateCameraShake(const FString& DirectoryPath, const FStrin
 
 	const std::filesystem::path AssetPath = BuildUniqueAssetPath(Directory, AssetName, L".uasset");
 
-	UCameraShakeAsset* NewAsset = UObjectManager::Get().CreateObject<UCameraShakeAsset>();
+	UCameraShakeAsset* NewAsset = GUObjectArray.CreateObject<UCameraShakeAsset>();
 	NewAsset->SetSourcePath(FPaths::ToUtf8(AssetPath.wstring()));
 	NewAsset->Version = 1;
 	NewAsset->ShakeType = ECameraShakeType::Sequence;
 
 	bool bSaved = FCameraShakeManager::Get().Save(NewAsset);
-	UObjectManager::Get().DestroyObject(NewAsset);
+	GUObjectArray.DestroyObject(NewAsset);
 
 	if (!bSaved)
 	{

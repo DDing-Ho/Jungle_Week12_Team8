@@ -1,16 +1,18 @@
 ﻿#pragma once
 
 #include "MovementComponent.h"
+#include "FloatingPawnMovementComponent.generated.h"
 
 #include <algorithm>
 
 class UPrimitiveComponent;
 class USceneComponent;
 
+UCLASS()
 class UFloatingPawnMovementComponent : public UMovementComponent
 {
 public:
-	DECLARE_CLASS(UFloatingPawnMovementComponent, UMovementComponent)
+	GENERATED_BODY(UFloatingPawnMovementComponent)
 
 	UFloatingPawnMovementComponent() = default;
 	~UFloatingPawnMovementComponent() override = default;
@@ -38,6 +40,8 @@ private:
 	float LookInputX = 0.0f;
 	float LookInputY = 0.0f;
 
+	UPROPERTY(Edit, Category="Movement", Min=0.0f, Max=100.0f, Speed=0.1f)
 	float Speed = 10.0f;
+	UPROPERTY(Edit, Category="Movement", Min=0.0f, Max=10.0f, Speed=0.01f)
 	float MouseSensitivity = 0.1f;
 };

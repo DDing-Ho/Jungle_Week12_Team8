@@ -1,4 +1,4 @@
-#include "GameFramework/GameModeBase.h"
+﻿#include "GameFramework/GameModeBase.h"
 #include "GameFramework/GameStateBase.h"
 #include "GameFramework/PlayerController.h"
 #include "GameFramework/Pawn.h"
@@ -6,8 +6,6 @@
 #include "Object/UClass.h"
 #include "Core/Log.h"
 #include "Core/ProjectSettings.h"
-
-IMPLEMENT_CLASS(AGameModeBase, AActor)
 
 AGameModeBase::AGameModeBase()
 {
@@ -67,7 +65,7 @@ UClass* AGameModeBase::ResolveClassFromProjectSettings(UClass* InDefault)
 	}
 
 	UClass* Found = UClass::FindByName(ConfiguredName.c_str());
-	if (Found && Found->IsA(AGameModeBase::StaticClass()))
+	if (Found && Found->IsChildOf(AGameModeBase::StaticClass()))
 	{
 		return Found;
 	}

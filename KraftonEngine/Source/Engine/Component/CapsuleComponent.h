@@ -2,11 +2,13 @@
 #pragma once
 
 #include "ShapeComponent.h"
+#include "CapsuleComponent.generated.h"
 
+UCLASS()
 class UCapsuleComponent : public UShapeComponent
 {
 public:
-	DECLARE_CLASS(UCapsuleComponent, UShapeComponent)
+	GENERATED_BODY(UCapsuleComponent)
 
 	void SetCapsuleSize(float InRadius, float InHalfHeight);
 	float GetScaledCapsuleRadius() const;
@@ -20,6 +22,8 @@ public:
 	void Serialize(FArchive& Ar) override;
 
 protected:
+	UPROPERTY(Edit, Category="Shape", DisplayName="Capsule Radius", Min=0.01f, Max=10000.0f, Speed=1.0f)
 	float CapsuleRadius = 1.8f;
+	UPROPERTY(Edit, Category="Shape", DisplayName="Capsule Half Height", Min=0.01f, Max=10000.0f, Speed=1.0f)
 	float CapsuleHalfHeight = 3.0f;
 };

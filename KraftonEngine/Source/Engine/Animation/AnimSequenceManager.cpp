@@ -40,12 +40,12 @@ UAnimSequence* FAnimSequenceManager::Load(const FString& Path)
 	FAssetImportMetadata Metadata;
 	Reader << Metadata;
 
-	UAnimSequence* AnimSequence = UObjectManager::Get().CreateObject<UAnimSequence>();
+	UAnimSequence* AnimSequence = GUObjectArray.CreateObject<UAnimSequence>();
 	AnimSequence->Serialize(Reader);
 
 	if (!Reader.IsValid())
 	{
-		UObjectManager::Get().DestroyObject(AnimSequence);
+		GUObjectArray.DestroyObject(AnimSequence);
 		UE_LOG("AnimSequence load failed: package data is incomplete. Path=%s", NormalizedPath.c_str());
 		return nullptr;
 	}

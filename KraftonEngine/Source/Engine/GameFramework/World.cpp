@@ -17,7 +17,6 @@
 #include "Runtime/Engine.h"
 #include <algorithm>
 
-IMPLEMENT_CLASS(UWorld, UObject)
 
 
 UWorld::~UWorld()
@@ -34,7 +33,7 @@ UObject* UWorld::Duplicate(UObject* NewOuter) const
 	// 새 UWorld를 만들고, 소스의 Actor들을 하나씩 복제해 NewWorld를 Outer로 삼아 등록한다.
 	// AActor::Duplicate 내부에서 Dup->GetTypedOuter<UWorld>() 경유 AddActor가 호출되므로
 	// 여기서는 World 단위 상태만 챙기면 된다.
-	UWorld* NewWorld = UObjectManager::Get().CreateObject<UWorld>();
+	UWorld* NewWorld = GUObjectArray.CreateObject<UWorld>();
 	if (!NewWorld)
 	{
 		return nullptr;
@@ -55,7 +54,7 @@ UObject* UWorld::Duplicate(UObject* NewOuter) const
 
 UWorld* UWorld::DuplicateAs(EWorldType InWorldType) const
 {
-	UWorld* NewWorld = UObjectManager::Get().CreateObject<UWorld>();
+	UWorld* NewWorld = GUObjectArray.CreateObject<UWorld>();
 	if (!NewWorld) return nullptr;
 
 	NewWorld->SetWorldType(InWorldType);
@@ -86,7 +85,7 @@ void UWorld::DestroyActor(AActor* Actor)
 	// PhysX onContact / TickManager 순회 도중에 self-destroy 하는 경로 (police HandleHit,
 	// meteor Tick) 는 호출자 측에서 stack 위쪽 코드가 더 이상 this 를 만지지 않도록
 	// 패턴화해뒀음 (bAlreadyCaught 가드, ElapsedTime=Lifetime 후 다음 Tick).
-	UObjectManager::Get().DestroyObject(Actor);
+	GUObjectArray.DestroyObject(Actor);
 }
 
 AActor* UWorld::SpawnActorByClass(UClass* Class)
@@ -285,7 +284,7 @@ FLODUpdateContext UWorld::PrepareLODContext()
 void UWorld::InitWorld()
 {
 	Partition.Reset(FBoundingBox());
-	PersistentLevel = UObjectManager::Get().CreateObject<ULevel>(this);
+	PersistentLevel = GUObjectArray.CreateObject<ULevel>(this);
 	PersistentLevel->SetWorld(this);
 
 	// E.2/3: CameraManager spawn 은 PC 의 BeginPlay 가 담당. World 는 보유하지 않음.
@@ -404,6 +403,6 @@ void UWorld::EndPlay()
 	MarkWorldPrimitivePickingBVHDirty();
 
 	// PersistentLevel은 CreateObject로 생성되었으므로 DestroyObject로 해제해야 alloc count가 맞음
-	UObjectManager::Get().DestroyObject(PersistentLevel);
+	GUObjectArray.DestroyObject(PersistentLevel);
 	PersistentLevel = nullptr;
 }

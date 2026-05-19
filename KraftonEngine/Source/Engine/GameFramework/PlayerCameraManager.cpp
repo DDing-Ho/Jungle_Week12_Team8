@@ -12,8 +12,6 @@
 #include "Object/UClass.h"
 #include <algorithm>
 
-IMPLEMENT_CLASS(APlayerCameraManager, AActor)
-
 void APlayerCameraManager::RegisterCamera(UCameraComponent* Camera)
 {
 	if (Camera)
@@ -283,7 +281,7 @@ UCameraModifier* APlayerCameraManager::AddNewCameraModifier(UClass* ModifierClas
 	UCameraModifier* Modifier = Cast<UCameraModifier>(Obj);
 	if (!Modifier)
 	{
-		if (Obj) UObjectManager::Get().DestroyObject(Obj);
+		if (Obj) GUObjectArray.DestroyObject(Obj);
 		return nullptr;
 	}
 
@@ -307,7 +305,7 @@ void APlayerCameraManager::RemoveCameraModifier(UCameraModifier* Modifier)
 	{
 		ShakeModifier = nullptr;
 	}
-	UObjectManager::Get().DestroyObject(Modifier);
+	GUObjectArray.DestroyObject(Modifier);
 }
 
 UCameraModifier* APlayerCameraManager::FindCameraModifier(UClass* ModifierClass) const
@@ -315,7 +313,7 @@ UCameraModifier* APlayerCameraManager::FindCameraModifier(UClass* ModifierClass)
 	if (!ModifierClass) return nullptr;
 	for (UCameraModifier* Mod : ModifierList)
 	{
-		if (Mod && Mod->GetClass()->IsA(ModifierClass))
+		if (Mod && Mod->GetClass()->IsChildOf(ModifierClass))
 		{
 			return Mod;
 		}

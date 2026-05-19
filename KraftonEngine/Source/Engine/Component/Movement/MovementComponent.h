@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "Component/ActorComponent.h"
+#include "MovementComponent.generated.h"
 
 class USceneComponent;
 
@@ -11,10 +12,11 @@ class USceneComponent;
  * USceneComponent를 움직이는 로직들의 베이스 클래스.
  * 실제 이동 로직은 자식 클래스에서 담당합니다.
  */
+UCLASS(HiddenInComponentList)
 class UMovementComponent : public UActorComponent
 {
 public:
-	DECLARE_CLASS(UMovementComponent, UActorComponent)
+	GENERATED_BODY(UMovementComponent)
 
 	UMovementComponent() = default;
 	~UMovementComponent() override = default;
@@ -39,6 +41,8 @@ protected:
 	USceneComponent* FindUpdatedComponentByPath(const FString& InPath) const;
 
 	USceneComponent* UpdatedComponent = nullptr; // 움직일 대상
+	UPROPERTY(Edit, Category="Movement", DisplayName="Auto Register Updated")
 	bool bAutoRegisterUpdatedComponent = true;
+	UPROPERTY(Edit, Category="Movement", DisplayName="Updated Component", Type=SceneComponentRef)
 	FString UpdatedComponentPath;
 };

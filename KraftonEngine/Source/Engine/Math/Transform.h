@@ -2,11 +2,21 @@
 #include "Engine/Math/Matrix.h"
 #include "Engine/Math/Rotator.h"
 #include "Engine/Math/Quat.h"
+#include "Core/Property/PropertyTypes.h"
+#include "Object/ObjectMacros.h"
+#include "Transform.generated.h"
 
+USTRUCT()
 struct FTransform
 {
+	GENERATED_BODY(FTransform)
+
+	UPROPERTY(Edit, Category="Transform")
 	FVector Location;
-	FQuat Rotation;
+
+	FQuat Rotation;   // Edited via USceneComponent::CachedEditRotator — FQuat has no editor type.
+
+	UPROPERTY(Edit, Category="Transform")
 	FVector Scale;
 
 	FTransform() : Location(0.0f, 0.0f, 0.0f), Rotation(FQuat::Identity), Scale(1.0f, 1.0f, 1.0f){}

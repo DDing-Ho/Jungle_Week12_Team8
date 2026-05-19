@@ -4,23 +4,37 @@
 #include "Math/MathUtils.h"
 #include "Math/Vector.h"
 
+#include "CameraComponent.generated.h"
+
 struct FMinimalViewInfo;
 
+USTRUCT()
 struct FCameraState
 {
+	GENERATED_BODY(FCameraState)
+	UPROPERTY(Edit, Category="Camera", DisplayName="FOV", Min = 0.1, Max = 3.14, Speed = 0.01)
 	float FOV = 3.14159265358979f / 3.0f;
+
 	float AspectRatio = 16.0f / 9.0f;
+
+	UPROPERTY(Edit, Category = "Camera", DisplayName = "Near Z", Min = 0.01, Max = 100.0, Speed = 0.01)
 	float NearZ = 0.1f;
+	
+	UPROPERTY(Edit, Category = "Camera", DisplayName = "Far Z", Min = 1.0, Max = 100000.0, Speed = 10.0)
 	float FarZ = 1000.0f;
+
+	UPROPERTY(Edit, Category = "Camera", DisplayName = "Ortho Width", Min = 0.1, Max = 1000.0, Speed = 0.5)
 	float OrthoWidth = 10.0f;
+
+	UPROPERTY(Edit, Category = "Camera", DisplayName = "Is Orthogonal")
 	bool bIsOrthogonal = false;
 };
 
+UCLASS()
 class UCameraComponent : public USceneComponent
 {
 public:
-	DECLARE_CLASS(UCameraComponent, USceneComponent)
-
+	GENERATED_BODY(UCameraComponent)
 	UCameraComponent() = default;
 
 	void BeginPlay() override;
@@ -48,5 +62,6 @@ public:
 	bool IsOrthogonal() const { return CameraState.bIsOrthogonal; }
 
 private:
+	UPROPERTY(Edit, Category="Camera", DisplayName="Camera State")
 	FCameraState CameraState;
 };

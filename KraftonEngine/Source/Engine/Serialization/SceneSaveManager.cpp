@@ -17,7 +17,7 @@
 #include "Component/Light/LightComponentBase.h"
 #include "Object/Object.h"
 #include "Object/ObjectFactory.h"
-#include "Core/PropertyTypes.h"
+#include "Core/Property/PropertyTypes.h"
 #include "Object/FName.h"
 #include "Profiling/PlatformTime.h"
 
@@ -274,11 +274,11 @@ json::JSON FSceneSaveManager::SerializeProperties(UObject* Obj)
 	JSON props = json::Object();
 	if (!Obj) return props;
 
-	TArray<FProperty> Descriptors;
+	TArray<const FProperty*> Descriptors;
 	Obj->GetNonTransientProperties(Descriptors);
 
-	for (const auto& Prop : Descriptors) {
-		props[Prop.Name] = Prop.Serialize();
+	for (const FProperty* Prop : Descriptors) {
+		props[Prop->Name] = Prop->Serialize(Obj);
 	}
 	return props;
 }
@@ -492,27 +492,27 @@ void FSceneSaveManager::DeserializeProperties(UObject* Obj, json::JSON& PropsJSO
 
 	UpgradeLegacyMeshMaterialProperties(Obj, PropsJSON);
 
-	TArray<FProperty> Descriptors;
+	TArray<const FProperty*> Descriptors;
 	Obj->GetNonTransientProperties(Descriptors);
 
-	for (auto& Prop : Descriptors) {
-		if (!PropsJSON.hasKey(Prop.Name.c_str())) continue;
-		json::JSON& Value = PropsJSON[Prop.Name.c_str()];
-		Prop.Deserialize(Value);
-		Obj->PostEditProperty(Prop.Name.c_str());
+	for (const FProperty* Prop : Descriptors) {
+		if (!PropsJSON.hasKey(Prop->Name.c_str())) continue;
+		json::JSON& Value = PropsJSON[Prop->Name.c_str()];
+		Prop->Deserialize(Obj, Value);
+		Obj->PostEditProperty(Prop->Name.c_str());
 	}
 
 	// 2nd pass: PostEditProperty가 새 프로퍼티를 추가할 수 있음
 	// (예: SetStaticMesh → MaterialSlots 생성 → "Element N" 디스크립터 추가)
-	TArray<FProperty> Descriptors2;
+	TArray<const FProperty*> Descriptors2;
 	Obj->GetNonTransientProperties(Descriptors2);
 
 	for (size_t i = Descriptors.size(); i < Descriptors2.size(); ++i) {
-		auto& Prop = Descriptors2[i];
-		if (!PropsJSON.hasKey(Prop.Name.c_str())) continue;
-		json::JSON& Value = PropsJSON[Prop.Name.c_str()];
-		Prop.Deserialize(Value);
-		Obj->PostEditProperty(Prop.Name.c_str());
+		const FProperty* Prop = Descriptors2[i];
+		if (!PropsJSON.hasKey(Prop->Name.c_str())) continue;
+		json::JSON& Value = PropsJSON[Prop->Name.c_str()];
+		Prop->Deserialize(Obj, Value);
+		Obj->PostEditProperty(Prop->Name.c_str());
 	}
 }
 

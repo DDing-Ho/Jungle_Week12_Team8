@@ -37,7 +37,7 @@ FDecalSceneProxy::~FDecalSceneProxy()
 	}
 	if (DecalProxyMaterial)
 	{
-		UObjectManager::Get().DestroyObject(DecalProxyMaterial);
+		GUObjectArray.DestroyObject(DecalProxyMaterial);
 		DecalProxyMaterial = nullptr;
 	}
 }

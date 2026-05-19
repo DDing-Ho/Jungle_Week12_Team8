@@ -8,12 +8,6 @@
 #include "Object/ObjectFactory.h"
 #include "Serialization/Archive.h"
 
-IMPLEMENT_CLASS(ULuaScriptComponent, UActorComponent)
-
-BEGIN_CLASS_PROPERTIES(ULuaScriptComponent)
-	REGISTER_PROPERTY(ScriptFile, "ScriptFile", EPropertyType::Script, "Script", CPF_Edit)
-END_CLASS_PROPERTIES(ULuaScriptComponent)
-
 ULuaScriptComponent::ULuaScriptComponent()
 {
 }
@@ -332,7 +326,7 @@ void ULuaScriptComponent::TickComponent(float DeltaTime, ELevelTick TickType, FA
 	}
 }
 
-void ULuaScriptComponent::GetEditableProperties(TArray<FProperty>& OutProps)
+void ULuaScriptComponent::GetEditableProperties(TArray<const FProperty*>& OutProps)
 {
 	EnsureDefaultScriptFile();
 	UActorComponent::GetEditableProperties(OutProps);

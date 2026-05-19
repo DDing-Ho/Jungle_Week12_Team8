@@ -2,11 +2,13 @@
 
 #include "SceneComponent.h"
 #include "Render/Types/FogParams.h"
+#include "HeightFogComponent.generated.h"
 
+UCLASS()
 class UHeightFogComponent : public USceneComponent
 {
 public:
-	DECLARE_CLASS(UHeightFogComponent, USceneComponent)
+	GENERATED_BODY(UHeightFogComponent)
 
 	UHeightFogComponent();
 
@@ -25,10 +27,16 @@ public:
 private:
 	void PushToScene();
 
+	UPROPERTY(Edit, Category="Fog", DisplayName="Fog Density", Min=0.0f, Max=0.05f, Speed=0.001f)
 	float FogDensity        = 0.02f;
+	UPROPERTY(Edit, Category="Fog", DisplayName="Height Falloff", Min=0.001f, Max=5.0f, Speed=0.01f)
 	float FogHeightFalloff  = 0.2f;
+	UPROPERTY(Edit, Category="Fog", DisplayName="Start Distance", Min=0.0f, Max=100000.0f, Speed=1.0f)
 	float StartDistance     = 0.0f;
+	UPROPERTY(Edit, Category="Fog", DisplayName="Cutoff Distance", Min=0.0f, Max=100000.0f, Speed=1.0f)
 	float FogCutoffDistance = 0.0f;
+	UPROPERTY(Edit, Category="Fog", DisplayName="Max Opacity", Min=0.0f, Max=1.0f, Speed=0.01f)
 	float FogMaxOpacity     = 1.0f;
+	UPROPERTY(Edit, Category="Fog", DisplayName="Inscattering Color", Type=Color4)
 	FVector4 FogInscatteringColor = FVector4(0.45f, 0.55f, 0.65f, 1.0f);
 };

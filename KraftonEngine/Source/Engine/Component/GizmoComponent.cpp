@@ -1,5 +1,4 @@
 ﻿#include "GizmoComponent.h"
-#include "Object/ObjectFactory.h"
 #include "GameFramework/AActor.h"
 #include "GameFramework/World.h"
 #include "Math/MathUtils.h"
@@ -11,9 +10,6 @@
 #include "Render/Proxy/GizmoSceneProxy.h"
 #include "Render/Scene/FScene.h"
 #include <cfloat>
-
-IMPLEMENT_CLASS(UGizmoComponent, UPrimitiveComponent)
-HIDE_FROM_COMPONENT_LIST(UGizmoComponent)
 
 FPrimitiveSceneProxy* UGizmoComponent::CreateSceneProxy()
 {

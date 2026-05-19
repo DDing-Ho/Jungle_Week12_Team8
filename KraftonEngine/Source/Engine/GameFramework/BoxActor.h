@@ -2,12 +2,15 @@
 
 #include "GameFramework/AActor.h"
 
+#include "BoxActor.generated.h"
+
 class UBoxComponent;
 
+UCLASS(Actor)
 class ABoxActor : public AActor
 {
 public:
-	DECLARE_CLASS(ABoxActor, AActor)
+	GENERATED_BODY(ABoxActor)
 
 	ABoxActor() = default;
 

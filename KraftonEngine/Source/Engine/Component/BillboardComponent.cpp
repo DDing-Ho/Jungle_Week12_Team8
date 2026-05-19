@@ -10,12 +10,6 @@
 
 #include <cstring>
 
-IMPLEMENT_CLASS(UBillboardComponent, UPrimitiveComponent)
-
-BEGIN_CLASS_PROPERTIES(UBillboardComponent)
-	REGISTER_PROPERTY(MaterialSlot, "Material", EPropertyType::MaterialSlot, "Rendering", EPropertyFlags::CPF_Edit)
-END_CLASS_PROPERTIES(UBillboardComponent)
-
 FPrimitiveSceneProxy* UBillboardComponent::CreateSceneProxy()
 {
 	return new FBillboardSceneProxy(this);

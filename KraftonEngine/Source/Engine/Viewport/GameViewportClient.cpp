@@ -8,7 +8,6 @@
 
 #include <windows.h>
 
-DEFINE_CLASS(UGameViewportClient, UObject)
 
 void UGameViewportClient::BeginGameSession(FViewport* InViewport)
 {

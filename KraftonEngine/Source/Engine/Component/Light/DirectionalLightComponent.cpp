@@ -7,8 +7,6 @@
 #include "Engine/Serialization/Archive.h"
 #include <cmath>
 
-IMPLEMENT_CLASS(UDirectionalLightComponent, ULightComponent)
-
 namespace
 {
 	void AddDirectionalLightArrow(FScene& Scene, const FVector& Origin, const FVector& Direction)

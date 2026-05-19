@@ -1,12 +1,27 @@
 ﻿#include "SkeletalMesh.h"
+#include "Mesh/MeshManager.h"
 #include "Mesh/Skeleton.h"
 #include "Mesh/SkeletonManager.h"
 #include "Object/ObjectFactory.h"
 #include "Serialization/Archive.h"
 
-IMPLEMENT_CLASS(USkeletalMesh, UObject)
 
 static const FString EmptyPath;
+
+USkeletalMesh::~USkeletalMesh()
+{
+	if (SkeletalMeshAsset)
+	{
+		delete SkeletalMeshAsset;
+		SkeletalMeshAsset = nullptr;
+	}
+
+	auto It = FMeshManager::SkeletalMeshCache.find(AssetPathFileName);
+	if (It != FMeshManager::SkeletalMeshCache.end() && It->second == this)
+	{
+		FMeshManager::SkeletalMeshCache.erase(It);
+	}
+}
 
 void USkeletalMesh::Serialize(FArchive& Ar)
 {

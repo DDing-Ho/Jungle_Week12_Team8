@@ -2,13 +2,15 @@
 
 #include "SkinnedMeshComponent.h"
 #include "Animation/AnimInstance.h"
+#include "SkeletalMeshComponent.generated.h"
 
 // SkeletalMesh 전용 render proxy만 제공하는 얇은 wrapper.
 // Skinning/bone/material/bounds 상태는 모두 USkinnedMeshComponent가 소유한다.
+UCLASS()
 class USkeletalMeshComponent : public USkinnedMeshComponent
 {
 public:
-	DECLARE_CLASS(USkeletalMeshComponent, USkinnedMeshComponent)
+	GENERATED_BODY(USkeletalMeshComponent)
 	USkeletalMeshComponent() = default;
 	~USkeletalMeshComponent() override = default;
 

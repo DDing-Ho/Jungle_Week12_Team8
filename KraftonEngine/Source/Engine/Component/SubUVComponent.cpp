@@ -12,15 +12,6 @@
 #include "Serialization/Archive.h"
 #include "Materials/Material.h"
 
-IMPLEMENT_CLASS(USubUVComponent, UBillboardComponent)
-
-BEGIN_CLASS_PROPERTIES(USubUVComponent)
-	REGISTER_PROPERTY(ParticleName, "Particle", EPropertyType::Name, "Particle", CPF_Edit)
-	PROPERTY_FLOAT(PlayRate, "Play Rate", "Particle", 1.0f, 120.0f, 1.0f, CPF_Edit)
-	PROPERTY_BOOL(bLoop, "bLoop", "Particle", CPF_Edit)
-	HIDE_PROPERTY("Material")
-END_CLASS_PROPERTIES(USubUVComponent)
-
 FPrimitiveSceneProxy* USubUVComponent::CreateSceneProxy()
 {
 	return new FSubUVSceneProxy(this);
@@ -52,7 +43,7 @@ USubUVComponent::~USubUVComponent()
 {
 	if (SubUVMaterial)
 	{
-		UObjectManager::Get().DestroyObject(SubUVMaterial);
+		GUObjectArray.DestroyObject(SubUVMaterial);
 		SubUVMaterial = nullptr;
 	}
 }

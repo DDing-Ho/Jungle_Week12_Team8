@@ -2,13 +2,15 @@
 
 #include "Component/ActorComponent.h"
 #include "Math/Vector.h"
+#include "ActionComponent.generated.h"
 
 class USceneComponent;
 
+UCLASS()
 class UActionComponent : public UActorComponent
 {
 public:
-	DECLARE_CLASS(UActionComponent, UActorComponent)
+	GENERATED_BODY(UActionComponent)
 
 	UActionComponent() = default;
 	~UActionComponent() override = default;
@@ -17,15 +19,24 @@ public:
 	void EndPlay() override;
 	void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction& ThisTickFunction) override;
 
+	UFUNCTION(Lua)
 	void HitStop(float Duration, float TimeDilation);
+	UFUNCTION(Lua)
 	void HitSquash(const FVector& SquashedScale, float SquashInDuration, float RecoverDuration);
+	UFUNCTION(Lua)
 	void Knockback(const FVector& Direction, float Distance, float Duration);
+	UFUNCTION(Lua)
 	void Slomo(float Duration, float TimeDilation);
 
+	UFUNCTION(Lua)
 	void StopHitStop();
+	UFUNCTION(Lua)
 	void StopHitSquash();
+	UFUNCTION(Lua)
 	void StopKnockback();
+	UFUNCTION(Lua)
 	void StopSlomo();
+	UFUNCTION(Lua)
 	void StopAllActions();
 
 private:

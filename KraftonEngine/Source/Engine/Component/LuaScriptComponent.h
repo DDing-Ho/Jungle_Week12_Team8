@@ -4,14 +4,16 @@
 #include "Core/Delegate.h"
 #include "Math/Vector.h"
 #include <sol/sol.hpp>
+#include "LuaScriptComponent.generated.h"
 
 class UPrimitiveComponent;
 struct FHitResult;
 
+UCLASS()
 class ULuaScriptComponent : public UActorComponent
 {
 public:
-	DECLARE_CLASS(ULuaScriptComponent, UActorComponent)
+	GENERATED_BODY(ULuaScriptComponent)
 
 	ULuaScriptComponent();
 	~ULuaScriptComponent();
@@ -22,7 +24,7 @@ public:
 	virtual void BeginPlay() override;
 	virtual void EndPlay() override;
 
-	void GetEditableProperties(TArray<FProperty>& OutProps) override;
+	void GetEditableProperties(TArray<const FProperty*>& OutProps) override;
 
 	void Serialize(FArchive& Ar) override;
 
@@ -64,6 +66,7 @@ private:
 		AActor* OtherActor,
 		UPrimitiveComponent* OtherComp);
 
+	UPROPERTY(Edit, Category="Script", DisplayName="ScriptFile", Type=Script)
 	FString ScriptFile;
 	
 	sol::environment Env;

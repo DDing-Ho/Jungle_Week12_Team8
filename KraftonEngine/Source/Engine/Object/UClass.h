@@ -1,10 +1,5 @@
 ﻿#pragma once
-
-#include "Core/CoreTypes.h"
-#include "Core/PropertyTypes.h"
-
-#include <cstring>
-#include <unordered_set>
+#include "UStruct.h"
 
 class UObject;
 class FArchive;
@@ -18,82 +13,47 @@ enum EClassFlags : uint32
 	CF_HiddenInComponentList = 1 << 3,
 };
 
-class UClass
+enum EClassCastFlags : uint32
+{
+	CASTCLASS_None						= 0,
+	CASTCLASS_UField					= 1 << 0,
+	CASTCLASS_UEnum						= 1 << 1,	
+	CASTCLASS_UStruct					= 1 << 2,
+	CASTCLASS_UScriptStruct             = 1 << 3,
+	CASTCLASS_UClass					= 1 << 4,
+	CASTCLASS_UFunction					= 1 << 5,
+	CASTCLASS_AActor					= 1 << 6,
+	CASTCLASS_APawn						= 1 << 7,
+	CASTCLASS_APlayerController			= 1 << 8,
+	CASTCLASS_USceneComponent			= 1 << 9,
+	CASTCLASS_UPrimitiveComponent		= 1 << 10,
+	CASTCLASS_UStaticMeshComponent		= 1 << 11,
+	CASTCLASS_USkinnedMeshComponent		= 1 << 12,
+	CASTCLASS_USkeletalMeshComponent	= 1 << 13,
+};
+
+class UClass : public UStruct
 {
 public:
-	UClass(const char* InName, UClass* InSuperClass, size_t InSize, uint32 InFlags = CF_None)
-		: Name(InName), SuperClass(InSuperClass), Size(InSize), ClassFlags(InFlags)
+	UClass(const char* InName, UClass* InSuperClass, size_t InSize,
+		uint32 InFlags = CF_None, uint32 InCastFlags = CASTCLASS_None)
+		: UStruct(InName, InSuperClass, InSize)
+		, ClassFlags(InFlags)
+		, OwnClassCastFlags(InCastFlags)
+		, ClassCastFlags(InCastFlags)
 	{}
 
-	~UClass()
-	{
-		for (uint32 i = 0; i < Properties.size(); i++)
-		{
-			if (Properties[i])
-			{
-				// Inner 는 PROPERTY_ARRAY 매크로가 heap 에 할당해 부모에만 1개 보관.
-				// FProperty 자체에는 dtor 가 없으므로 (값 복사 안전성 때문) 여기서 명시 해제.
-				if (Properties[i]->Inner)
-				{
-					delete Properties[i]->Inner;
-					Properties[i]->Inner = nullptr;
-				}
-				delete Properties[i];
-				Properties[i] = nullptr;
-			}
-		}
-		Properties.clear();
-	}
+	~UClass() = default;
 
-	//void		 Serialize(FArchive& Ar);
-	const char*  GetName()       const { return Name; }
-	UClass*      GetSuperClass() const { return SuperClass; }
-	size_t       GetSize()       const { return Size; }
-	uint32       GetClassFlags() const { return ClassFlags; }
-	void         AddClassFlags(uint32 Flags) { ClassFlags |= Flags; }
-	const TArray<FProperty*>& GetProperties() const { return Properties; }
-	FProperty*   GetProperty(uint32 Index) const { return Index < Properties.size() ? Properties[Index] : nullptr; }
-	void		 AddProperty(FProperty* InProperty) { if (InProperty) Properties.push_back(InProperty); }
+	void	Bind();
+	uint32	GetClassFlags() const { return ClassFlags; }
+	void	AddClassFlags(uint32 Flags) { ClassFlags |= Flags; }
+	uint32	GetClassCastFlags() const { return ClassCastFlags; }
+	UClass* GetSuperClass() const { return (UClass*)GetSuperStruct(); }
 
-	// Hide the property from both the editor AND the serializing process
-	void		 HideInheritedProperty(FString InName);
-	bool		 IsPropertyHidden(FString InName) const;
-
-	// 베이스 → 파생 순서로 모든 프로퍼티 템플릿을 OutProps 에 복사.
-	// 기존 GetEditableProperties 구현이 Super 를 먼저 호출하던 순서와 동일하다.
-	// 복사본을 돌려주므로 호출자가 ValuePtr 을 인스턴스 주소로 패치해도 템플릿은 안전.
-	void GetAllProperties(TArray<FProperty>& OutProps) const
-	{
-		if (SuperClass) SuperClass->GetAllProperties(OutProps);
-		for (const FProperty* P : Properties)
-		{
-			if (P) OutProps.push_back(*P);
-		}
-	}
-
-	void GetEditableProperties(TArray<FProperty>& OutProps) const;
-	void GetNonTransientProperties(TArray<FProperty>& OutProps) const;
-
-	// 이름으로 프로퍼티 룩업. 자기 클래스 → 베이스 순서로 검색.
-	const FProperty* FindPropertyByName(const char* InName) const
-	{
-		if (!InName) return nullptr;
-		for (const FProperty* P : Properties)
-		{
-			if (P && std::strcmp(P->Name.c_str(), InName) == 0) return P;
-		}
-		return SuperClass ? SuperClass->FindPropertyByName(InName) : nullptr;
-	}
-
-	bool IsA(const UClass* Other) const
-	{
-		for (const UClass* C = this; C; C = C->SuperClass)
-		{
-			if (C == Other)
-				return true;
-		}
-		return false;
-	}
+	// Not a virtual override, but rather a C++ function overload that utilizes Name Hiding.
+	// This is a deliberate decision.
+	bool IsChildOf(const UClass* Other);
 
 	bool HasAnyClassFlags(uint32 Flags) const
 	{
@@ -120,18 +80,20 @@ public:
 		return nullptr;
 	}
 
-private:
-	void GetEditablePropertiesFor(TArray<FProperty>& OutProps, const UClass* TargetClass) const;
-	void GetNonTransientPropertiesFor(TArray<FProperty>& OutProps, const UClass* TargetClass) const;
+	static void RegisterClassesAsStaticObjects();
+
+	static UClass* StaticClass() { return &StaticClassInstance; }
+	UClass* GetClass() const override { return StaticClass(); }
+
+public:
+	static UClass StaticClassInstance;
+	static FClassRegistrar s_Registrar;
 
 private:
-	const char* Name        = nullptr;
-	UClass*     SuperClass  = nullptr;
-	size_t      Size        = 0;
-	uint32      ClassFlags  = CF_None;
-
-	TArray<FProperty*> Properties;
-	std::unordered_set<FString> HiddenProperties;
+	bool   bBound		  = false;
+	uint32 ClassFlags     = CF_None;
+	uint32 OwnClassCastFlags = CASTCLASS_None;
+	uint32 ClassCastFlags = CASTCLASS_None;
 };
 
 // static initializer 에서 UClass를 전역 레지스트리에 등록

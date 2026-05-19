@@ -2,6 +2,7 @@
 
 #include "Engine/Runtime/EngineLoop.h"
 #include "Engine/Platform/CrashDump.h"
+#include "Engine/Object/FUObjectArray.h"
 #include <objbase.h>
 
 #pragma comment(lib, "ole32.lib")
@@ -20,11 +21,11 @@ namespace
 	UEngine* CreateConcreteEngine()
 	{
 #if WITH_EDITOR
-		return UObjectManager::Get().CreateObject<UEditorEngine>();
+		return GUObjectArray.CreateObject<UEditorEngine>();
 #elif WITH_STANDALONE
-		return UObjectManager::Get().CreateObject<UGameEngine>();
+		return GUObjectArray.CreateObject<UGameEngine>();
 #else
-		return UObjectManager::Get().CreateObject<UEngine>();
+		return GUObjectArray.CreateObject<UEngine>();
 #endif
 	}
 

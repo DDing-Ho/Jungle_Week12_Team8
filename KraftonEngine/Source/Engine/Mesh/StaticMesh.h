@@ -4,6 +4,7 @@
 #include "Collision/MeshTriangleBVH.h"
 #include "Mesh/StaticMeshAsset.h"
 #include "Serialization/Archive.h"
+#include "StaticMesh.generated.h"
 
 #include <memory>
 
@@ -17,10 +18,11 @@ struct FLODMeshData
 };
 
 // UStaticMesh — FStaticMesh를 소유하는 UObject 에셋
+UCLASS()
 class UStaticMesh : public UObject
 {
 public:
-	DECLARE_CLASS(UStaticMesh, UObject)
+	GENERATED_BODY(UStaticMesh)
 
 	static constexpr uint32 MAX_LOD_COUNT = 4;
 
@@ -30,7 +32,7 @@ public:
 	void Serialize(FArchive& Ar);
 
 	void SetAssetPathFileName(const FString& InPathFileName) { AssetPathFileName = InPathFileName; }
-	const FString& GetAssetPathFileName() const { return AssetPathFileName; }
+	const FString& GetAssetPathFileName() const override { return AssetPathFileName; }
 
 	void SetStaticMeshAsset(FStaticMesh* InMesh);
 	FStaticMesh* GetStaticMeshAsset() const;

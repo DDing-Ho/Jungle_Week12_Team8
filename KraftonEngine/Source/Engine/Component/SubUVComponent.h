@@ -3,13 +3,19 @@
 #include "BillboardComponent.h"
 #include "Core/ResourceTypes.h"
 #include "Object/FName.h"
+#include "SubUVComponent.generated.h"
 
 class UMaterial;
 
+UCLASS()
 class USubUVComponent : public UBillboardComponent
 {
 public:
-	DECLARE_CLASS(USubUVComponent, UBillboardComponent)
+	GENERATED_BODY(USubUVComponent)
+
+	// SubUV owns its own particle-backed material; the inherited
+	// UBillboardComponent::Texture property is irrelevant here.
+	UPROPERTY_HIDE("Material")
 
 	USubUVComponent();
 	~USubUVComponent() override;
@@ -46,14 +52,21 @@ protected:
 private:
 	void RebuildSubUVMaterial();
 
+	UPROPERTY(Edit, Category="Particle", DisplayName="Particle")
 	FName ParticleName;
+
 	FParticleResource* CachedParticle = nullptr; // ResourceManager 소유, 여기선 참조만
 	UMaterial* SubUVMaterial = nullptr;           // Particle SRV를 래핑하는 경량 머티리얼
 
 	uint32 FrameIndex = 0;
+
+	UPROPERTY(Edit, Category="Particle", DisplayName="Play Rate", Min=1.0, Max=120.0, Speed=1.0)
 	float  PlayRate = 30.0f; // 초당 프레임 수
+
 	float  TimeAccumulator = 0.0f;
 
+	UPROPERTY(Edit, Category="Particle")
 	bool bLoop = true;
+
 	bool bIsExecute = false;
 };

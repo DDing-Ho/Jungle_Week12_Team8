@@ -39,7 +39,7 @@ void UAnimSequence::Serialize(FArchive& Ar)
 
 	if (!DataModel)
 	{
-		DataModel = UObjectManager::Get().CreateObject<UAnimDataModel>(this);
+		DataModel = GUObjectArray.CreateObject<UAnimDataModel>(this);
 	}
 
 	DataModel->Serialize(Ar);

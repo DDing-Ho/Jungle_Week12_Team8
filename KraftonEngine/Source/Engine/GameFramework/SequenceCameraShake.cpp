@@ -6,7 +6,6 @@
 #include "FloatCurve/FloatCurveManager.h"
 #include "FloatCurve/FloatCurveAsset.h"
 
-IMPLEMENT_CLASS(USequenceCameraShake, UCameraShakeBase)
 
 namespace
 {

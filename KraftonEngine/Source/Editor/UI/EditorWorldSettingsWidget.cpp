@@ -1,4 +1,4 @@
-#include "Editor/UI/EditorWorldSettingsWidget.h"
+﻿#include "Editor/UI/EditorWorldSettingsWidget.h"
 #include "Engine/Runtime/Engine.h"
 #include "GameFramework/World.h"
 #include "GameFramework/WorldSettings.h"
@@ -35,7 +35,7 @@ void EditorWorldSettingsWidget::Render()
 		GameModeClasses.push_back(nullptr); // sentinel for "(Default)"
 		for (UClass* C : UClass::GetAllClasses())
 		{
-			if (C && C->IsA(AGameModeBase::StaticClass()))
+			if (C && C->IsChildOf(AGameModeBase::StaticClass()))
 				GameModeClasses.push_back(C);
 		}
 

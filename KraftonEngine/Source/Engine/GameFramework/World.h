@@ -16,6 +16,7 @@
 #include <Collision/SpatialPartition.h>
 #include "GameFramework/WorldSettings.h"
 #include "Physics/IPhysicsScene.h"
+#include "World.generated.h"
 #include <memory>
 
 class UCameraComponent;
@@ -25,9 +26,10 @@ class AGameStateBase;
 class APlayerController;
 class UClass;
 
+UCLASS()
 class UWorld : public UObject {
 public:
-	DECLARE_CLASS(UWorld, UObject)
+	GENERATED_BODY(UWorld)
 	UWorld() = default;
 	~UWorld() override;
 
@@ -155,7 +157,7 @@ template<typename T>
 inline T* UWorld::SpawnActor()
 {
 	// create and register an actor
-	T* Actor = UObjectManager::Get().CreateObject<T>(PersistentLevel);
+	T* Actor = GUObjectArray.CreateObject<T>(PersistentLevel);
 	AddActor(Actor); // BeginPlay 트리거는 AddActor 내부에서 bHasBegunPlay 가드로 처리
 	return Actor;
 }

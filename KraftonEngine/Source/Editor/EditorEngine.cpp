@@ -31,7 +31,6 @@
 
 #include "Mesh/SkeletalMesh.h"
 
-IMPLEMENT_CLASS(UEditorEngine, UEngine)
 
 namespace
 {
@@ -327,7 +326,7 @@ void UEditorEngine::StartPlayInEditorSession(const FRequestPlaySessionParams& Pa
 
 	if (!GetGameViewportClient())
 	{
-		UGameViewportClient* PIEViewportClient = UObjectManager::Get().CreateObject<UGameViewportClient>();
+		UGameViewportClient* PIEViewportClient = GUObjectArray.CreateObject<UGameViewportClient>();
 		SetGameViewportClient(PIEViewportClient);
 	}
 	if (UGameViewportClient* PIEViewportClient = GetGameViewportClient())
@@ -426,7 +425,7 @@ void UEditorEngine::EndPlayMap()
 	if (UGameViewportClient* PIEViewportClient = GetGameViewportClient())
 	{
 		PIEViewportClient->EndGameSession();
-		UObjectManager::Get().DestroyObject(PIEViewportClient);
+		GUObjectArray.DestroyObject(PIEViewportClient);
 		SetGameViewportClient(nullptr);
 	}
 
@@ -586,7 +585,7 @@ void UEditorEngine::ClearScene()
 		if (Ctx.World)
 		{
 			Ctx.World->EndPlay();
-			UObjectManager::Get().DestroyObject(Ctx.World);
+			GUObjectArray.DestroyObject(Ctx.World);
 		}
 
 		It = WorldList.erase(It);

@@ -8,12 +8,6 @@
 #include <cstring>
 #include <cmath>
 
-IMPLEMENT_CLASS(UBoxComponent, UShapeComponent)
-
-BEGIN_CLASS_PROPERTIES(UBoxComponent)
-	PROPERTY_VEC3(BoxExtent, "Box Extent", "Shape", CPF_Edit)
-END_CLASS_PROPERTIES(UBoxComponent)
-
 void UBoxComponent::SetBoxExtent(const FVector& InExtent)
 {
 	BoxExtent = InExtent;

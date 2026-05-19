@@ -9,15 +9,6 @@
 #include <cstring>
 #include <sstream>
 
-// Base movement logic only; concrete movement types should be added instead.
-IMPLEMENT_CLASS(UMovementComponent, UActorComponent)
-HIDE_FROM_COMPONENT_LIST(UMovementComponent)
-
-BEGIN_CLASS_PROPERTIES(UMovementComponent)
-	PROPERTY_BOOL(bAutoRegisterUpdatedComponent, "Auto Register Updated", "Movement", CPF_Edit)
-	REGISTER_PROPERTY(UpdatedComponentPath, "Updated Component", EPropertyType::SceneComponentRef, "Movement", CPF_Edit)
-END_CLASS_PROPERTIES(UMovementComponent)
-
 namespace
 {
 	constexpr const char* RootComponentPathToken = "Root";

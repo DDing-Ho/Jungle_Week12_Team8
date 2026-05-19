@@ -2,7 +2,7 @@
 #include <algorithm>
 #include <cmath>
 #include "Object/ObjectFactory.h"
-#include "Core/PropertyTypes.h"
+#include "Core/Property/PropertyTypes.h"
 #include "Engine/Platform/Paths.h"
 #include "Collision/RayUtils.h"
 #include "Mesh/StaticMeshAsset.h"
@@ -12,13 +12,6 @@
 #include "Render/Proxy/StaticMeshSceneProxy.h"
 #include "Render/Proxy/PrimitiveSceneProxy.h"
 #include "Serialization/Archive.h"
-
-IMPLEMENT_CLASS(UStaticMeshComponent, UMeshComponent)
-
-BEGIN_CLASS_PROPERTIES(UStaticMeshComponent)
-	REGISTER_PROPERTY(StaticMeshPath, "Static Mesh", EPropertyType::StaticMeshRef, "Mesh", CPF_Edit)
-	PROPERTY_ARRAY(MaterialSlots, "Materials", "Materials", CPF_Edit | CPF_FixedSize, FMaterialSlot, EPropertyType::MaterialSlot, (void)0)
-END_CLASS_PROPERTIES(UStaticMeshComponent)
 
 FPrimitiveSceneProxy* UStaticMeshComponent::CreateSceneProxy()
 {
@@ -32,7 +25,7 @@ void UStaticMeshComponent::SetStaticMesh(UStaticMesh* InMesh)
 	{
 		// 메시 에셋 PathFileName 은 Import 시점에 절대 경로로 들어올 수 있어
 		// 컴포넌트 단계에서 프로젝트 상대 경로로 정규화한다 (씬 직렬화 안정성).
-		StaticMeshPath = FPaths::MakeProjectRelative(InMesh->GetAssetPathFileName());
+		StaticMesh.SetPath(FPaths::MakeProjectRelative(InMesh->GetAssetPathFileName()));
 		const TArray<FStaticMaterial>& DefaultMaterials = StaticMesh->GetStaticMaterials();
 
 		OverrideMaterials.resize(DefaultMaterials.size());
@@ -50,7 +43,7 @@ void UStaticMeshComponent::SetStaticMesh(UStaticMesh* InMesh)
 	}
 	else
 	{
-		StaticMeshPath = "None";
+		StaticMesh.Reset();
 		OverrideMaterials.clear();
 		MaterialSlots.clear();
 	}
@@ -224,7 +217,7 @@ static FArchive& operator<<(FArchive& Ar, FMaterialSlot& Slot)
 void UStaticMeshComponent::Serialize(FArchive& Ar)
 {
 	UMeshComponent::Serialize(Ar);
-	Ar << StaticMeshPath;
+	Ar << StaticMesh;
 	Ar << MaterialSlots;
 }
 
@@ -233,10 +226,10 @@ void UStaticMeshComponent::PostDuplicate()
 	UMeshComponent::PostDuplicate();
 
 	// 메시 에셋 재로딩
-	if (!StaticMeshPath.empty() && StaticMeshPath != "None")
+	if (!StaticMesh.IsNull())
 	{
 		ID3D11Device* Device = GEngine->GetRenderer().GetFD3DDevice().GetDevice();
-		UStaticMesh* Loaded = FMeshManager::LoadStaticMesh(StaticMeshPath, Device);
+		UStaticMesh* Loaded = FMeshManager::LoadStaticMesh(StaticMesh.GetPath().ToString(), Device);
 		if (Loaded)
 		{
 			// SetStaticMesh는 MaterialSlots를 덮어쓰므로, 직렬화된 슬롯 정보를 백업·복원한다.
@@ -272,14 +265,14 @@ void UStaticMeshComponent::PostEditProperty(const char* PropertyName)
 
 	if (strcmp(PropertyName, "Static Mesh") == 0)
 	{
-		if (StaticMeshPath.empty() || StaticMeshPath == "None")
+		if (StaticMesh.IsNull())
 		{
 			StaticMesh = nullptr;
 		}
 		else
 		{
 			ID3D11Device* Device = GEngine->GetRenderer().GetFD3DDevice().GetDevice();
-			UStaticMesh* Loaded = FMeshManager::LoadStaticMesh(StaticMeshPath, Device);
+			UStaticMesh* Loaded = FMeshManager::LoadStaticMesh(StaticMesh.GetPath().ToString(), Device);
 			SetStaticMesh(Loaded);
 		}
 		CacheLocalBounds();

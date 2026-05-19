@@ -7,12 +7,6 @@
 
 #include <cmath>
 
-IMPLEMENT_CLASS(UCylindricalBillboardComponent, UBillboardComponent)
-
-BEGIN_CLASS_PROPERTIES(UCylindricalBillboardComponent)
-	PROPERTY_VEC3(BillboardAxis, "BillboardAxis", "Rendering", CPF_Edit)
-END_CLASS_PROPERTIES(UCylindricalBillboardComponent)
-
 FPrimitiveSceneProxy* UCylindricalBillboardComponent::CreateSceneProxy()
 {
 	return new FCylindricalBillboardSceneProxy(this);

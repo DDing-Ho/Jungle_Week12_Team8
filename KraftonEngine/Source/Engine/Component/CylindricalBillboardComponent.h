@@ -1,10 +1,12 @@
 #pragma once
 #include "BillboardComponent.h"
+#include "CylindricalBillboardComponent.generated.h"
 
+UCLASS()
 class UCylindricalBillboardComponent : public UBillboardComponent
 {
 public:
-	DECLARE_CLASS(UCylindricalBillboardComponent, UBillboardComponent)
+	GENERATED_BODY(UCylindricalBillboardComponent)
 
 	void Serialize(FArchive& Ar) override;
 	void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction& ThisTickFunction);
@@ -15,5 +17,6 @@ public:
 	FVector GetBillboardAxis() const { return BillboardAxis; }
 
 protected:
+	UPROPERTY(Edit, Category="Rendering", DisplayName="BillboardAxis")
 	FVector BillboardAxis = FVector(0, 0, 1);
 };

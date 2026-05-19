@@ -40,12 +40,12 @@ USkeleton* FSkeletonManager::Load(const FString& Path)
 	FAssetImportMetadata Metadata;
 	Reader << Metadata;
 
-	USkeleton* Skeleton = UObjectManager::Get().CreateObject<USkeleton>();
+	USkeleton* Skeleton = GUObjectArray.CreateObject<USkeleton>();
 	Skeleton->Serialize(Reader);
 
 	if (!Reader.IsValid())
 	{
-		UObjectManager::Get().DestroyObject(Skeleton);
+		GUObjectArray.DestroyObject(Skeleton);
 		UE_LOG("Skeleton load failed: package data is incomplete. Path=%s", NormalizedPath.c_str());
 		return nullptr;
 	}

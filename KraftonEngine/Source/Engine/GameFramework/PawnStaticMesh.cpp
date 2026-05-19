@@ -3,8 +3,6 @@
 #include "Engine/Runtime/Engine.h"
 #include "Mesh/MeshManager.h"
 
-IMPLEMENT_CLASS(APawnStaticMesh, APawn)
-
 void APawnStaticMesh::InitDefaultComponents(const FString& StaticMeshFileName)
 {
 	StaticMeshComponent = AddComponent<UStaticMeshComponent>();

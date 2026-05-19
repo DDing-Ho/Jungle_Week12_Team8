@@ -3,13 +3,15 @@
 #include "Render/Resource/MeshBufferManager.h"
 #include "Core/ResourceTypes.h"
 #include "Object/FName.h"
+#include "BillboardComponent.generated.h"
 
 class FPrimitiveSceneProxy;
 
+UCLASS()
 class UBillboardComponent : public UPrimitiveComponent
 {
 public:
-	DECLARE_CLASS(UBillboardComponent, UPrimitiveComponent)
+	GENERATED_BODY(UBillboardComponent)
 
 	void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction& ThisTickFunction) override;
 	FPrimitiveSceneProxy* CreateSceneProxy() override;
@@ -35,6 +37,7 @@ public:
 protected:
 	bool bIsBillboard = true;
 
+	UPROPERTY(Edit, Category="Rendering", DisplayName="Material", Type=MaterialSlot)
 	FMaterialSlot MaterialSlot;
 	UMaterial* Material = nullptr;
 };

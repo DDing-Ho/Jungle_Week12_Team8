@@ -1,8 +1,7 @@
 ﻿#pragma once
 
 #include "Object/Object.h"
-
-extern TArray<UObject*> GUObjectArray;
+#include "Object/UClass.h"
 
 // 특정 UObject 타입 순회
 template<typename TObject>
@@ -25,20 +24,20 @@ public:
 
 	explicit operator bool() const
 	{
-		return CurrentIndex < static_cast<int32>(GUObjectArray.size());
+		return CurrentIndex < GUObjectArray.Num();
 	}
 
 	TObject* operator*() const
 	{
-		return static_cast<TObject*>(GUObjectArray[CurrentIndex]);
+		return static_cast<TObject*>(GUObjectArray.IndexToObject(CurrentIndex));
 	}
 
 private:
 	void AdvanceToNextValidObject()
 	{
-		while (CurrentIndex < static_cast<int32>(GUObjectArray.size()))
+		while (CurrentIndex < GUObjectArray.Num())
 		{
-			UObject* Obj = GUObjectArray[CurrentIndex];
+			UObject* Obj = GUObjectArray.IndexToObject(CurrentIndex);
 			if (Obj && Obj->IsA<TObject>())
 			{
 				return;
@@ -69,23 +68,23 @@ public:
 
 	explicit operator bool() const
 	{
-		return CurrentIndex < static_cast<int32>(GUObjectArray.size());
+		return CurrentIndex < GUObjectArray.Num();
 	}
 
 	UObject* operator*() const
 	{
-		return GUObjectArray[CurrentIndex];
+		return GUObjectArray.IndexToObject(CurrentIndex);
 	}
 
 private:
 	void AdvanceToNextValidObject()
 	{
-		while (CurrentIndex < static_cast<int32>(GUObjectArray.size()))
+		while (CurrentIndex < GUObjectArray.Num())
 		{
-			UObject* Obj = GUObjectArray[CurrentIndex];
+			UObject* Obj = GUObjectArray.IndexToObject(CurrentIndex);
 			if (Obj != nullptr)
 			{
-				if (FilterType == nullptr || Obj->GetClass()->IsA(FilterType))
+				if (FilterType == nullptr || Obj->GetClass()->IsChildOf(FilterType))
 				{
 					return;
 				}

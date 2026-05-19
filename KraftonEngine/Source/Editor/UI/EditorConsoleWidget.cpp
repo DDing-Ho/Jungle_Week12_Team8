@@ -777,8 +777,9 @@ void FEditorConsoleWidget::HandleObjList(const TArray<FString>& Args)
 	};
 	TMap<const char*, FClassEntry> ClassMap;
 
-	for (UObject* Obj : GUObjectArray)
+	for (const FUObjectItem& Item : GUObjectArray.GetItems())
 	{
+		UObject* Obj = Item.Object;
 		if (!Obj) continue;
 		UClass* Cls = Obj->GetClass();
 		if (!Cls) continue;
@@ -819,7 +820,7 @@ void FEditorConsoleWidget::HandleObjList(const TArray<FString>& Args)
 	}
 	AddLog("-------------------------------------------------------------\n");
 	AddLog("%-35s %8u %10.1f\n", "TOTAL", TotalCount, TotalBytes / 1024.0);
-	AddLog("GUObjectArray capacity: %zu\n", GUObjectArray.capacity());
+	AddLog("GUObjectArray capacity: %zu\n", GUObjectArray.Capacity());
 }
 
 void FEditorConsoleWidget::HandleStatFPS(const TArray<FString>& Args)

@@ -3,8 +3,6 @@
 #include "GameFramework/AActor.h"
 #include "GameFramework/World.h"
 
-IMPLEMENT_CLASS(UAmbientLightComponent, ULightComponentBase)
-
 UAmbientLightComponent::UAmbientLightComponent()
 {
 	Intensity = 0.15f;

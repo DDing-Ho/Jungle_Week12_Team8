@@ -4,6 +4,7 @@
 #include "Slate/SWindow.h"
 #include "Viewport/ViewportClient.h"
 #include "Input/InputSystem.h"
+#include "GameViewportClient.generated.h"
 
 #ifndef NOMINMAX
 #define NOMINMAX
@@ -15,10 +16,11 @@ class UCameraComponent;
 
 // UE의 UGameViewportClient 대응 — UObject + FViewportClient 다중상속.
 // 게임 런타임 뷰포트를 담당 (Standalone / Editor PIE 양쪽 동일 인터페이스).
+UCLASS(NoFactory)
 class UGameViewportClient : public UObject, public FViewportClient
 {
 public:
-	DECLARE_CLASS(UGameViewportClient, UObject)
+	GENERATED_BODY(UGameViewportClient)
 
 	UGameViewportClient() = default;
 	~UGameViewportClient() override = default;

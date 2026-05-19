@@ -54,10 +54,13 @@ DECLARE_MULTICAST_DELEGATE_ThreeParams(
 	UPrimitiveComponent* /*OtherComp*/
 );
 
+#include "PrimitiveComponent.generated.h"
+
+UCLASS(HiddenInComponentList)
 class UPrimitiveComponent : public USceneComponent
 {
 public:
-	DECLARE_CLASS(UPrimitiveComponent, USceneComponent)
+	GENERATED_BODY(UPrimitiveComponent)
 	~UPrimitiveComponent() override;
 
 	void BeginPlay() override;
@@ -218,17 +221,47 @@ protected:
 	// (BeginPlay 전 InitDefaultComponents 단계에서 setter가 호출돼도 PhysicsScene 호출은 skip되어
 	//  멤버만 변경 → BeginPlay에서 한 번 정확한 값으로 등록됨.)
 	bool bComponentHasBegunPlay = false;
+
+	UPROPERTY(Edit, Category="Rendering", DisplayName="Is Visible")
 	bool bIsVisible = true;
+
+	UPROPERTY(Edit, Category="Rendering", DisplayName="Cast Shadow")
 	bool bCastShadow = true;
+
+	UPROPERTY(Edit, Category="Rendering", DisplayName="Cast Shadow as Two-Sided")
 	bool bCastShadowAsTwoSided = false;
+
+	UPROPERTY(Edit, Category="Collision", DisplayName="Simulate Physics")
 	bool bSimulatePhysics = false;
+
+	UPROPERTY(Edit, Category="Collision", DisplayName="Generate Overlap Events")
 	bool bGenerateOverlapEvents = false;
 
 	// 물리 파라미터 — RootComponent의 값만 백엔드에 적용 (compound shape 정책).
+	UPROPERTY(Edit, Category="Physics", DisplayName="Mass (Kg)", Min = 0.0, Max = 1000.0, Speed = 0.1)
 	float Mass = 1.0f;                          // kg
+
+	UPROPERTY(Edit, Category="Physics", DisplayName="Center of Mass")
 	FVector CenterOfMassOffset = { 0, 0, 0 };   // RootComponent local 좌표계 offset
+
+	UPROPERTY(Edit, Category="Collision", DisplayName="Collision Enabled",
+	          Type=Enum,
+	          EnumNames=GCollisionEnabledNames,
+	          EnumCount=(uint32)ECollisionEnabled::COUNT,
+	          EnumSize=sizeof(ECollisionEnabled))
 	ECollisionEnabled CollisionEnabled = ECollisionEnabled::NoCollision;
+
+	// Names array is 16 entries, but the dropdown only exposes active channels.
+	UPROPERTY(Edit, Category="Collision", DisplayName="Object Type",
+	          Type=Enum,
+	          EnumNames=GCollisionChannelNames,
+	          EnumCount=(uint32)NumActiveCollisionChannels,
+	          EnumSize=sizeof(ECollisionChannel))
 	ECollisionChannel ObjectType = ECollisionChannel::WorldStatic;
+
+	UPROPERTY(Edit, Category="Collision", DisplayName="Response Container",
+	          Type=Struct,
+	          StructFunc=&FCollisionResponseContainer::GetSchema)
 	FCollisionResponseContainer ResponseContainer; // 기본: 전 채널 Block
 	FPrimitiveSceneProxy* SceneProxy = nullptr;
 

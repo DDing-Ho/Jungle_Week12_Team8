@@ -26,12 +26,12 @@ UCameraShakeAsset* FCameraShakeManager::Load(const FString& Path)
 		FAssetImportMetadata Metadata;
 		Ar << Metadata;
 
-		UCameraShakeAsset* NewAsset = UObjectManager::Get().CreateObject<UCameraShakeAsset>();
+		UCameraShakeAsset* NewAsset = GUObjectArray.CreateObject<UCameraShakeAsset>();
 		NewAsset->Serialize(Ar);
 
 		if (!Ar.IsValid())
 		{
-			UObjectManager::Get().DestroyObject(NewAsset);
+			GUObjectArray.DestroyObject(NewAsset);
 			return nullptr;
 		}
 
@@ -40,7 +40,7 @@ UCameraShakeAsset* FCameraShakeManager::Load(const FString& Path)
 		return NewAsset;
 	}
 
-	UCameraShakeAsset* NewAsset = UObjectManager::Get().CreateObject<UCameraShakeAsset>();
+	UCameraShakeAsset* NewAsset = GUObjectArray.CreateObject<UCameraShakeAsset>();
 	const FString FullPath = FPaths::ToUtf8(FPaths::Combine(FPaths::RootDir(), FPaths::ToWide(NormalizedPath)));
 	if (NewAsset->LoadFromFile(FullPath))
 	{
@@ -50,7 +50,7 @@ UCameraShakeAsset* FCameraShakeManager::Load(const FString& Path)
 	}
 	else
 	{
-		UObjectManager::Get().DestroyObject(NewAsset);
+		GUObjectArray.DestroyObject(NewAsset);
 		return nullptr;
 	}
 }

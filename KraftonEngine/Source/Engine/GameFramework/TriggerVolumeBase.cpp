@@ -6,8 +6,6 @@
 #include "Core/CollisionTypes.h"
 #include "Serialization/Archive.h"
 
-IMPLEMENT_CLASS(ATriggerVolumeBase, AActor)
-
 void ATriggerVolumeBase::InitDefaultComponents(const FVector& Extent)
 {
 	TriggerBox = AddComponent<UBoxComponent>();
@@ -25,12 +23,6 @@ void ATriggerVolumeBase::PostDuplicate()
 {
 	Super::PostDuplicate();
 	TriggerBox = Cast<UBoxComponent>(GetRootComponent());
-}
-
-void ATriggerVolumeBase::GetEditableProperties(TArray<FProperty>& OutProps)
-{
-	Super::GetEditableProperties(OutProps);
-	OutProps.push_back({ "TriggerTag", EPropertyType::Name, "Trigger", &TriggerTag });
 }
 
 void ATriggerVolumeBase::BeginPlay()

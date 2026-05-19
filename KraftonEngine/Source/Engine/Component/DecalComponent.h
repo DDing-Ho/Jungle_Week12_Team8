@@ -2,15 +2,17 @@
 #include "PrimitiveComponent.h"
 #include "Core/ResourceTypes.h"
 #include "Collision/ConvexVolume.h"
+#include "DecalComponent.generated.h"
 
 class UStaticMeshComponent;
 
 // class DecalProxy;
 
+UCLASS()
 class UDecalComponent : public UPrimitiveComponent
 {
 public:
-	DECLARE_CLASS(UDecalComponent, UPrimitiveComponent)
+	GENERATED_BODY(UDecalComponent)
 
 	UDecalComponent() = default;
 	~UDecalComponent() override = default;
@@ -55,12 +57,18 @@ private:
 private:
 	FConvexVolume ConvexVolume;
 	TArray<UStaticMeshComponent*> Receivers;
+	UPROPERTY(Edit, Category="Rendering", DisplayName="Material", Type=MaterialSlot)
 	FMaterialSlot MaterialSlot;
 	UMaterial* Material = nullptr;
+	UPROPERTY(Edit, Category="Rendering", DisplayName="Color", Type=Vec4)
 	FVector4 Color = {1,1,1,1};
+	UPROPERTY(Edit, Category="Rendering", Min=0.0f, Max=0.0f, Speed=0.1f)
 	float FadeInDelay = 0;
+	UPROPERTY(Edit, Category="Rendering", Min=0.0f, Max=0.0f, Speed=0.1f)
 	float FadeInDuration = 0;
+	UPROPERTY(Edit, Category="Rendering", Min=0.0f, Max=0.0f, Speed=0.1f)
 	float FadeOutDelay = 0;
+	UPROPERTY(Edit, Category="Rendering", Min=0.0f, Max=0.0f, Speed=0.1f)
 	float FadeOutDuration = 0;
 	float FadeTimer = 0;
 	float FadeOpacity = 1.0f;		// 페이드 효과 사용 시 Color.A에 곱함

@@ -2,8 +2,6 @@
 #include "Component/SphereComponent.h"
 #include "Core/Log.h"
 
-IMPLEMENT_CLASS(ASphereActor, AActor)
-
 void ASphereActor::InitDefaultComponents()
 {
 	SphereComponent = AddComponent<USphereComponent>();

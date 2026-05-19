@@ -8,6 +8,7 @@
 #include "Editor/Settings/EditorSettings.h"
 #include "Editor/Selection/SelectionManager.h"
 #include "Editor/PIE/PIETypes.h"
+#include "EditorEngine.generated.h"
 #include <optional>
 #if STATS
 #include "Editor/EditorRenderPipeline.h"
@@ -22,10 +23,11 @@ class UGameViewportClient;
 class IEditorPreviewViewportClient;
 struct FPerspectiveCameraData;
 
+UCLASS()
 class UEditorEngine : public UEngine
 {
 public:
-	DECLARE_CLASS(UEditorEngine, UEngine)
+	GENERATED_BODY(UEditorEngine)
 
 	UEditorEngine() = default;
 	~UEditorEngine() override = default;

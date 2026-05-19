@@ -16,6 +16,7 @@
 #include "Mesh/SkeletonManager.h"
 #include "Mesh/StaticMesh.h"
 #include "Mesh/StaticMeshAsset.h"
+#include "Object/FUObjectArray.h"
 #include "Serialization/WindowsArchive.h"
 #endif
 
@@ -426,7 +427,7 @@ namespace
 			? FEditorFbxImportService::GetStaticMeshPackagePathForFbx(FbxFilePath)
 			: NormalizeProjectPath(PackagePathOverride);
 
-		UStaticMesh* StaticMesh = UObjectManager::Get().CreateObject<UStaticMesh>();
+		UStaticMesh* StaticMesh = GUObjectArray.CreateObject<UStaticMesh>();
 		NewMeshAsset->PathFileName = SourcePath;
 		StaticMesh->SetStaticMaterials(std::move(ParsedMaterials));
 		StaticMesh->SetStaticMeshAsset(NewMeshAsset.release());
@@ -486,7 +487,7 @@ namespace
 		NewSkeletonAsset->PathFileName = SourcePath;
 		NewSkeletonAsset->Bones = std::move(FEditorFbxImporter::Bones);
 
-		USkeleton* Skeleton = UObjectManager::Get().CreateObject<USkeleton>();
+		USkeleton* Skeleton = GUObjectArray.CreateObject<USkeleton>();
 		Skeleton->SetAssetPathFileName(SkeletonPackagePath);
 		Skeleton->SetSkeletonAsset(NewSkeletonAsset.release());
 
@@ -526,7 +527,7 @@ namespace
 			NewMeshAsset->Indices = std::move(ImportedMesh.Indices);
 			NewMeshAsset->Sections = std::move(ImportedMesh.Sections);
 
-			USkeletalMesh* SkeletalMesh = UObjectManager::Get().CreateObject<USkeletalMesh>();
+			USkeletalMesh* SkeletalMesh = GUObjectArray.CreateObject<USkeletalMesh>();
 			SkeletalMesh->SetSkeletalMaterials(std::move(ImportedMesh.Materials));
 			SkeletalMesh->SetSkeletalMeshAsset(NewMeshAsset.release());
 			SkeletalMesh->SetSkeleton(Skeleton);
@@ -622,7 +623,7 @@ namespace
 			NewSkeletonAsset->PathFileName = SourcePath;
 			NewSkeletonAsset->Bones = std::move(ParsedSkeleton.Bones);
 
-			Skeleton = UObjectManager::Get().CreateObject<USkeleton>();
+			Skeleton = GUObjectArray.CreateObject<USkeleton>();
 			Skeleton->SetAssetPathFileName(SkeletonPackagePath);
 			Skeleton->SetSkeletonAsset(NewSkeletonAsset.release());
 
@@ -667,8 +668,8 @@ namespace
 			const FString DefaultPackagePath = FEditorFbxImportService::GetAnimSequencePackagePathForFbx(SourcePath, StackName, bSingleStack);
 			const FString PackagePath = ResolvePackagePathOverride(PackagePathOverrides, SequenceIndex, DefaultPackagePath);
 
-			UAnimSequence* AnimSequence = UObjectManager::Get().CreateObject<UAnimSequence>();
-			UAnimDataModel* DataModel = UObjectManager::Get().CreateObject<UAnimDataModel>(AnimSequence);
+			UAnimSequence* AnimSequence = GUObjectArray.CreateObject<UAnimSequence>();
+			UAnimDataModel* DataModel = GUObjectArray.CreateObject<UAnimDataModel>(AnimSequence);
 			DataModel->SetPlayLength(ImportedSequence.PlayLength);
 			DataModel->SetFrameRate(ImportedSequence.FrameRate);
 			DataModel->SetNumberOfFrames(ImportedSequence.NumberOfFrames);

@@ -7,7 +7,6 @@
 #include <d3d11.h>
 #include <filesystem>
 
-IMPLEMENT_CLASS(UTexture2D, UObject)
 
 std::map<FString, UTexture2D*> UTexture2D::TextureCache;
 
@@ -69,10 +68,10 @@ UTexture2D* UTexture2D::LoadFromFile(const FString& FilePath, ID3D11Device* Devi
 	}
 
 	// 새 UTexture2D 생성
-	UTexture2D* Texture = UObjectManager::Get().CreateObject<UTexture2D>();
+	UTexture2D* Texture = GUObjectArray.CreateObject<UTexture2D>();
 	if (!Texture->LoadInternal(FilePath, Device, InColorSpace))
 	{
-		UObjectManager::Get().DestroyObject(Texture);
+		GUObjectArray.DestroyObject(Texture);
 		return nullptr;
 	}
 

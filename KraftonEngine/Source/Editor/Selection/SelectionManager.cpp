@@ -9,7 +9,7 @@
 
 void FSelectionManager::Init()
 {
-	Gizmo = UObjectManager::Get().CreateObject<UGizmoComponent>();
+	Gizmo = GUObjectArray.CreateObject<UGizmoComponent>();
 	Gizmo->SetWorldLocation(FVector(0.0f, 0.0f, 0.0f));
 	Gizmo->Deactivate();
 }
@@ -38,7 +38,7 @@ void FSelectionManager::Shutdown()
 
 	if (Gizmo)
 	{
-		UObjectManager::Get().DestroyObject(Gizmo);
+		GUObjectArray.DestroyObject(Gizmo);
 		Gizmo = nullptr;
 	}
 }

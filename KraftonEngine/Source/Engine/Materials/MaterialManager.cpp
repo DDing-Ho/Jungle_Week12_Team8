@@ -58,7 +58,7 @@ UMaterial* FMaterialManager::GetOrCreateMaterial(const FString& MatFilePath)
 	if (JsonData.IsNull())
 	{
 		// 기본 머티리얼 생성
-		UMaterial* DefaultMaterial = UObjectManager::Get().CreateObject<UMaterial>();
+		UMaterial* DefaultMaterial = GUObjectArray.CreateObject<UMaterial>();
 		FMaterialTemplate* Template = GetOrCreateTemplate(DefaultShaderPath);
 		TMap<FString, std::unique_ptr<FMaterialConstantBuffer>> Buffers = CreateConstantBuffers(Template);
 		DefaultMaterial->Create(GenericPath, Template, ERenderPass::Opaque, EBlendState::Opaque, EDepthStencilState::Default, ERasterizerState::SolidBackCull, std::move(Buffers));
@@ -91,7 +91,7 @@ UMaterial* FMaterialManager::GetOrCreateMaterial(const FString& MatFilePath)
 	auto InjectedBuffers = CreateConstantBuffers(Template);
 
 	// 6. UMaterial 인스턴스 생성 및 초기화 (RenderPass는 인스턴스별)
-	UMaterial* Material = UObjectManager::Get().CreateObject<UMaterial>();
+	UMaterial* Material = GUObjectArray.CreateObject<UMaterial>();
 	Material->Create(PathFileName, Template, RenderPass, BlendState, DepthState, RasterState, std::move(InjectedBuffers));
 	MaterialCache.emplace(GenericPath, Material);
 

@@ -1,5 +1,6 @@
 ﻿#include "Engine/Runtime/EngineLoop.h"
 #include "Profiling/StartupProfiler.h"
+#include "Object/UClass.h"
 
 FEngineLoop::FEngineLoop(FCreateEngineFn InEngineFactory)
 	: EngineFactory(InEngineFactory)
@@ -9,7 +10,7 @@ FEngineLoop::FEngineLoop(FCreateEngineFn InEngineFactory)
 void FEngineLoop::CreateEngine()
 {
 	// 팩토리 미주입 시 베이스 UEngine 으로 fallback — 구체 변종 선택은 호출 측 책임.
-	GEngine = EngineFactory ? EngineFactory() : UObjectManager::Get().CreateObject<UEngine>();
+	GEngine = EngineFactory ? EngineFactory() : GUObjectArray.CreateObject<UEngine>();
 }
 
 bool FEngineLoop::Init(HINSTANCE hInstance, int nShowCmd)
@@ -20,6 +21,17 @@ bool FEngineLoop::Init(HINSTANCE hInstance, int nShowCmd)
 		{
 			return false;
 		}
+	}
+
+	{
+		SCOPE_STARTUP_STAT("UClass::BindAll");
+		for (UClass* C : UClass::GetAllClasses())
+			if (C) C->Bind();
+	}
+
+	{
+		SCOPE_STARTUP_STAT("UClass::RegisterPermanentObjects");
+		UClass::RegisterClassesAsStaticObjects();
 	}
 
 	Application.SetOnSizingCallback([this]()
@@ -79,7 +91,7 @@ void FEngineLoop::Shutdown()
 	if (GEngine)
 	{
 		GEngine->Shutdown();
-		UObjectManager::Get().DestroyObject(GEngine);
 		GEngine = nullptr;
 	}
+	GUObjectArray.Shutdown();
 }

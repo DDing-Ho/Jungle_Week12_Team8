@@ -17,7 +17,7 @@ FTextRenderSceneProxy::~FTextRenderSceneProxy()
 {
 	if (TextMaterial)
 	{
-		UObjectManager::Get().DestroyObject(TextMaterial);
+		GUObjectArray.DestroyObject(TextMaterial);
 		TextMaterial = nullptr;
 	}
 }

@@ -79,8 +79,16 @@ INCLUDE_PATHS = [
     "ThirdParty\\lua\\include",
     "ThirdParty\\sol2\\include",
     "ThirdParty\\fmod\\include",
+    "Intermediate\\Generated\\Inc",   # Foo.generated.h emitted by Scripts/GenerateCode.py
     ".",
 ]
+
+# Codegen — emits Foo.generated.h / Foo.gen.cpp under Intermediate/Generated/.
+# Runs as a BeforeTargets="ClCompile" Exec; .gen.cpp files are added to the
+# ClCompile collection by the same target (wildcard evaluated at target time,
+# which is how MSBuild picks up files produced earlier in the build).
+CODEGEN_SCRIPT       = "..\\Scripts\\GenerateCode.py"
+CODEGEN_GENCPP_GLOB  = "Intermediate\\Generated\\Source\\*.gen.cpp"
 
 # RmlUi config
 RMLUI_DEBUG_DIR = "ThirdParty\\RmlUi\\Debug"
@@ -442,6 +450,19 @@ def generate_vcxproj(files: dict[str, list[str]]):
             ET.SubElement(ig, "None", Include=f)
 
     ET.SubElement(proj, "Import", Project="$(VCTargetsPath)\\Microsoft.Cpp.targets")
+
+    # Codegen target — runs Scripts/GenerateCode.py before ClCompile and adds
+    # any emitted Intermediate/Generated/Source/*.gen.cpp into the ClCompile
+    # collection. The ItemGroup inside the Target is evaluated at execution
+    # time, so files produced by the Exec step in this same target are
+    # picked up by the ClCompile build that follows.
+    gen_target = ET.SubElement(proj, "Target",
+                               Name="GenerateCode",
+                               BeforeTargets="ClCompile")
+    ET.SubElement(gen_target, "Exec",
+                  Command=f'python "$(ProjectDir){CODEGEN_SCRIPT}"')
+    gen_ig = ET.SubElement(gen_target, "ItemGroup")
+    ET.SubElement(gen_ig, "ClCompile", Include=CODEGEN_GENCPP_GLOB)
 
     # NuGet package imports
     if NUGET_PACKAGES:

@@ -10,14 +10,6 @@
 #include "Render/Proxy/TextRenderSceneProxy.h"
 #include "Serialization/Archive.h"
 
-IMPLEMENT_CLASS(UTextRenderComponent, UBillboardComponent)
-
-BEGIN_CLASS_PROPERTIES(UTextRenderComponent)
-	PROPERTY_STRING(Text, "Text", "Text", EPropertyFlags::CPF_Edit)
-	REGISTER_PROPERTY(FontName, "Font", EPropertyType::Name, "Text", EPropertyFlags::CPF_Edit)
-	PROPERTY_FLOAT(FontSize, "Font Size", "Text", 0.1f, 100.f, 0.1f, EPropertyFlags::CPF_Edit)
-END_CLASS_PROPERTIES(UTextRenderComponent)
-
 FPrimitiveSceneProxy* UTextRenderComponent::CreateSceneProxy()
 {
 	return new FTextRenderSceneProxy(this);

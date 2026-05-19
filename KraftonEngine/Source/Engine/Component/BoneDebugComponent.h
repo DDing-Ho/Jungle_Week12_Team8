@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "Component/PrimitiveComponent.h"
+#include "BoneDebugComponent.generated.h"
 
 class USkeletalMeshComponent;
 class FScene;
@@ -11,10 +12,11 @@ enum class EBoneDebugDrawMode : uint8
 	AllBones
 };
 
+UCLASS()
 class UBoneDebugComponent : public UPrimitiveComponent
 {
 public:
-	DECLARE_CLASS(UBoneDebugComponent, UPrimitiveComponent)
+	GENERATED_BODY(UBoneDebugComponent)
 
 	UBoneDebugComponent();
 	~UBoneDebugComponent() override;

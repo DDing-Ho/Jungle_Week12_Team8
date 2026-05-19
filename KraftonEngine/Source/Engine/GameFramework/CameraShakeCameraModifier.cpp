@@ -1,4 +1,4 @@
-#include "GameFramework/CameraShakeCameraModifier.h"
+﻿#include "GameFramework/CameraShakeCameraModifier.h"
 #include "GameFramework/CameraShakeBase.h"
 #include "GameFramework/PlayerCameraManager.h"
 #include "Math/Quat.h"
@@ -32,7 +32,6 @@ namespace
 	}
 }
 
-IMPLEMENT_CLASS(UCameraModifier_CameraShake, UCameraModifier)
 
 UCameraModifier_CameraShake::UCameraModifier_CameraShake()
 {
@@ -100,7 +99,7 @@ UCameraShakeBase* UCameraModifier_CameraShake::StartShake(
 	{
 		if (Existing && !Existing->IsFinished()
 			&& Existing->bSingleInstance
-			&& Existing->GetClass()->IsA(ShakeClass))
+			&& Existing->GetClass()->IsChildOf(ShakeClass))
 		{
 			Existing->StartShake(CameraOwner, Scale, PlaySpace, UserPlaySpaceRot);
 			return Existing;
@@ -111,7 +110,7 @@ UCameraShakeBase* UCameraModifier_CameraShake::StartShake(
 	UCameraShakeBase* Shake = Cast<UCameraShakeBase>(Obj);
 	if (!Shake)
 	{
-		if (Obj) UObjectManager::Get().DestroyObject(Obj);
+		if (Obj) GUObjectArray.DestroyObject(Obj);
 		return nullptr;
 	}
 
@@ -139,7 +138,7 @@ void UCameraModifier_CameraShake::StopAllInstancesOfShake(UClass* ShakeClass, bo
 	if (!ShakeClass) return;
 	for (UCameraShakeBase* Shake : ActiveShakes)
 	{
-		if (Shake && Shake->GetClass()->IsA(ShakeClass))
+		if (Shake && Shake->GetClass()->IsChildOf(ShakeClass))
 		{
 			Shake->StopShake(bImmediately);
 		}

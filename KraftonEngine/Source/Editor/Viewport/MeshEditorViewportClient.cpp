@@ -38,7 +38,7 @@ void FMeshEditorViewportClient::Release()
 	PreviewWorld = nullptr;
 	PreviewActor = nullptr;
 
-	UObjectManager::Get().DestroyObject(Gizmo);
+	GUObjectArray.DestroyObject(Gizmo);
 	Gizmo = nullptr;
 	BoneDebugComponent = nullptr;
 
@@ -49,7 +49,7 @@ void FMeshEditorViewportClient::Release()
 
 void FMeshEditorViewportClient::CreatePreviewGizmo()
 {
-	Gizmo = UObjectManager::Get().CreateObject<UGizmoComponent>();
+	Gizmo = GUObjectArray.CreateObject<UGizmoComponent>();
 	Gizmo->SetScene(&PreviewWorld->GetScene());
 	Gizmo->CreateRenderState();
 	Gizmo->Deactivate();

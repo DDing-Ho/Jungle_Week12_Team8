@@ -91,6 +91,15 @@
     <Filter Include="Source\Engine\Core">
       <UniqueIdentifier>{aaeb2f3f-eff4-9d0e-a471-82c1372b9aed}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\Engine\Core\Property">
+      <UniqueIdentifier>{25647ff2-6251-d6c8-4f33-105c96cacd0f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Engine\Core\Property\FObjectPropertyBase">
+      <UniqueIdentifier>{f4f90532-5b42-ed0a-10b7-a0fe8f04391a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Engine\Core\UObject">
+      <UniqueIdentifier>{f50e0f97-fca0-9bde-d2e1-3675b9e5cc50}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Source\Engine\Debug">
       <UniqueIdentifier>{94a820a1-1cf9-b142-f9b6-735eff25a3ee}</UniqueIdentifier>
     </Filter>
@@ -192,33 +201,6 @@
     </Filter>
     <Filter Include="Source\Engine\Viewport">
       <UniqueIdentifier>{b95fbad5-2f3a-0600-c7ff-db94055fd64b}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source\Game">
-      <UniqueIdentifier>{7b75b017-e44b-6189-2a88-30dc16a5724f}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source\Game\Component">
-      <UniqueIdentifier>{78626bb9-6558-fab0-2208-a035814756cf}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source\Game\Component\Movement">
-      <UniqueIdentifier>{4333c327-1f62-b9bf-6949-fb14c97be88a}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source\Game\GameMode">
-      <UniqueIdentifier>{180756f8-cd60-823a-2895-cf41347cb361}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source\Game\GameState">
-      <UniqueIdentifier>{28248026-b2c1-326a-d8fc-c6a454813320}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source\Game\Lua">
-      <UniqueIdentifier>{a904550b-6c67-d00d-ee77-c5aaf7b88e71}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source\Game\Meteor">
-      <UniqueIdentifier>{afb4ecc1-8505-3209-a55f-fb5c9de1f78d}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source\Game\Pawn">
-      <UniqueIdentifier>{00a43d1b-bdbc-c88e-5b8e-b7bdfdf08663}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source\Game\PlayerController">
-      <UniqueIdentifier>{98f08a21-3450-b417-9a82-c35be6aaeec5}</UniqueIdentifier>
     </Filter>
     <Filter Include="ThirdParty">
       <UniqueIdentifier>{b6ce33ca-bd0b-67d0-3b00-df63693ce519}</UniqueIdentifier>
@@ -650,6 +632,15 @@
     <ClCompile Include="Source\Engine\Animation\LuaAnimStateMachine.cpp">
       <Filter>Source\Engine\Animation</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Animation\Notify.cpp">
+      <Filter>Source\Engine\Animation</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Animation\NotifyRegistry.cpp">
+      <Filter>Source\Engine\Animation</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Animation\Notify_PlaySound.cpp">
+      <Filter>Source\Engine\Animation</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\Asset\AssetPackage.cpp">
       <Filter>Source\Engine\Asset</Filter>
     </ClCompile>
@@ -755,9 +746,6 @@
     <ClCompile Include="Source\Engine\Component\SubUVComponent.cpp">
       <Filter>Source\Engine\Component</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Engine\Component\TemporaryBoneAnimatorComponent.cpp">
-      <Filter>Source\Engine\Component</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Engine\Component\TextRenderComponent.cpp">
       <Filter>Source\Engine\Component</Filter>
     </ClCompile>
@@ -809,11 +797,26 @@
     <ClCompile Include="Source\Engine\Core\ProjectSettings.cpp">
       <Filter>Source\Engine\Core</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Engine\Core\PropertyTypes.cpp">
-      <Filter>Source\Engine\Core</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Engine\Core\TickFunction.cpp">
       <Filter>Source\Engine\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Core\Property\PropertyTypes.cpp">
+      <Filter>Source\Engine\Core\Property</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Core\Property\FObjectPropertyBase\FSoftObjectProperty.cpp">
+      <Filter>Source\Engine\Core\Property\FObjectPropertyBase</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Core\UObject\FSoftObjectPath.cpp">
+      <Filter>Source\Engine\Core\UObject</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Core\UObject\FSoftObjectPtr.cpp">
+      <Filter>Source\Engine\Core\UObject</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Core\UObject\FWeakObjectPtr.cpp">
+      <Filter>Source\Engine\Core\UObject</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Core\UObject\TSoftObjectPtr.cpp">
+      <Filter>Source\Engine\Core\UObject</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Debug\DebugDrawQueue.cpp">
       <Filter>Source\Engine\Debug</Filter>
@@ -965,10 +968,19 @@
     <ClCompile Include="Source\Engine\Object\FName.cpp">
       <Filter>Source\Engine\Object</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Object\FUObjectArray.cpp">
+      <Filter>Source\Engine\Object</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\Object\Object.cpp">
       <Filter>Source\Engine\Object</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Object\ScriptStruct.cpp">
+      <Filter>Source\Engine\Object</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\Object\UClass.cpp">
+      <Filter>Source\Engine\Object</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Object\UStruct.cpp">
       <Filter>Source\Engine\Object</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Object\UUIDGenerator.cpp">
@@ -1232,60 +1244,6 @@
     <ClCompile Include="Source\Engine\Viewport\ViewportClient.cpp">
       <Filter>Source\Engine\Viewport</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Game\GameActorPlacements.cpp">
-      <Filter>Source\Game</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Game\GameEngine.cpp">
-      <Filter>Source\Game</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Game\GameRenderPipeline.cpp">
-      <Filter>Source\Game</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Game\GameScoreboard.cpp">
-      <Filter>Source\Game</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Game\Component\CarDirtComponent.cpp">
-      <Filter>Source\Game\Component</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Game\Component\CarGasComponent.cpp">
-      <Filter>Source\Game\Component</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Game\Component\CompletionOutlineComponent.cpp">
-      <Filter>Source\Game\Component</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Game\Component\DirtComponent.cpp">
-      <Filter>Source\Game\Component</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Game\Component\Movement\CarMovementComponent.cpp">
-      <Filter>Source\Game\Component\Movement</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Game\GameMode\GameModeCarGame.cpp">
-      <Filter>Source\Game\GameMode</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Game\GameMode\GameModeIntro.cpp">
-      <Filter>Source\Game\GameMode</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Game\GameState\GameStateCarGame.cpp">
-      <Filter>Source\Game\GameState</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Game\Lua\GameLuaBindings.cpp">
-      <Filter>Source\Game\Lua</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Game\Meteor\Meteor.cpp">
-      <Filter>Source\Game\Meteor</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Game\Pawn\CarPawn.cpp">
-      <Filter>Source\Game\Pawn</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Game\Pawn\PoliceCar.cpp">
-      <Filter>Source\Game\Pawn</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Game\Pawn\WalkingPersonActor.cpp">
-      <Filter>Source\Game\Pawn</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Game\PlayerController\PlayerControllerCarGame.cpp">
-      <Filter>Source\Game\PlayerController</Filter>
-    </ClCompile>
     <ClCompile Include="ThirdParty\ImGui\imgui.cpp">
       <Filter>ThirdParty\ImGui</Filter>
     </ClCompile>
@@ -1308,11 +1266,6 @@
       <Filter>ThirdParty\ImGui</Filter>
     </ClCompile>
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="HighPerformanceGpuHint.cpp" />
-    <ClCompile Include="Source\Editor\UI\Asset\AnimSequenceEditorWidget.cpp" />
-    <ClCompile Include="Source\Engine\Animation\Notify.cpp" />
-    <ClCompile Include="Source\Engine\Animation\NotifyRegistry.cpp" />
-    <ClCompile Include="Source\Engine\Animation\Notify_PlaySound.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\Editor\EditorEngine.h">
@@ -1519,6 +1472,15 @@
     <ClInclude Include="Source\Engine\Animation\LuaAnimStateMachine.h">
       <Filter>Source\Engine\Animation</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Animation\Notify.h">
+      <Filter>Source\Engine\Animation</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Animation\NotifyRegistry.h">
+      <Filter>Source\Engine\Animation</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Animation\Notify_PlaySound.h">
+      <Filter>Source\Engine\Animation</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Engine\Asset\AssetPackage.h">
       <Filter>Source\Engine\Asset</Filter>
     </ClInclude>
@@ -1627,9 +1589,6 @@
     <ClInclude Include="Source\Engine\Component\SubUVComponent.h">
       <Filter>Source\Engine\Component</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Engine\Component\TemporaryBoneAnimatorComponent.h">
-      <Filter>Source\Engine\Component</Filter>
-    </ClInclude>
     <ClInclude Include="Source\Engine\Component\TextRenderComponent.h">
       <Filter>Source\Engine\Component</Filter>
     </ClInclude>
@@ -1696,9 +1655,6 @@
     <ClInclude Include="Source\Engine\Core\ProjectSettings.h">
       <Filter>Source\Engine\Core</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Engine\Core\PropertyTypes.h">
-      <Filter>Source\Engine\Core</Filter>
-    </ClInclude>
     <ClInclude Include="Source\Engine\Core\RayTypes.h">
       <Filter>Source\Engine\Core</Filter>
     </ClInclude>
@@ -1710,6 +1666,45 @@
     </ClInclude>
     <ClInclude Include="Source\Engine\Core\TickFunction.h">
       <Filter>Source\Engine\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Core\Property\FArrayProperty.h">
+      <Filter>Source\Engine\Core\Property</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Core\Property\FEnumProperty.h">
+      <Filter>Source\Engine\Core\Property</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Core\Property\FStructProperty.h">
+      <Filter>Source\Engine\Core\Property</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Core\Property\PropertyTypes.h">
+      <Filter>Source\Engine\Core\Property</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Core\Property\FObjectPropertyBase\FClassProperty.h">
+      <Filter>Source\Engine\Core\Property\FObjectPropertyBase</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Core\Property\FObjectPropertyBase\FObjectProperty.h">
+      <Filter>Source\Engine\Core\Property\FObjectPropertyBase</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Core\Property\FObjectPropertyBase\FObjectPropertyBase.h">
+      <Filter>Source\Engine\Core\Property\FObjectPropertyBase</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Core\Property\FObjectPropertyBase\FSoftObjectProperty.h">
+      <Filter>Source\Engine\Core\Property\FObjectPropertyBase</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Core\UObject\FSoftObjectPath.h">
+      <Filter>Source\Engine\Core\UObject</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Core\UObject\FSoftObjectPtr.h">
+      <Filter>Source\Engine\Core\UObject</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Core\UObject\FWeakObjectPtr.h">
+      <Filter>Source\Engine\Core\UObject</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Core\UObject\TSoftObjectPtr.h">
+      <Filter>Source\Engine\Core\UObject</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Core\UObject\TWeakObjectPtr.h">
+      <Filter>Source\Engine\Core\UObject</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Debug\DebugDrawQueue.h">
       <Filter>Source\Engine\Debug</Filter>
@@ -1891,6 +1886,12 @@
     <ClInclude Include="Source\Engine\Object\FName.h">
       <Filter>Source\Engine\Object</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Object\FUObjectArray.h">
+      <Filter>Source\Engine\Object</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Object\LuaClassRegistry.h">
+      <Filter>Source\Engine\Object</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Engine\Object\Object.h">
       <Filter>Source\Engine\Object</Filter>
     </ClInclude>
@@ -1900,7 +1901,16 @@
     <ClInclude Include="Source\Engine\Object\ObjectIterator.h">
       <Filter>Source\Engine\Object</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Object\ObjectMacros.h">
+      <Filter>Source\Engine\Object</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Object\ScriptStruct.h">
+      <Filter>Source\Engine\Object</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Engine\Object\UClass.h">
+      <Filter>Source\Engine\Object</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Object\UStruct.h">
       <Filter>Source\Engine\Object</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Object\UUIDGenerator.h">
@@ -2235,60 +2245,6 @@
     </ClInclude>
     <ClInclude Include="Source\Engine\Viewport\ViewportClient.h">
       <Filter>Source\Engine\Viewport</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Game\GameActorPlacements.h">
-      <Filter>Source\Game</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Game\GameEngine.h">
-      <Filter>Source\Game</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Game\GameRenderPipeline.h">
-      <Filter>Source\Game</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Game\GameScoreboard.h">
-      <Filter>Source\Game</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Game\Component\CarDirtComponent.h">
-      <Filter>Source\Game\Component</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Game\Component\CarGasComponent.h">
-      <Filter>Source\Game\Component</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Game\Component\CompletionOutlineComponent.h">
-      <Filter>Source\Game\Component</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Game\Component\DirtComponent.h">
-      <Filter>Source\Game\Component</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Game\Component\Movement\CarMovementComponent.h">
-      <Filter>Source\Game\Component\Movement</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Game\GameMode\GameModeCarGame.h">
-      <Filter>Source\Game\GameMode</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Game\GameMode\GameModeIntro.h">
-      <Filter>Source\Game\GameMode</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Game\GameState\GameStateCarGame.h">
-      <Filter>Source\Game\GameState</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Game\Lua\GameLuaBindings.h">
-      <Filter>Source\Game\Lua</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Game\Meteor\Meteor.h">
-      <Filter>Source\Game\Meteor</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Game\Pawn\CarPawn.h">
-      <Filter>Source\Game\Pawn</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Game\Pawn\PoliceCar.h">
-      <Filter>Source\Game\Pawn</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Game\Pawn\WalkingPersonActor.h">
-      <Filter>Source\Game\Pawn</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Game\PlayerController\PlayerControllerCarGame.h">
-      <Filter>Source\Game\PlayerController</Filter>
     </ClInclude>
     <ClInclude Include="ThirdParty\fbx\include\fbxsdk.h">
       <Filter>ThirdParty\fbx\include</Filter>
@@ -3952,9 +3908,6 @@
     <ClInclude Include="ThirdParty\sol2\include\sol\utility\to_string.hpp">
       <Filter>ThirdParty\sol2\include\sol\utility</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Engine\Animation\Notify.h" />
-    <ClInclude Include="Source\Engine\Animation\NotifyRegistry.h" />
-    <ClInclude Include="Source\Engine\Animation\Notify_PlaySound.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="KraftonEngine.rc" />

@@ -2,6 +2,7 @@
 
 #include <functional>
 #include "Object/Object.h"
+#include "Object/UClass.h"
 #include "Core/Singleton.h"
 
 #define REGISTER_FACTORY(TypeName)															\
@@ -11,7 +12,7 @@ namespace {																					\
 				FObjectFactory::Get().Register(												\
 					#TypeName,																\
 					[](UObject* InOuter)->UObject* {										\
-						return UObjectManager::Get().CreateObject<TypeName>(InOuter);		\
+						return GUObjectArray.CreateObject<TypeName>(InOuter);				\
 					}																		\
 				);																			\
 		}																					\

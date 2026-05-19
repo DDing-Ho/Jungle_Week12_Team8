@@ -1,13 +1,17 @@
-#pragma once
+﻿#pragma once
 #include "Math/Vector.h"
 #include "Core/CoreTypes.h"
-#include "Core/PropertyTypes.h"
+#include "Core/Property/FEnumProperty.h"
+#include "Core/Property/PropertyTypes.h"
 
 class AActor;
 class UPrimitiveComponent;
 
 // ============================================================
 // ECollisionChannel — 충돌 채널 (오브젝트 분류용)
+// Intentionally NOT UENUM-marked: the 16-slot placeholder names array can't
+// be expressed via codegen. UPROPERTY sites reference GCollisionChannelNames
+// directly via Type=Enum, EnumNames=, ...
 // ============================================================
 enum class ECollisionChannel : uint8
 {
@@ -16,11 +20,11 @@ enum class ECollisionChannel : uint8
 	Pawn = 2,
 	Projectile = 3,
 	Trigger = 4,
-	// 필요 시 확장 (ActiveCount, MAX 갱신)
-
-	ActiveCount = 5, // 에디터/드롭다운에 노출되는 실질 채널 수
-	MAX = 16         // 응답 테이블 최대 슬롯 수
+	// 필요 시 확장
 };
+
+inline constexpr int32 NumActiveCollisionChannels = 5;
+inline constexpr int32 MaxCollisionChannels = 16;
 
 // 채널 이름 문자열 (에디터 Enum 드롭다운용)
 inline const char* GCollisionChannelNames[] =
@@ -37,6 +41,7 @@ inline const char* GCollisionChannelNames[] =
 
 // ============================================================
 // ECollisionResponse — 채널 간 응답 방식
+// Trailing COUNT sentinel excluded from GCollisionResponseNames — not UENUM.
 // ============================================================
 enum class ECollisionResponse : uint8
 {
@@ -56,6 +61,7 @@ inline const char* GCollisionResponseNames[] =
 
 // ============================================================
 // ECollisionEnabled — 충돌 활성화 모드
+// Trailing COUNT sentinel excluded from GCollisionEnabledNames — not UENUM.
 // ============================================================
 enum class ECollisionEnabled : uint8
 {
@@ -77,10 +83,13 @@ inline const char* GCollisionEnabledNames[] =
 
 // ============================================================
 // FCollisionResponseContainer — 채널별 응답 테이블
+// Not USTRUCT-marked: GetSchema below builds one cached enum schema per active
+// channel using the display names from GCollisionChannelNames — a pattern the
+// static codegen can't reproduce.
 // ============================================================
 struct FCollisionResponseContainer
 {
-	ECollisionResponse Responses[static_cast<int32>(ECollisionChannel::MAX)];
+	ECollisionResponse Responses[MaxCollisionChannels];
 
 	FCollisionResponseContainer()
 	{
@@ -94,7 +103,7 @@ struct FCollisionResponseContainer
 
 	void SetAllChannels(ECollisionResponse InResponse)
 	{
-		for (int32 i = 0; i < static_cast<int32>(ECollisionChannel::MAX); ++i)
+		for (int32 i = 0; i < MaxCollisionChannels; ++i)
 		{
 			Responses[i] = InResponse;
 		}
@@ -111,20 +120,30 @@ struct FCollisionResponseContainer
 	}
 
 	// 에디터용 자기기술 함수 — Struct 프로퍼티 시스템에서 사용
-	static void DescribeProperties(void* Ptr, std::vector<FProperty>& OutProps)
+	static const std::vector<FProperty*>& GetSchema()
 	{
-		auto* Container = static_cast<FCollisionResponseContainer*>(Ptr);
-		for (int32 i = 0; i < static_cast<int32>(ECollisionChannel::ActiveCount); ++i)
+		static const std::vector<FProperty*> Schema = []()
 		{
-			FProperty Desc;
-			Desc.Name = GCollisionChannelNames[i];
-			Desc.Type = EPropertyType::Enum;
-			Desc.ValuePtr = &Container->Responses[i];
-			Desc.EnumNames = GCollisionResponseNames;
-			Desc.EnumCount = static_cast<uint32>(ECollisionResponse::COUNT);
-			Desc.EnumSize = sizeof(ECollisionResponse);
-			OutProps.push_back(Desc);
-		}
+			std::vector<FProperty*> Properties;
+			Properties.reserve(NumActiveCollisionChannels);
+
+			for (int32 i = 0; i < NumActiveCollisionChannels; ++i)
+			{
+				Properties.push_back(new FEnumProperty(
+					GCollisionChannelNames[i],
+					"",
+					CPF_Edit,
+					static_cast<uint32>(offsetof(FCollisionResponseContainer, Responses) + sizeof(ECollisionResponse) * i),
+					sizeof(ECollisionResponse),
+					GCollisionResponseNames,
+					static_cast<uint32>(ECollisionResponse::COUNT),
+					sizeof(ECollisionResponse)));
+			}
+
+			return Properties;
+		}();
+
+		return Schema;
 	}
 };
 

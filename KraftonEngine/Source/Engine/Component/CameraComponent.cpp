@@ -7,16 +7,6 @@
 #include "Render/Types/MinimalViewInfo.h"
 #include <cmath>
 
-IMPLEMENT_CLASS(UCameraComponent, USceneComponent)
-
-BEGIN_CLASS_PROPERTIES(UCameraComponent)
-	PROPERTY_FLOAT_OFFSET("FOV", "Camera", offsetof(ThisClass, CameraState) + offsetof(FCameraState, FOV), 0.1f, 3.14f, 0.01f, CPF_Edit)
-	PROPERTY_FLOAT_OFFSET("Near Z", "Camera", offsetof(ThisClass, CameraState) + offsetof(FCameraState, NearZ), 0.01f, 100.0f, 0.01f, CPF_Edit)
-	PROPERTY_FLOAT_OFFSET("Far Z", "Camera", offsetof(ThisClass, CameraState) + offsetof(FCameraState, FarZ), 1.0f, 100000.0f, 10.0f, CPF_Edit)
-	PROPERTY_BOOL_OFFSET("Orthographic", "Camera", offsetof(ThisClass, CameraState) + offsetof(FCameraState, bIsOrthogonal), CPF_Edit)
-	PROPERTY_FLOAT_OFFSET("Ortho Width", "Camera", offsetof(ThisClass, CameraState) + offsetof(FCameraState, OrthoWidth), 0.1f, 1000.0f, 0.5f, CPF_Edit)
-END_CLASS_PROPERTIES(UCameraComponent)
-
 void UCameraComponent::BeginPlay()
 {
 	Super::BeginPlay();

@@ -8,7 +8,6 @@
 
 #include <SimpleJSON/json.hpp>
 
-IMPLEMENT_CLASS(UCameraShakeAsset, UObject)
 
 static FVector ReadVector(json::JSON& Object, const FString& Key, const FVector& DefaultValue)
 {

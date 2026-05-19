@@ -605,7 +605,7 @@ void UUIManager::Shutdown()
 
 UUserWidget* UUIManager::CreateWidget(APlayerController* OwningPlayer, const FString& DocumentPath)
 {
-	UUserWidget* Widget = UObjectManager::Get().CreateObject<UUserWidget>();
+	UUserWidget* Widget = GUObjectArray.CreateObject<UUserWidget>();
 	Widget->Initialize(OwningPlayer, DocumentPath);
 	CreatedWidgets.push_back(Widget);
 	return Widget;
@@ -706,7 +706,7 @@ void UUIManager::DestroyAllWidgets()
 	{
 		if (IsAliveObject(Widget))
 		{
-			UObjectManager::Get().DestroyObject(Widget);
+			GUObjectArray.DestroyObject(Widget);
 		}
 	}
 	CreatedWidgets.clear();

@@ -55,7 +55,7 @@ void EditorProjectSettingsWidget::Render()
 		GameModeClasses.push_back(nullptr); // sentinel for "(Default)"
 		for (UClass* C : UClass::GetAllClasses())
 		{
-			if (C && C->IsA(AGameModeBase::StaticClass()))
+			if (C && C->IsChildOf(AGameModeBase::StaticClass()))
 				GameModeClasses.push_back(C);
 		}
 

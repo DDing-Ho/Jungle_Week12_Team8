@@ -7,17 +7,6 @@
 #include "Render/Scene/FScene.h"
 #include "Serialization/Archive.h"
 
-IMPLEMENT_CLASS(UHeightFogComponent, USceneComponent)
-
-BEGIN_CLASS_PROPERTIES(UHeightFogComponent)
-	PROPERTY_FLOAT(FogDensity, "Fog Density", "Fog", 0.0f, 0.05f, 0.001f, CPF_Edit)
-	PROPERTY_FLOAT(FogHeightFalloff, "Height Falloff", "Fog", 0.001f, 5.0f, 0.01f, CPF_Edit)
-	PROPERTY_FLOAT(StartDistance, "Start Distance", "Fog", 0.0f, 100000.0f, 1.0f, CPF_Edit)
-	PROPERTY_FLOAT(FogCutoffDistance, "Cutoff Distance", "Fog", 0.0f, 100000.0f, 1.0f, CPF_Edit)
-	PROPERTY_FLOAT(FogMaxOpacity, "Max Opacity", "Fog", 0.0f, 1.0f, 0.01f, CPF_Edit)
-	REGISTER_PROPERTY(FogInscatteringColor, "Inscattering Color", EPropertyType::Color4, "Fog", CPF_Edit)
-END_CLASS_PROPERTIES(UHeightFogComponent)
-
 UHeightFogComponent::UHeightFogComponent()
 {
 	SetComponentTickEnabled(false);

@@ -3,8 +3,6 @@
 #include "Component/SkeletalMeshComponent.h"
 #include "Mesh/MeshManager.h"
 
-IMPLEMENT_CLASS(ASkeletalMeshActor, AActor)
-
 void ASkeletalMeshActor::BeginPlay()
 {
 	Super::BeginPlay();

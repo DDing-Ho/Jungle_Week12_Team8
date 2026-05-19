@@ -4,7 +4,6 @@
 #include <cmath>
 #include <cstdlib>
 
-IMPLEMENT_CLASS(UWaveOscillatorCameraShake, UCameraShakeBase)
 
 namespace
 {

@@ -1,15 +1,17 @@
 #pragma once
 
 #include "GameFramework/AActor.h"
+#include "DecalActor.generated.h"
 
 class UTextRenderComponent;
 class UDecalComponent;
 class UBillboardComponent;
 
+UCLASS(Actor)
 class ADecalActor : public AActor
 {
 public:
-	DECLARE_CLASS(ADecalActor, AActor)
+	GENERATED_BODY(ADecalActor)
 
 	ADecalActor();
 

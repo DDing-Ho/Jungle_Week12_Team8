@@ -2,20 +2,31 @@
 
 #include "CameraComponent.h"
 #include "Core/EngineTypes.h"
+#include "CineCameraComponent.generated.h"
 
+USTRUCT()
 struct FCineLetterboxSettings
 {
+	GENERATED_BODY(FCineLetterboxSettings)
+
+	UPROPERTY(Edit, DisplayName="Enable Letterbox")
 	bool bEnabled = false;
+
+	UPROPERTY(Edit, DisplayName="Letterbox Amount", Min=0.0f, Max=1.0f, Speed=0.01f)
 	float Amount = 1.0f;
+
+	UPROPERTY(Edit, DisplayName="Letterbox Thickness", Min=0.0f, Max=0.5f, Speed=0.01f)
 	float Thickness = 0.12f;
+
+	UPROPERTY(Edit, DisplayName="Letterbox Color", Type=Color4)
 	FLinearColor Color = FLinearColor::Black();
 };
 
+UCLASS()
 class UCineCameraComponent : public UCameraComponent
 {
 public:
-	DECLARE_CLASS(UCineCameraComponent, UCameraComponent)
-
+	GENERATED_BODY(UCineCameraComponent)
 	UCineCameraComponent() = default;
 
 	void Serialize(FArchive& Ar) override;
@@ -28,5 +39,6 @@ public:
 	const FCineLetterboxSettings& GetLetterboxSettings() const { return Letterbox; }
 
 private:
+	UPROPERTY(Edit, Category="Cinematic", DisplayName="Letterbox")
 	FCineLetterboxSettings Letterbox;
 };

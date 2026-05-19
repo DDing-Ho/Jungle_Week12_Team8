@@ -30,7 +30,7 @@ FGizmoSceneProxy::~FGizmoSceneProxy()
 	GizmoCB.Release();
 	if (GizmoMaterial)
 	{
-		UObjectManager::Get().DestroyObject(GizmoMaterial);
+		GUObjectArray.DestroyObject(GizmoMaterial);
 		GizmoMaterial = nullptr;
 	}
 }

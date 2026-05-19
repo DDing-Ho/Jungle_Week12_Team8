@@ -1,5 +1,6 @@
 ﻿#include "LuaScriptManager.h"
 
+#include "Object/LuaClassRegistry.h"
 #include "Core/Log.h"
 #include "Core/Notification.h"
 #include "Audio/AudioManager.h"
@@ -355,6 +356,11 @@ void FLuaScriptManager::RegisterBindings(sol::state& Lua)
 	RegisterActorBindings(Lua);
 	RegisterUIBindings(Lua);
 	RegisterAnimBindings(Lua);
+
+	for (auto Fn : FLuaClassRegistrar::GetAll())
+	{
+		Fn(Lua);
+	}
 }
 
 FInputSystemSnapshot FLuaScriptManager::GetLuaInputSnapshot()
@@ -770,17 +776,6 @@ void FLuaScriptManager::RegisterMathBindings(sol::state& Lua)
 
 void FLuaScriptManager::RegisterActorBindings(sol::state& Lua)
 {
-	Lua.new_usertype<UActionComponent>("ActionComponent",
-		"HitStop", &UActionComponent::HitStop,
-		"HitSquash", &UActionComponent::HitSquash,
-		"Knockback", &UActionComponent::Knockback,
-		"Slomo", &UActionComponent::Slomo,
-		"StopHitStop", &UActionComponent::StopHitStop,
-		"StopHitSquash", &UActionComponent::StopHitSquash,
-		"StopKnockback", &UActionComponent::StopKnockback,
-		"StopSlomo", &UActionComponent::StopSlomo,
-		"StopAllActions", &UActionComponent::StopAllActions);
-
 	Lua.new_usertype<UFloatingPawnMovementComponent>("FloatingPawnMovementComponent",
 		"SetMoveInput", &UFloatingPawnMovementComponent::SetMoveInput,
 		"SetLookInput", &UFloatingPawnMovementComponent::SetLookInput);
@@ -1086,7 +1081,7 @@ void FLuaScriptManager::RegisterActorBindings(sol::state& Lua)
 		if (!Cls) return nullptr;
 		for (AActor* Actor : GEngine->GetWorld()->GetActors())
 		{
-			if (Actor && Actor->GetClass()->IsA(Cls))
+			if (Actor && Actor->GetClass()->IsChildOf(Cls))
 			{
 				return Actor;
 			}

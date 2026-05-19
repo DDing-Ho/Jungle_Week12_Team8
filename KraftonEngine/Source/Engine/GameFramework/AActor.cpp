@@ -3,14 +3,13 @@
 #include "Component/PrimitiveComponent.h"
 #include "Component/ActorComponent.h"
 #include "Component/Movement/MovementComponent.h"
+#include "Core/Property/PropertyTypes.h"
 #include "Math/Rotator.h"
 #include "GameFramework/Level.h"
 #include "GameFramework/World.h"
 #include "Serialization/Archive.h"
 
 #include <algorithm>
-
-IMPLEMENT_CLASS(AActor, UObject)
 
 AActor::AActor()
 {
@@ -46,7 +45,7 @@ UActorComponent* AActor::AddComponentByClass(UClass* Class)
 
 	UActorComponent* Comp = Cast<UActorComponent>(Obj);
 	if (!Comp) {
-		UObjectManager::Get().DestroyObject(Obj);
+		GUObjectArray.DestroyObject(Obj);
 		return nullptr;
 	}
 
@@ -107,7 +106,7 @@ void AActor::RemoveComponent(UActorComponent* Component)
 	if (RootComponent == Component)
 		RootComponent = nullptr;
 
-	UObjectManager::Get().DestroyObject(Component);
+	GUObjectArray.DestroyObject(Component);
 }
 
 void AActor::SetRootComponent(USceneComponent* Comp)
@@ -164,8 +163,6 @@ FVector AActor::GetActorLocation() const
 
 void AActor::SetActorLocation(const FVector& NewLocation)
 {
-	PendingActorLocation = NewLocation;
-
 	if (RootComponent)
 	{
 		RootComponent->SetWorldLocation(NewLocation);
@@ -234,7 +231,6 @@ FRotator AActor::GetActorRotation() const
 
 void AActor::SetActorRotation(const FRotator& NewRotation)
 {
-	PendingActorRotation = NewRotation;
 	if (RootComponent)
 	{
 		RootComponent->SetRelativeRotation(NewRotation);
@@ -243,7 +239,6 @@ void AActor::SetActorRotation(const FRotator& NewRotation)
 
 void AActor::SetActorRotation(const FVector& EulerRotation)
 {
-	PendingActorRotation = FRotator(EulerRotation);
 	if (RootComponent)
 	{
 		RootComponent->SetRelativeRotation(EulerRotation);
@@ -441,41 +436,34 @@ UObject* AActor::Duplicate(UObject* NewOuter) const
 	return Dup;
 }
 
-void AActor::GetEditableProperties(TArray<FProperty>& OutProps)
+void AActor::GetEditableProperties(TArray<const FProperty*>& OutProps)
 {
 	UObject::GetEditableProperties(OutProps);
 
-	PendingActorLocation = GetActorLocation();
-	PendingActorRotation = GetActorRotation();
-	PendingActorScale = GetActorScale();
 	PendingActorVisible = bVisible;
-
-	OutProps.push_back({ "Location", EPropertyType::Vec3, "Transform", &PendingActorLocation });
-	OutProps.push_back({ "Rotation", EPropertyType::Rotator, "Transform", &PendingActorRotation });
-	OutProps.push_back({ "Scale", EPropertyType::Vec3, "Transform", &PendingActorScale });
-	OutProps.push_back({ "Visible", EPropertyType::Bool, "Actor", &PendingActorVisible });
+	static const FBoolProperty VisibleProperty(
+		"Visible",
+		"Actor",
+		CPF_Edit,
+		offsetof(AActor, PendingActorVisible),
+		sizeof(((AActor*)0)->PendingActorVisible));
+	OutProps.push_back(&VisibleProperty);
 
 	// Tags — 콤마 구분 단일 문자열로 편집. PostEditProperty 가 다시 split 해서 Tags 갱신.
 	PendingTagsString = JoinTagsCommaSep(Tags);
-	OutProps.push_back({ "Tags", EPropertyType::String, "Actor", &PendingTagsString });
+	static const FStringProperty TagsProperty(
+		"Tags",
+		"Actor",
+		CPF_Edit,
+		offsetof(AActor, PendingTagsString),
+		sizeof(((AActor*)0)->PendingTagsString));
+	OutProps.push_back(&TagsProperty);
 }
 
 void AActor::PostEditProperty(const char* PropertyName)
 {
 	UObject::PostEditProperty(PropertyName);
-	if (strcmp(PropertyName, "Location") == 0)
-	{
-		SetActorLocation(PendingActorLocation);
-	}
-	else if (strcmp(PropertyName, "Rotation") == 0)
-	{
-		SetActorRotation(PendingActorRotation);
-	}
-	else if (strcmp(PropertyName, "Scale") == 0)
-	{
-		SetActorScale(PendingActorScale);
-	}
-	else if (strcmp(PropertyName, "Visible") == 0)
+	if (strcmp(PropertyName, "Visible") == 0)
 	{
 		SetVisible(PendingActorVisible);
 	}

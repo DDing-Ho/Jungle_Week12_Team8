@@ -2,21 +2,23 @@
 
 #include "Object/Object.h"
 #include "SkeletalMeshAsset.h"
+#include "SkeletalMesh.generated.h"
 
 class USkeleton;
 struct FSkeletonAsset;
 
+UCLASS()
 class USkeletalMesh : public UObject
 {
 public:
-	DECLARE_CLASS(USkeletalMesh, UObject)
+	GENERATED_BODY(USkeletalMesh)
 
 	USkeletalMesh() = default;
-	~USkeletalMesh() override = default;
+	~USkeletalMesh() override;
 
 	void Serialize(FArchive& Ar);
 
-	const FString& GetAssetPathFileName() const { return AssetPathFileName; }
+	const FString& GetAssetPathFileName() const override { return AssetPathFileName; }
 	void SetAssetPathFileName(const FString& InPathFileName) { AssetPathFileName = InPathFileName; }
 
 	void SetSkeletalMeshAsset(FSkeletalMesh* InMesh);

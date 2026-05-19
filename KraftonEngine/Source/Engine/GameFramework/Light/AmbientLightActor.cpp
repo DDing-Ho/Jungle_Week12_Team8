@@ -4,8 +4,6 @@
 #include "Component/Light/AmbientLightComponent.h"
 #include "Materials/MaterialManager.h"
 
-IMPLEMENT_CLASS(AAmbientLightActor, AActor)
-
 void AAmbientLightActor::InitDefaultComponents()
 {
 	LightComponent = AddComponent<UAmbientLightComponent>();

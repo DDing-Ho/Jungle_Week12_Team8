@@ -3,32 +3,16 @@
 #include "Serialization/Archive.h"
 #include "Serialization/MemoryArchive.h"
 #include "Object/ObjectFactory.h"
-
-TArray<UObject*> GUObjectArray;
-TSet<UObject*> GUObjectSet;
+#include "UClass.h"
 
 UObject::UObject()
 {
 	UUID = UUIDGenerator::GenUUID();
-	InternalIndex = static_cast<uint32>(GUObjectArray.size());
-	GUObjectArray.push_back(this);
-	GUObjectSet.insert(this);
 }
 
 UObject::~UObject()
 {
-	GUObjectSet.erase(this);
-
-	uint32 LastIndex = static_cast<uint32>(GUObjectArray.size() - 1);
-
-	if (InternalIndex != LastIndex)
-	{
-		UObject* LastObject = GUObjectArray[LastIndex];
-		GUObjectArray[InternalIndex] = LastObject;
-		LastObject->InternalIndex = InternalIndex;
-	}
-
-	GUObjectArray.pop_back();
+	GUObjectArray.RemoveObject(this);
 }
 
 UObject* UObject::Duplicate(UObject* NewOuter) const
@@ -53,6 +37,11 @@ UObject* UObject::Duplicate(UObject* NewOuter) const
 	return Dup;
 }
 
+bool UObject::IsA(const UClass* Other) const 
+{ 
+	return Other && GetClass()->IsChildOf(Other);
+}
+
 void UObject::Serialize(FArchive& Ar)
 {
 	// 기본 UObject는 직렬화할 상태 없음.
@@ -60,35 +49,18 @@ void UObject::Serialize(FArchive& Ar)
 	Ar << ObjectName;
 }
 
-void UObject::GetAllProperties(TArray<FProperty>& OutProps)
+void UObject::GetAllProperties(TArray<const FProperty*>& OutProps)
 {
 	UClass* Cls = GetClass();
 	if (!Cls) return;
-
-	const size_t Start = OutProps.size();
 	Cls->GetAllProperties(OutProps);
-
-	uint8_t* Base = reinterpret_cast<uint8_t*>(this);
-	for (size_t i = Start; i < OutProps.size(); ++i)
-	{
-		OutProps[i].ValuePtr = Base + OutProps[i].Offset_Internal;
-	}
 }
 
-void UObject::GetEditableProperties(TArray<FProperty>& OutProps)
+void UObject::GetEditableProperties(TArray<const FProperty*>& OutProps)
 {
-
 	UClass* Cls = GetClass();
 	if (!Cls) return;
-
-	const size_t Start = OutProps.size();
 	Cls->GetEditableProperties(OutProps);
-
-	uint8_t* Base = reinterpret_cast<uint8_t*>(this);
-	for (size_t i = Start; i < OutProps.size(); ++i)
-	{
-		OutProps[i].ValuePtr = Base + OutProps[i].Offset_Internal;
-	}
 }
 
 void UObject::PostEditProperty(const char* /*PropertyName*/)
@@ -96,19 +68,12 @@ void UObject::PostEditProperty(const char* /*PropertyName*/)
 	// 기본 UObject는 편집 후 추가 작업 없음.
 }
 
-void UObject::GetNonTransientProperties(TArray<FProperty>& OutProps)
+void UObject::GetNonTransientProperties(TArray<const FProperty*>& OutProps)
 {
 	UClass* Cls = GetClass();
 	if (!Cls) return;
-
-	const size_t Start = OutProps.size();
 	Cls->GetNonTransientProperties(OutProps);
-
-	uint8_t* Base = reinterpret_cast<uint8_t*>(this);
-	for (size_t i = Start; i < OutProps.size(); ++i)
-	{
-		OutProps[i].ValuePtr = Base + OutProps[i].Offset_Internal;
-	}
 }
 
 UClass UObject::StaticClassInstance("UObject", nullptr, sizeof(UObject), CF_None);
+FClassRegistrar UObject::s_Registrar(&UObject::StaticClassInstance);

@@ -6,7 +6,8 @@
 #include "Animation/NotifyRegistry.h"
 #include "Component/Light/DirectionalLightComponent.h"
 #include "Component/SkeletalMeshComponent.h"
-#include "Core/PropertyTypes.h"
+#include "Core/Property/FEnumProperty.h"
+#include "Core/Property/PropertyTypes.h"
 #include "Editor/Settings/EditorSettings.h"
 #include "GameFramework/Light/DirectionalLightActor.h"
 #include "GameFramework/StaticMeshActor.h"
@@ -15,6 +16,7 @@
 #include "Mesh/SkeletalMesh.h"
 #include "Mesh/SkeletalMeshAsset.h"
 #include "Mesh/SkeletonAsset.h"
+#include "Object/FUObjectArray.h"
 #include "Runtime/Engine.h"
 #include "Slate/SlateApplication.h"
 #include "UI/Toolbar/ViewportToolbar.h"
@@ -39,44 +41,47 @@ namespace
 	}
 
 	// Notify 프로퍼티 1개를 타입별로 렌더링. 변경 여부 반환.
-	bool DrawNotifyPropertyRow(FProperty& Prop)
+	bool DrawNotifyPropertyRow(const FProperty& Prop, void* Container)
 	{
 		bool bChanged = false;
-		switch (Prop.Type)
+		void* ValuePtr = Prop.ContainerPtrToValuePtr(Container);
+		switch (Prop.GetType())
 		{
 		case EPropertyType::Float:
 		{
-			float* Val = static_cast<float*>(Prop.ValuePtr);
-			if (Prop.Min != 0.0f || Prop.Max != 0.0f)
-				bChanged = ImGui::DragFloat("##v", Val, Prop.Speed, Prop.Min, Prop.Max, "%.4f");
+			const FNumericProperty& NumericProp = static_cast<const FNumericProperty&>(Prop);
+			float* Val = static_cast<float*>(ValuePtr);
+			if (NumericProp.Min != 0.0f || NumericProp.Max != 0.0f)
+				bChanged = ImGui::DragFloat("##v", Val, NumericProp.Speed, NumericProp.Min, NumericProp.Max, "%.4f");
 			else
-				bChanged = ImGui::DragFloat("##v", Val, Prop.Speed);
+				bChanged = ImGui::DragFloat("##v", Val, NumericProp.Speed);
 			break;
 		}
 		case EPropertyType::Bool:
 		{
-			bool* Val = static_cast<bool*>(Prop.ValuePtr);
+			bool* Val = static_cast<bool*>(ValuePtr);
 			bChanged = ImGui::Checkbox("##v", Val);
 			break;
 		}
 		case EPropertyType::Int:
 		{
-			int32* Val = static_cast<int32*>(Prop.ValuePtr);
-			if (Prop.Min != 0.0f || Prop.Max != 0.0f)
-				bChanged = ImGui::DragInt("##v", Val, static_cast<int32>(Prop.Speed), static_cast<int32>(Prop.Min), static_cast<int32>(Prop.Max));
+			const FNumericProperty& NumericProp = static_cast<const FNumericProperty&>(Prop);
+			int32* Val = static_cast<int32*>(ValuePtr);
+			if (NumericProp.Min != 0.0f || NumericProp.Max != 0.0f)
+				bChanged = ImGui::DragInt("##v", Val, static_cast<int32>(NumericProp.Speed), static_cast<int32>(NumericProp.Min), static_cast<int32>(NumericProp.Max));
 			else
-				bChanged = ImGui::DragInt("##v", Val, static_cast<int32>(Prop.Speed));
+				bChanged = ImGui::DragInt("##v", Val, static_cast<int32>(NumericProp.Speed));
 			break;
 		}
 		case EPropertyType::Vec3:
 		{
-			float* Val = static_cast<float*>(Prop.ValuePtr);
-			bChanged = ImGui::DragFloat3("##v", Val, Prop.Speed);
+			float* Val = static_cast<float*>(ValuePtr);
+			bChanged = ImGui::DragFloat3("##v", Val, 0.1f);
 			break;
 		}
 		case EPropertyType::String:
 		{
-			FString* Val = static_cast<FString*>(Prop.ValuePtr);
+			FString* Val = static_cast<FString*>(ValuePtr);
 			char Buf[256];
 			strncpy_s(Buf, sizeof(Buf), Val->c_str(), _TRUNCATE);
 			if (ImGui::InputText("##v", Buf, sizeof(Buf)))
@@ -88,7 +93,7 @@ namespace
 		}
 		case EPropertyType::Name:
 		{
-			FName* Val = static_cast<FName*>(Prop.ValuePtr);
+			FName* Val = static_cast<FName*>(ValuePtr);
 			char Buf[256];
 			strncpy_s(Buf, sizeof(Buf), Val->ToString().c_str(), _TRUNCATE);
 			if (ImGui::InputText("##v", Buf, sizeof(Buf)))
@@ -100,15 +105,16 @@ namespace
 		}
 		case EPropertyType::Enum:
 		{
-			if (Prop.EnumNames && Prop.EnumCount > 0)
+			const FEnumProperty& EnumProp = static_cast<const FEnumProperty&>(Prop);
+			if (EnumProp.EnumNames && EnumProp.EnumCount > 0)
 			{
 				int32 Idx = 0;
-				if (Prop.EnumSize == 1)      Idx = *static_cast<uint8*>(Prop.ValuePtr);
-				else if (Prop.EnumSize == 4) Idx = *static_cast<int32*>(Prop.ValuePtr);
-				if (ImGui::Combo("##v", &Idx, Prop.EnumNames, static_cast<int32>(Prop.EnumCount)))
+				if (EnumProp.EnumSize == 1)      Idx = *static_cast<uint8*>(ValuePtr);
+				else if (EnumProp.EnumSize == 4) Idx = *static_cast<int32*>(ValuePtr);
+				if (ImGui::Combo("##v", &Idx, EnumProp.EnumNames, static_cast<int32>(EnumProp.EnumCount)))
 				{
-					if (Prop.EnumSize == 1)      *static_cast<uint8*>(Prop.ValuePtr) = static_cast<uint8>(Idx);
-					else if (Prop.EnumSize == 4) *static_cast<int32*>(Prop.ValuePtr) = Idx;
+					if (EnumProp.EnumSize == 1)      *static_cast<uint8*>(ValuePtr) = static_cast<uint8>(Idx);
+					else if (EnumProp.EnumSize == 4) *static_cast<int32*>(ValuePtr) = Idx;
 					bChanged = true;
 				}
 			}
@@ -324,7 +330,7 @@ void FAnimSequenceEditorWidget::InitializePreviewWorld()
 		PreviewMeshComponent->SetSkeletalMesh(PreviewSkeletalMesh);
 		Actor->SetRootComponent(PreviewMeshComponent);
 
-		SingleNodeInstance = UObjectManager::Get().CreateObject<UAnimSingleNodeInstance>();
+		SingleNodeInstance = GUObjectArray.CreateObject<UAnimSingleNodeInstance>();
 		PreviewMeshComponent->SetAnimInstance(SingleNodeInstance);
 		SingleNodeInstance->SetAnimation(AnimSequence);
 	}
@@ -388,7 +394,7 @@ void FAnimSequenceEditorWidget::ReleasePreviewWorld()
 {
 	if (SingleNodeInstance)
 	{
-		UObjectManager::Get().DestroyObject(SingleNodeInstance);
+		GUObjectArray.DestroyObject(SingleNodeInstance);
 		SingleNodeInstance = nullptr;
 	}
 
@@ -1251,7 +1257,7 @@ void FAnimSequenceEditorWidget::RenderTimelinePanel()
 		// --- 리플렉션 기반 프로퍼티 인스펙터 ---
 		if (UNotify* Notify = SelectedNotify.NotifyTrigger)
 		{
-			TArray<FProperty> Props;
+			TArray<const FProperty*> Props;
 			Notify->GetEditableProperties(Props);
 
 			if (!Props.empty())
@@ -1273,11 +1279,11 @@ void FAnimSequenceEditorWidget::RenderTimelinePanel()
 
 						ImGui::TableSetColumnIndex(0);
 						ImGui::AlignTextToFramePadding();
-						ImGui::TextUnformatted(Props[i].Name.c_str());
+						ImGui::TextUnformatted(Props[i]->Name.c_str());
 
 						ImGui::TableSetColumnIndex(1);
 						ImGui::SetNextItemWidth(-1);
-						if (DrawNotifyPropertyRow(Props[i]))
+						if (DrawNotifyPropertyRow(*Props[i], Notify))
 							MarkDirty();
 
 						ImGui::PopID();

@@ -8,6 +8,7 @@
 #include "Render/Resource/Buffer.h"
 #include "Render/Types/MaterialTextureSlot.h"
 #include "Render/Types/RenderConstants.h"
+#include "Material.generated.h"
 #include <memory>
 
 class UTexture2D;
@@ -70,6 +71,7 @@ struct FMaterialConstantBuffer
 
 //파라미터 값 + 텍스처 (런타임 데이터)
 //JSON으로 직렬화되는 데이터
+UCLASS()
 class UMaterial : public UObject
 {
 private:
@@ -97,7 +99,7 @@ private:
 	bool SetParameter(const FString& Name, const void* Data, uint32 Size);
 
 public:
-	DECLARE_CLASS(UMaterial, UObject)
+	GENERATED_BODY(UMaterial)
 	~UMaterial() override;
 
 	void Create(const FString& InPathFileName, FMaterialTemplate* InTemplate,
@@ -148,7 +150,7 @@ public:
 
 	const FString& GetTexturePathFileName(const FString& TextureName)const;
 
-	const FString& GetAssetPathFileName() const { return PathFileName; }
+	const FString& GetAssetPathFileName() const override { return PathFileName; }
 	void SetAssetPathFileName(const FString& InPath) { PathFileName = InPath; }
 	void Serialize(FArchive& Ar);//>>>>>Manager가 위임
 

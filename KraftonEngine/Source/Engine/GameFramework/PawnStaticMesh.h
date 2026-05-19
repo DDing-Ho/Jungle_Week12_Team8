@@ -1,6 +1,7 @@
 #pragma once
 
 #include "GameFramework/Pawn.h"
+#include "PawnStaticMesh.generated.h"
 
 class UStaticMeshComponent;
 
@@ -12,10 +13,11 @@ class UStaticMeshComponent;
 // 직렬화/복제 시에는 컴포넌트가 씬에서 복원되며, PostDuplicate에서
 // 캐시 포인터만 다시 잡는다.
 // ============================================================
+UCLASS(Actor)
 class APawnStaticMesh : public APawn
 {
 public:
-	DECLARE_CLASS(APawnStaticMesh, APawn)
+	GENERATED_BODY(APawnStaticMesh)
 
 	APawnStaticMesh() = default;
 	~APawnStaticMesh() override = default;
