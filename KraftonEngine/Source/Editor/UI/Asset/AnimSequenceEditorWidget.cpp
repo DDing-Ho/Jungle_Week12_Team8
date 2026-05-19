@@ -1037,6 +1037,7 @@ void FAnimSequenceEditorWidget::RenderViewportPanel(float Deltatime)
 			{
 				ViewportClient.SetBoneDebugDrawMode(static_cast<EBoneDebugDrawMode>(BoneDrawMode));
 			}
+
 		};
 
 		FViewportToolbar::Render(Context);
@@ -1382,6 +1383,23 @@ void FAnimSequenceEditorWidget::RenderTimelinePanel()
 	{
 		if (SingleNodeInstance)
 			SingleNodeInstance->SetLooping(bLooping);
+	}
+
+	ImGui::SameLine();
+	if (PreviewMeshComponent)
+	{
+		bool bIgnore = PreviewMeshComponent->GetIgnoreRootMotion();
+		if (ImGui::Checkbox("Ignore Root Motion", &bIgnore))
+		{
+			PreviewMeshComponent->SetIgnoreRootMotion(bIgnore);
+		}
+	}
+	else
+	{
+		ImGui::BeginDisabled();
+		bool bDummy = true;
+		ImGui::Checkbox("Ignore Root Motion", &bDummy);
+		ImGui::EndDisabled();
 	}
 
 	ImGui::SameLine();

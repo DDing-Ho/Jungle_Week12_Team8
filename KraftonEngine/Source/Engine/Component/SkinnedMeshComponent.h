@@ -72,6 +72,9 @@ public:
 	FMeshBuffer* GetMeshBuffer() const override;
 	FMeshDataView GetMeshDataView() const override;
 
+	bool GetIgnoreRootMotion() const { return bIgnoreRootMotion; }
+	void SetIgnoreRootMotion(bool bIgnore) { bIgnoreRootMotion = bIgnore; }
+
 protected:
 	// Tick/skinning 섹션: skin matrix와 CPU vertex skinning을 분리해 필요한 경로만 계산한다.
 	void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction& ThisTickFunction) override;

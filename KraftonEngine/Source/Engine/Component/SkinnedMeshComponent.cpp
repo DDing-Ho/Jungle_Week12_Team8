@@ -587,6 +587,15 @@ void USkinnedMeshComponent::SetBoneLocalTransformByArray(const TArray<FMatrix>& 
 	// 프레임당 bone 수만큼 같은 mesh를 다시 스키닝하는 병목이 생깁니다. 여기서는 edit pose 배열만 먼저 통째로
 	// 교체하고, 모든 bone 값이 준비된 뒤 UpdateSkinMatrices를 딱 한 번 호출합니다.
 	BoneEditLocalMatrices = NewLocalMatrices;
+
+	if (bIgnoreRootMotion && TargetRootBoneIndex < static_cast<uint32>(BoneEditLocalMatrices.size()))
+	{
+		FMatrix& RootMatrix = BoneEditLocalMatrices[TargetRootBoneIndex];
+		RootMatrix.M[3][0] = 0.0f;
+		RootMatrix.M[3][1] = 0.0f;
+		RootMatrix.M[3][2] = 0.0f;
+	}
+
 	bUseBoneEditPose = true;
 
 	UpdateSkinMatrices();
