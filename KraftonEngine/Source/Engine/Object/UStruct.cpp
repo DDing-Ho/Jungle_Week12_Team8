@@ -48,9 +48,9 @@ void UStruct::GetEditablePropertiesFor(TArray<const FProperty*>& OutProps, const
 {
 	if (SuperStruct) SuperStruct->GetEditablePropertiesFor(OutProps, Target);
 
-	for (uint32 i = 0; i < Properties.size(); i++)
+	for (uint32 i = 0; i < ChildProperties.size(); i++)
 	{
-		FProperty* Property = Properties[i];
+		FProperty* Property = ChildProperties[i];
 		if (!Property || Target->IsPropertyHidden(Property->Name)) continue;
 		if (Property->PropertyFlag & EPropertyFlags::CPF_Edit) OutProps.push_back(Property);
 	}
@@ -60,9 +60,9 @@ void UStruct::GetNonTransientPropertiesFor(TArray<const FProperty*>& OutProps, c
 {
 	if (SuperStruct) SuperStruct->GetNonTransientPropertiesFor(OutProps, Target);
 
-	for (uint32 i = 0; i < Properties.size(); i++)
+	for (uint32 i = 0; i < ChildProperties.size(); i++)
 	{
-		FProperty* Property = Properties[i];
+		FProperty* Property = ChildProperties[i];
 		if (!Property || Target->IsPropertyHidden(Property->Name)) continue;
 		if ((Property->PropertyFlag & EPropertyFlags::CPF_Transient) == 0) OutProps.push_back(Property);
 	}

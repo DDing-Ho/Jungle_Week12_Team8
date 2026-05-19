@@ -798,6 +798,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\lua\bin\lua51.dll" "$(OutDir)"</Command>
     <ClInclude Include="Source\Engine\Mesh\SkeletonManager.h" />
     <ClInclude Include="Source\Engine\Mesh\StaticMesh.h" />
     <ClInclude Include="Source\Engine\Mesh\StaticMeshAsset.h" />
+    <ClInclude Include="Source\Engine\Object\EStructFlags.h" />
     <ClInclude Include="Source\Engine\Object\FName.h" />
     <ClInclude Include="Source\Engine\Object\FUObjectArray.h" />
     <ClInclude Include="Source\Engine\Object\LuaClassRegistry.h" />

@@ -89,9 +89,9 @@ struct FClassRegistrar;
 	KE_REGISTER_PROPERTY_OFFSET_IMPL(InName, EPropertyType::Enum, InCategory, InOffset, InSize, InFlags, \
 		(P->EnumNames = (EnumNamesArr), P->EnumCount = (EnumCountVal), P->EnumSize = (EnumSizeVal)))
 
-#define PROPERTY_STRUCT_OFFSET(InName, InCategory, InOffset, InSize, StructFuncPtr, InFlags) \
+#define PROPERTY_STRUCT_OFFSET(InName, InCategory, InOffset, InSize, ScriptStructPtr, InFlags) \
 	KE_REGISTER_PROPERTY_OFFSET_IMPL(InName, EPropertyType::Struct, InCategory, InOffset, InSize, InFlags, \
-		P->StructFunc = (StructFuncPtr))
+		(void)(ScriptStructPtr))
 
 // ---------------------------------------------------------------------------
 

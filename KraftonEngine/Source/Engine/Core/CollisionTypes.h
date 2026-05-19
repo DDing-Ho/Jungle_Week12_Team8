@@ -3,6 +3,7 @@
 #include "Core/CoreTypes.h"
 #include "Core/Property/FEnumProperty.h"
 #include "Core/Property/PropertyTypes.h"
+#include "Object/ScriptStruct.h"
 
 class AActor;
 class UPrimitiveComponent;
@@ -83,9 +84,8 @@ inline const char* GCollisionEnabledNames[] =
 
 // ============================================================
 // FCollisionResponseContainer — 채널별 응답 테이블
-// Not USTRUCT-marked: GetSchema below builds one cached enum schema per active
-// channel using the display names from GCollisionChannelNames — a pattern the
-// static codegen can't reproduce.
+// Manual UScriptStruct metadata because the active collision-channel fields
+// are generated from GCollisionChannelNames rather than ordinary members.
 // ============================================================
 struct FCollisionResponseContainer
 {
@@ -119,17 +119,21 @@ struct FCollisionResponseContainer
 		return Responses[static_cast<int32>(Channel)];
 	}
 
-	// 에디터용 자기기술 함수 — Struct 프로퍼티 시스템에서 사용
-	static const std::vector<FProperty*>& GetSchema()
+	static UScriptStruct* StaticStruct()
 	{
-		static const std::vector<FProperty*> Schema = []()
+		static const TCppStructOps<FCollisionResponseContainer> CppStructOps;
+		static UScriptStruct Struct(
+			"FCollisionResponseContainer",
+			nullptr,
+			sizeof(FCollisionResponseContainer),
+			alignof(FCollisionResponseContainer),
+			&CppStructOps);
+		static FScriptStructRegistrar Registrar(&Struct);
+		static const bool bPropertiesRegistered = []()
 		{
-			std::vector<FProperty*> Properties;
-			Properties.reserve(NumActiveCollisionChannels);
-
 			for (int32 i = 0; i < NumActiveCollisionChannels; ++i)
 			{
-				Properties.push_back(new FEnumProperty(
+				Struct.AddProperty(new FEnumProperty(
 					GCollisionChannelNames[i],
 					"",
 					CPF_Edit,
@@ -140,10 +144,11 @@ struct FCollisionResponseContainer
 					sizeof(ECollisionResponse)));
 			}
 
-			return Properties;
+			return true;
 		}();
+		(void)bPropertiesRegistered;
 
-		return Schema;
+		return &Struct;
 	}
 };
 

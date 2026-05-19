@@ -88,7 +88,6 @@ class PropertyInfo:
     enum_count: str | None = None
     enum_size: str | None = None
     enum_type: str | None = None
-    struct_func: str | None = None
     struct_type: str | None = None
     array_inner_type: str | None = None  # for TArray<T>
     property_class: str | None = None    # for FObjectPropertyBase derivatives
@@ -462,6 +461,8 @@ def parse_property(
     if "Type" in kvs:
         prop_type = f"EPropertyType::{kvs['Type']}"
         array_inner = None
+        if prop_type == "EPropertyType::Struct":
+            struct_type = kvs.get("Struct", cpp_type)
     else:
         prop_type, _, array_inner = classify_type(cpp_type, known_enums, known_structs)
         if cpp_type in known_enums:
@@ -485,7 +486,6 @@ def parse_property(
         enum_count=kvs.get("EnumCount"),
         enum_size=kvs.get("EnumSize"),
         enum_type=enum_type,
-        struct_func=kvs.get("StructFunc"),
         struct_type=struct_type,
         array_inner_type=array_inner,
         property_class=kvs.get("Class"),
@@ -566,7 +566,8 @@ CLASS_MACRO_TEMPLATE = """\
 
 STRUCT_MACRO_TEMPLATE = """\
 #define KE_GENERATED_BODY_{struct_name}() \\
-    static const std::vector<FProperty*>& GetSchema();
+    static class UScriptStruct StaticStructInstance; \\
+    static class UScriptStruct* StaticStruct() {{ return &StaticStructInstance; }}
 """
 
 def emit_generated_header(
@@ -606,6 +607,8 @@ def emit_gen_cpp(
         f'#include "{source_header_include}"',
         '#include "Object/ObjectFactory.h"',
     ]
+    if structs:
+        out.append('#include "Object/ScriptStruct.h"')
     out.extend(
         f'#include "{header}"'
         for header in collect_property_headers(classes, structs, known_enums, known_structs)
@@ -649,17 +652,23 @@ def emit_struct_schema(
     known_structs: dict[str, StructInfo],
 ) -> str:
     lines = [
-        f"const std::vector<FProperty*>& {s.name}::GetSchema()",
+        f"static const TCppStructOps<{s.name}> G{s.name}CppStructOps;",
+        f"UScriptStruct {s.name}::StaticStructInstance(",
+        f'    "{s.name}", nullptr,',
+        f"    sizeof({s.name}), alignof({s.name}), &G{s.name}CppStructOps);",
+        f"static FScriptStructRegistrar s_{s.name}_StructReg({s.name}::StaticStruct());",
+        "",
+        f"static void Register{s.name}StructProperties(UScriptStruct* Struct)",
         "{",
-        "    static const std::vector<FProperty*> Schema = []()",
-        "    {",
-        "        std::vector<FProperty*> Properties;",
+        "    static bool bRegistered = false;",
+        "    if (bRegistered || !Struct) return;",
+        "    bRegistered = true;",
     ]
     for p in s.properties:
         if p.prop_type == "EPropertyType::Array":
             raise CodegenError(f"array struct field {p.name}: v1 struct arrays are not supported")
         lines.append(
-            "        Properties.push_back("
+            "    Struct->AddProperty("
             + emit_property_constructor_expr(
                 p,
                 offset_expr=f"offsetof({s.name}, {p.name})",
@@ -671,11 +680,14 @@ def emit_struct_schema(
             + ");"
         )
     lines.extend([
-        "        return Properties;",
-        "    }();",
-        "",
-        "    return Schema;",
         "}",
+        "",
+        f"struct {s.name}_StructPropertyRegistrar {{",
+        f"    {s.name}_StructPropertyRegistrar() {{",
+        f"        Register{s.name}StructProperties({s.name}::StaticStruct());",
+        "    }",
+        "};",
+        f"static {s.name}_StructPropertyRegistrar s_{s.name}_StructPropertyReg;",
     ])
     return "\n".join(lines) + "\n"
 
@@ -814,14 +826,9 @@ def emit_property_constructor_args(
         )
     if p.prop_type == "EPropertyType::Struct":
         if p.struct_type:
-            struct = known_structs.get(p.struct_type)
-            if not struct:
-                raise CodegenError(f"unknown generated struct type {p.struct_type}")
-            return [f"&{struct.name}::GetSchema"]
-        if p.struct_func:
-            return [p.struct_func]
+            return [f"{p.struct_type}::StaticStruct()"]
         raise CodegenError(
-            f"struct {error_context} {p.name}: v1 requires generated USTRUCT or StructFunc="
+            f"struct {error_context} {p.name}: requires generated USTRUCT or Struct="
         )
     if p.prop_type == "EPropertyType::SoftObject":
         if not p.property_class:

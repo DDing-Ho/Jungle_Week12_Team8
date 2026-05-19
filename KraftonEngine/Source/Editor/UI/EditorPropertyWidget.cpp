@@ -1871,7 +1871,8 @@ bool FEditorPropertyWidget::RenderPropertyWidget(
 	case EPropertyType::Struct:
 	{
 		const FStructProperty& StructProp = static_cast<const FStructProperty&>(Prop);
-		if (!StructProp.SchemaFn) break;
+		const TArray<FProperty*>& ChildProps = StructProp.GetStructProperties();
+		if (ChildProps.empty()) break;
 
 		ImGuiTreeNodeFlags Flags = ImGuiTreeNodeFlags_DefaultOpen |
 			ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_FramePadding;
@@ -1880,7 +1881,6 @@ bool FEditorPropertyWidget::RenderPropertyWidget(
 
 		if (bOpen)
 		{
-			const std::vector<FProperty*>& ChildProps = StructProp.SchemaFn();
 			TArray<const FProperty*> ChildSchema;
 			ChildSchema.reserve(ChildProps.size());
 			for (const FProperty* ChildProp : ChildProps)
