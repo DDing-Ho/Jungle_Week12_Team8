@@ -10,6 +10,7 @@
 
 namespace
 {
+	// float clamp 함수
 	float ClampFloat(float Value, float MinValue, float MaxValue)
 	{
 		return std::max(MinValue, std::min(MaxValue, Value));
@@ -46,6 +47,8 @@ namespace
 		return FQuat::FromAxisAngle(FVector::UpVector, YawDegrees * DEG_TO_RAD).GetNormalized();
 	}
 
+	// Component에 Rotation 값 저장
+	// WorldQuat * ParentQuat.inv
 	void SetWorldYaw(USceneComponent* Component, float WorldYawDegrees)
 	{
 		if (!Component)
@@ -87,15 +90,28 @@ void UCharacterMovementComponent::TickComponent(float DeltaTime, ELevelTick Tick
 	case MOVE_Walking:
 		PhysWalking(DeltaTime);
 		break;
+
 	case MOVE_Falling:
 		PhysFalling(DeltaTime);
 		break;
+
+	case MOVE_None:
+		Acceleration = FVector::ZeroVector;
+		Velocity = FVector::ZeroVector;
+		UpdatedPrimitive->SetLinearVelocity(FVector::ZeroVector);
+		ClearLookInput();
+		return;
+
 	default:
-		break;
+		ClearLookInput();
+		return;
 	}
 
 	UpdateRotation(DeltaTime);
 	ClearLookInput();
+	// MoveInput은 여기서 Clear하지 않는다.
+	// 왜냐하면 현재 입력 주입은 Lua/외부 컴포넌트 Tick 순서에 의존할 수 있기 때문이다.
+	// 이동 입력을 멈추고 싶다면 Lua 쪽에서 매 프레임 SetMoveInput(0.0f, 0.0f)을 호출해야 한다.
 }
 
 void UCharacterMovementComponent::Serialize(FArchive& Ar)
@@ -117,6 +133,12 @@ void UCharacterMovementComponent::Serialize(FArchive& Ar)
 
 void UCharacterMovementComponent::PostEditProperty(const char* PropertyName)
 {
+	if (!PropertyName)
+	{
+		UpdatedPrimitive = Cast<UPrimitiveComponent>(GetUpdatedComponent());
+		return;
+	}
+
 	UMovementComponent::PostEditProperty(PropertyName);
 
 	if (std::strcmp(PropertyName, "Orient Rotation To Movement") == 0 && bOrientRotationToMovement)
