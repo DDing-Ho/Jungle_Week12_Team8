@@ -15,6 +15,7 @@
 #include "GameFramework/Light/DirectionalLightActor.h"
 #include "GameFramework/Light/PointLightActor.h"
 #include "GameFramework/Light/SpotLightActor.h"
+#include "GameFramework/Character.h"
 #include "GameFramework/SkeletalMeshActor.h"
 #include "GameFramework/World.h"
 #include "Render/Pipeline/Renderer.h"
@@ -1701,6 +1702,8 @@ void FLevelViewportLayout::RenderViewportPlaceActorPopup()
 		PlaceActorMenuItem("Sphere Collider", EViewportPlaceActorType::SphereCollider);
 		PlaceActorMenuItem("Capsule Collider", EViewportPlaceActorType::CapsuleCollider);
 		PlaceActorMenuItem("Trigger Volume", EViewportPlaceActorType::TriggerVolume);
+		ImGui::Separator();
+		PlaceActorMenuItem("Character", EViewportPlaceActorType::Character);
 		PlaceActorMenuItem("Skeletal Mesh Actor", EViewportPlaceActorType::SkeletalMesh);
 
 		// Game 모듈이 등록한 액터들 (예: ACarPawn). 등록 순서대로 표시.
@@ -1950,6 +1953,17 @@ AActor* FLevelViewportLayout::SpawnActorFromViewportMenu(EViewportPlaceActorType
 		ATriggerVolumeBase* Actor = World->SpawnActor<ATriggerVolumeBase>();
 		if (Actor)
 		{
+			Actor->InitDefaultComponents();
+			SpawnedActor = Actor;
+		}
+		break;
+	}
+	case EViewportPlaceActorType::Character:
+	{
+		ACharacter* Actor = World->SpawnActor<ACharacter>();
+		if (Actor)
+		{
+			Actor->SetAutoPossessPlayer(true);
 			Actor->InitDefaultComponents();
 			SpawnedActor = Actor;
 		}
