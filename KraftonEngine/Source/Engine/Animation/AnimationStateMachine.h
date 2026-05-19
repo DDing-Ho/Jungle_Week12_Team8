@@ -4,11 +4,16 @@
 
 class USkeletalMeshComponent;
 class UAnimSequence;
+class UAnimInstance;
 
 class UAnimationStateMachine : public UObject
 {
 public:
-	virtual void Initialize(USkeletalMeshComponent* InOwner) { OwnerComponent = InOwner; }
+	virtual void Initialize(USkeletalMeshComponent* InOwner, UAnimInstance* InAnimInstance)
+	{ 
+		OwnerComponent = InOwner;
+		OwnerAnimInstance = InAnimInstance;
+	}
 
 	// PrevStateLocalTime 저장 → BlendAlpha 갱신 → ProcessState() 호출
 	void UpdateAnimationState(float DeltaTime);
@@ -24,6 +29,7 @@ public:
 
 protected:
 	USkeletalMeshComponent* OwnerComponent  = nullptr;
+	UAnimInstance*          OwnerAnimInstance = nullptr;
 	UAnimSequence*          CurrentSequence = nullptr;
 	UAnimSequence*          PrevSequence    = nullptr;
 

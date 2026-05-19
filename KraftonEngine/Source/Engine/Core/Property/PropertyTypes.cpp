@@ -265,13 +265,19 @@ void FArrayProperty::Deserialize(void* Instance, const json::JSON& Value) const
 json::JSON FStructProperty::Serialize(const void* Instance) const
 {
 	const void* StructInstance = ContainerPtrToValuePtr(Instance);
-	if (!SchemaFn || !StructInstance)
+	if (!StructInstance)
+	{
+		return json::JSON();
+	}
+
+	const TArray<FProperty*>& StructProperties = GetStructProperties();
+	if (StructProperties.empty())
 	{
 		return json::JSON();
 	}
 
 	json::JSON Object = json::Object();
-	for (const FProperty* Child : SchemaFn())
+	for (const FProperty* Child : StructProperties)
 	{
 		if (Child)
 		{
@@ -284,12 +290,13 @@ json::JSON FStructProperty::Serialize(const void* Instance) const
 void FStructProperty::Deserialize(void* Instance, const json::JSON& Value) const
 {
 	void* StructInstance = ContainerPtrToValuePtr(Instance);
-	if (!SchemaFn || !StructInstance)
+	if (!StructInstance)
 	{
 		return;
 	}
 
-	for (const FProperty* Child : SchemaFn())
+	const TArray<FProperty*>& StructProperties = GetStructProperties();
+	for (const FProperty* Child : StructProperties)
 	{
 		if (!Child || !Value.hasKey(Child->Name.c_str()))
 		{

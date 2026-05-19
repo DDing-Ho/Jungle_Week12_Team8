@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 // ---------------------------------------------------------------------------
 // Unreal-style annotation markers parsed by the codegen (Scripts/GenerateCode.py).
@@ -30,8 +30,9 @@
 // without UE's __LINE__ tracking.
 //
 // UENUM/USTRUCT metadata is emitted by GenerateCode.py when the annotated
-// type itself is generated. Manually declared enum/struct property types can
-// still provide EnumNames=/EnumCount=/EnumSize= or StructFunc= explicitly.
+// type itself is generated. Manual enum property types can still provide
+// EnumNames=/EnumCount=/EnumSize= explicitly; manual struct property types
+// expose StaticStruct().
 // ---------------------------------------------------------------------------
 
 #define UCLASS(...)

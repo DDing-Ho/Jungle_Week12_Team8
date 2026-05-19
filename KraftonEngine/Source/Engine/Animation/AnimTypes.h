@@ -1,12 +1,15 @@
 ﻿#pragma once
 
 #include "Core/CoreTypes.h"
+#include "Core/Property/PropertyTypes.h"
 #include "Math/Quat.h"
 #include "Math/Transform.h"
 #include "Math/Vector.h"
 #include "Object/FName.h"
+#include "Object/ObjectMacros.h"
 #include "Serialization/Archive.h"
 #include "Notify.h"
+#include "AnimTypes.generated.h"
 
 /** 한 Bone의 transform key 데이터만 들고 있는 순수 데이터 구조체 입니다. */
 struct FRawAnimSequenceTrack
@@ -72,17 +75,40 @@ struct FAnimNotifyEvent
 	}
 };
 
+USTRUCT()
 struct FTwoBoneIKChain
 {
+	GENERATED_BODY(FTwoBoneIKChain)
+
+	UPROPERTY(Edit, Category="IK", DisplayName="Enabled")
+	bool bEnabled = true;
+
 	/** UpperArm or Thigh */
-	int RootBoneIndex;
+	UPROPERTY(Edit, Category="IK", DisplayName="Root Bone Index", Speed=1.0f)
+	int RootBoneIndex = -1;
 
 	/** LowerArm or Calf */
-	int MidBoneIndex;
+	UPROPERTY(Edit, Category="IK", DisplayName="Mid Bone Index", Speed=1.0f)
+	int MidBoneIndex = -1;
 
 	/** Hand or Foot */
-	int EndBoneIndex;
+	UPROPERTY(Edit, Category="IK", DisplayName="End Bone Index", Speed=1.0f)
+	int EndBoneIndex = -1;
 
-	FVector TargetPosition;
-	FVector PolePosition;
+	UPROPERTY(Edit, Category="IK", DisplayName="Target Position")
+	FVector TargetPosition = FVector::ZeroVector;
+
+	UPROPERTY(Edit, Category="IK", DisplayName="Pole Position")
+	FVector PolePosition = FVector::ForwardVector;
+
+	friend FArchive& operator<<(FArchive& Ar, FTwoBoneIKChain& Chain)
+	{
+		Ar << Chain.bEnabled;
+		Ar << Chain.RootBoneIndex;
+		Ar << Chain.MidBoneIndex;
+		Ar << Chain.EndBoneIndex;
+		Ar << Chain.TargetPosition;
+		Ar << Chain.PolePosition;
+		return Ar;
+	}
 };

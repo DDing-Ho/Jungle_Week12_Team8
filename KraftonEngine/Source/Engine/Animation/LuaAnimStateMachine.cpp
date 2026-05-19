@@ -1,4 +1,5 @@
 ﻿#include "LuaAnimStateMachine.h"
+#include "Animation/AnimInstance.h"
 #include "Animation/AnimSequence.h"
 #include "Animation/AnimSequenceManager.h"
 #include "Object/ObjectFactory.h"
@@ -7,12 +8,12 @@
 
 IMPLEMENT_CLASS(ULuaAnimStateMachine, UAnimationStateMachine)
 
-void ULuaAnimStateMachine::Initialize(USkeletalMeshComponent* InOwner)
+void ULuaAnimStateMachine::Initialize(USkeletalMeshComponent* InOwner, UAnimInstance* InAnimInstance)
 {
-	Super::Initialize(InOwner);
+	Super::Initialize(InOwner, InAnimInstance);
 }
 
-void ULuaAnimStateMachine::LoadScript(const std::string& ScriptPath)
+void ULuaAnimStateMachine::LoadScript(const FString& ScriptPath)
 {
 	ScriptFilePath = ScriptPath;
 	bScriptLoaded = false;
@@ -24,8 +25,9 @@ void ULuaAnimStateMachine::LoadScript(const std::string& ScriptPath)
 
 	// Lua에서 'self'로 이 StateMachine 객체에 접근
 	ScriptEnv["self"] = this;
+	ScriptEnv["AnimInstance"] = OwnerAnimInstance;
 
-	std::string Content;
+	FString Content;
 	if (!FLuaScriptManager::ReadScriptFileContent(ScriptPath, Content))
 	{
 		UE_LOG("[LuaAnimSM] Failed to read script: %s", ScriptPath.c_str());
@@ -74,7 +76,7 @@ void ULuaAnimStateMachine::ProcessState(float DeltaSeconds)
 	}
 }
 
-void ULuaAnimStateMachine::TransitionTo(const std::string& StateName)
+void ULuaAnimStateMachine::TransitionTo(const FString& StateName)
 {
 	if (StateName == CurrentStateName)
 		return;
@@ -99,7 +101,7 @@ void ULuaAnimStateMachine::TransitionTo(const std::string& StateName)
 	}
 }
 
-void ULuaAnimStateMachine::SetSequenceByName(const std::string& SequenceName)
+void ULuaAnimStateMachine::SetSequenceByName(const FString& SequenceName)
 {
 	UAnimSequence* Seq = FAnimSequenceManager::Get().Load(SequenceName);
 	if (Seq)
@@ -111,3 +113,4 @@ void ULuaAnimStateMachine::SetSequenceByName(const std::string& SequenceName)
 		UE_LOG("[LuaAnimSM] SetSequenceByName: not found - %s", SequenceName.c_str());
 	}
 }
+

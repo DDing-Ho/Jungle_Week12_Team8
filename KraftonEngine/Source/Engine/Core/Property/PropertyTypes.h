@@ -70,8 +70,6 @@ struct FMaterialSlot
 
 class FProperty;
 
-using FStructPropertySchemaFn = const std::vector<FProperty*>& (*)();
-
 class FProperty
 {
 public:

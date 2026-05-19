@@ -261,7 +261,7 @@ protected:
 
 	UPROPERTY(Edit, Category="Collision", DisplayName="Response Container",
 	          Type=Struct,
-	          StructFunc=&FCollisionResponseContainer::GetSchema)
+	          Struct=FCollisionResponseContainer)
 	FCollisionResponseContainer ResponseContainer; // 기본: 전 채널 Block
 	FPrimitiveSceneProxy* SceneProxy = nullptr;
 

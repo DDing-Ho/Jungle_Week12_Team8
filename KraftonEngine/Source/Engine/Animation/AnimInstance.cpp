@@ -5,7 +5,7 @@
 
 IMPLEMENT_CLASS(UAnimInstance, UObject)
 
-void UAnimInstance::Initialize(USkeletalMeshComponent* InOwner)
+void UAnimInstance::Initialize(USkeletalMeshComponent* InOwner, const FString& InScriptPath)
 {
 	OwnerComponent = InOwner;
 }

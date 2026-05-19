@@ -10,11 +10,11 @@ class UClass;
 class UStruct : public UObject {
 public:
 	virtual ~UStruct() {
-		for (FProperty* Property : Properties)
+		for (FProperty* Property : ChildProperties)
 		{
 			delete Property;
 		}
-		Properties.clear();
+		ChildProperties.clear();
 	}
 
 	UStruct() = default;
@@ -29,9 +29,9 @@ public:
 	UStruct*	GetSuperStruct()	const { return SuperStruct; }
 	size_t      GetSize() const { return Size; }
 
-	const TArray<FProperty*>& GetProperties() const { return Properties; }
-	FProperty*				  GetProperty(uint32 Index) const { return Index < Properties.size() ? Properties[Index] : nullptr; }
-	void					  AddProperty(FProperty* InProperty) { if (InProperty) Properties.push_back(InProperty); }
+	const TArray<FProperty*>& GetProperties() const { return ChildProperties; }
+	FProperty*				  GetProperty(uint32 Index) const { return Index < ChildProperties.size() ? ChildProperties[Index] : nullptr; }
+	void					  AddProperty(FProperty* InProperty) { if (InProperty) ChildProperties.push_back(InProperty); }
 
 	// Hide the property from both the editor AND the serializing process
 	void HideInheritedProperty(FString InName);
@@ -41,7 +41,7 @@ public:
 	void GetAllProperties(TArray<const FProperty*>& OutProps) const
 	{
 		if (SuperStruct) SuperStruct->GetAllProperties(OutProps);
-		for (const FProperty* P : Properties)
+		for (const FProperty* P : ChildProperties)
 		{
 			if (P) OutProps.push_back(P);
 		}
@@ -54,7 +54,7 @@ public:
 	const FProperty* FindPropertyByName(const char* InName) const
 	{
 		if (!InName) return nullptr;
-		for (const FProperty* P : Properties)
+		for (const FProperty* P : ChildProperties)
 		{
 			if (P && std::strcmp(P->Name.c_str(), InName) == 0) return P;
 		}
@@ -80,6 +80,8 @@ protected:
 	UStruct*	SuperStruct	= nullptr;
 	size_t      Size		= 0;
 
-	TArray<FProperty*> Properties;
+	// Make this into a linked list once implementing UField and TFieldIterator
+	TArray<FProperty*> ChildProperties;
 	std::unordered_set<FString> HiddenProperties;
 };
+

@@ -6,8 +6,11 @@ DEVLOG.md
 # Codex
 AGENTS.md
 
-# Ingore Immediate files
+# Ignore Intermediate files
 /KraftonEngine/Intermediate/*
+
+# Header tool generated files
+/KraftonEngine/Intermediate/Generated/
 
 # ============================================================
 # Visual Studio — user/cache

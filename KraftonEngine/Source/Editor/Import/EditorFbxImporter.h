@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "Core/CoreTypes.h"
 #include "Animation/AnimTypes.h"
@@ -48,7 +48,6 @@ private:
 		FString TexturePath;
 		FString NormalTexturePath;
 	};
-
 public:
 	static bool Import(const FString& FilePath);
 	static bool ImportStatic(const FString& FilePath, const FImportOptions* Options, FStaticMesh& OutMesh, TArray<FStaticMaterial>& OutMaterials, const TArray<int32>* MeshNodeIndexFilter = nullptr);

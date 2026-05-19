@@ -450,6 +450,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\lua\bin\lua51.dll" "$(OutDir)"</Command>
     <ClCompile Include="Source\Engine\GameFramework\CameraShakeBase.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\CameraShakeCameraModifier.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\CapsuleActor.cpp" />
+    <ClCompile Include="Source\Engine\GameFramework\Character.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\DecalActor.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\GameModeBase.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\GameStateBase.cpp" />
@@ -750,6 +751,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\lua\bin\lua51.dll" "$(OutDir)"</Command>
     <ClInclude Include="Source\Engine\GameFramework\CameraShakeCameraModifier.h" />
     <ClInclude Include="Source\Engine\GameFramework\CameraTypes.h" />
     <ClInclude Include="Source\Engine\GameFramework\CapsuleActor.h" />
+    <ClInclude Include="Source\Engine\GameFramework\Character.h" />
     <ClInclude Include="Source\Engine\GameFramework\DecalActor.h" />
     <ClInclude Include="Source\Engine\GameFramework\GameModeBase.h" />
     <ClInclude Include="Source\Engine\GameFramework\GameStateBase.h" />
@@ -798,6 +800,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\lua\bin\lua51.dll" "$(OutDir)"</Command>
     <ClInclude Include="Source\Engine\Mesh\SkeletonManager.h" />
     <ClInclude Include="Source\Engine\Mesh\StaticMesh.h" />
     <ClInclude Include="Source\Engine\Mesh\StaticMeshAsset.h" />
+    <ClInclude Include="Source\Engine\Object\EStructFlags.h" />
     <ClInclude Include="Source\Engine\Object\FName.h" />
     <ClInclude Include="Source\Engine\Object\FUObjectArray.h" />
     <ClInclude Include="Source\Engine\Object\LuaClassRegistry.h" />
