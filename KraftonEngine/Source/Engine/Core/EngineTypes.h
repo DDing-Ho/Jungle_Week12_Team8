@@ -144,7 +144,7 @@ enum EEngineShowFlags : uint32
 // ============================================================
 // EMovementMode — CMC 움직임 분기
 // ============================================================
-enum EMovementMode : int
+enum EMovementMode
 {
 	MOVE_None,			// movement disabled
 	MOVE_Walking,		// Walking on a surface
