@@ -1,5 +1,6 @@
 ﻿#include "CharacterMovementComponent.h"
 #include "Component/PrimitiveComponent.h"
+#include "Component/SceneComponent.h"
 #include "Math/Quat.h"
 #include "Serialization/Archive.h"
 
@@ -197,7 +198,7 @@ void UCharacterMovementComponent::StopMovementImmediately()
 
 void UCharacterMovementComponent::SetControllerDesiredYaw(float InYawDegrees)
 {
-	ControllerDesiredYawDegrees = InYawDegrees;
+	ControllerDesiredYawDegrees = NormalizeAxisDegrees(InYawDegrees);
 }
 
 const FVector& UCharacterMovementComponent::GetVelocity() const
