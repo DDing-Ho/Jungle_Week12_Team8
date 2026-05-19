@@ -17,10 +17,8 @@ inline const char* GCharacterMovementModeNames[] = {
 };
 
 /*
- * ACharacter가 사용할 경량 CharacterMovement API의 기반 컴포넌트
- * ACharacter는 이 컴포넌트를 소유하고, 
- * 생성/초기화 시 SetUpdatedComponent(CapsuleComponent 또는 RootComponent)를 호출
- * CharacterMovementComponent의 UpdatedComponent는 Mesh가 아니라 Capsule 또는 Root Primitive
+ * ACharacter가 사용할 경량 CharacterMovementComponent
+ * ACharacter는 이 컴포넌트를 소유 초기화 시 SetUpdatedComponent(RootComponent)를 호출
  * SkeletalMesh는 시각 표현이고, 실제 캐릭터 이동 기준은 Capsule/Primitive
  */
 UCLASS()
@@ -61,6 +59,8 @@ public:
 	EMovementMode	GetMovementMode() const;
 	void			SetMovementMode(EMovementMode NewMovementMode);
 	float			GetControllerDesiredYaw() const;
+	bool			ShouldUseControllerDesiredRotation() const;
+	bool			ShouldUseControllerYawForMovement() const;
 	UFUNCTION(Lua)
 	float			GetSpeed2D() const;
 	UFUNCTION(Lua)
@@ -77,9 +77,9 @@ private:
 	void			UpdateVelocityFalling(float DeltaTime);
 	void			UpdateRotation(float DeltaTime);
 	FVector			GetCurrentMoveDirection() const;
-	FVector			GetPlanarForward() const;
-	FVector			GetPlanarRight() const;
+	bool			ApplyTemporaryFlatGroundConstraint();
 	void			LimitVelocity2D(float MaxSpeed);
+	void			MoveUpdatedComponentKinematic(float DeltaTime);
 
 	UPrimitiveComponent* UpdatedPrimitive = nullptr;
 
@@ -93,7 +93,7 @@ private:
 	float LookInputX = 0.0f;
 	float LookInputY = 0.0f;
 
-	// 컨트롤러 방향 회전 모드에서 사용할 목표 월드 Yaw.
+	// 컨트롤러 방향 회전 모드에서 사용할 목표 월드 Yaw
 	float ControllerDesiredYawDegrees = 0.0f;
 
 	// 현재 캐릭터 이동 상태.
@@ -101,28 +101,28 @@ private:
 	EMovementMode MovementMode = MOVE_Walking;
 
 	// 지상 이동 시 도달할 수 있는 최대 2D 속도.
-	UPROPERTY(Edit, Category="Character Movement|Walking", DisplayName="Max Walk Speed", Min=0.0f, Max=5000.0f, Speed=10.0f)
-	float MaxWalkSpeed = 600.0f;
+	UPROPERTY(Edit, Category="Character Movement|Walking", DisplayName="Max Walk Speed", Min=0.0f, Max=50.0f, Speed=0.1f)
+	float MaxWalkSpeed = 6.0f;
 
 	// 입력이 들어왔을 때 속도를 늘리는 가속도.
-	UPROPERTY(Edit, Category="Character Movement|Walking", DisplayName="Max Acceleration", Min=0.0f, Max=10000.0f, Speed=10.0f)
-	float MaxAcceleration = 2048.0f;
+	UPROPERTY(Edit, Category="Character Movement|Walking", DisplayName="Max Acceleration", Min=0.0f, Max=100.0f, Speed=0.1f)
+	float MaxAcceleration = 20.0f;
 
 	// 이동 입력이 없을 때 지상에서 적용할 감속도.
-	UPROPERTY(Edit, Category="Character Movement|Walking", DisplayName="Braking Deceleration Walking", Min=0.0f, Max=10000.0f, Speed=10.0f)
-	float BrakingDecelerationWalking = 2048.0f;
+	UPROPERTY(Edit, Category="Character Movement|Walking", DisplayName="Braking Deceleration Walking", Min=0.0f, Max=100.0f, Speed=0.1f)
+	float BrakingDecelerationWalking = 20.0f;
 
 	// 지상 감속에 사용할 마찰 계수.
 	UPROPERTY(Edit, Category="Character Movement|Walking", DisplayName="Ground Friction", Min=0.0f, Max=64.0f, Speed=0.1f)
 	float GroundFriction = 8.0f;
 
 	// 낙하 중 Z축에 적용할 중력 가속도. Z-up 기준이므로 기본값은 음수
-	UPROPERTY(Edit, Category="Character Movement|Falling", DisplayName="Gravity Z", Min=-5000.0f, Max=0.0f, Speed=10.0f)
-	float GravityZ = -980.0f;
+	UPROPERTY(Edit, Category="Character Movement|Falling", DisplayName="Gravity Z", Min=-100.0f, Max=0.0f, Speed=0.1f)
+	float GravityZ = -9.8f;
 
 	// 점프 시작 시 Z축 속도에 넣을 값
-	UPROPERTY(Edit, Category="Character Movement|Jumping", DisplayName="Jump Z Velocity", Min=0.0f, Max=5000.0f, Speed=10.0f)
-	float JumpZVelocity = 420.0f;
+	UPROPERTY(Edit, Category="Character Movement|Jumping", DisplayName="Jump Z Velocity", Min=0.0f, Max=50.0f, Speed=0.1f)
+	float JumpZVelocity = 4.2f;
 
 	// 낙하 중 수평 입력이 속도에 반영되는 비율
 	UPROPERTY(Edit, Category="Character Movement|Falling", DisplayName="Air Control", Min=0.0f, Max=1.0f, Speed=0.01f)

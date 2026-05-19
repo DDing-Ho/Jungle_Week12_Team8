@@ -8,6 +8,19 @@ ACharacter::ACharacter()
 	
 }
 
+void ACharacter::BeginPlay()
+{
+	SyncSpringArmRotationMode();
+
+	APawn::BeginPlay();
+}
+
+void ACharacter::Tick(float DeltaTime)
+{
+	APawn::Tick(DeltaTime);
+	SyncSpringArmRotationMode();
+}
+
 void ACharacter::InitDefaultComponents()
 {
 	CapsuleComponent = AddComponent<UCapsuleComponent>();
@@ -16,14 +29,18 @@ void ACharacter::InitDefaultComponents()
 	Mesh = AddComponent<USkeletalMeshComponent>();
 	GetRootComponent()->AddChild(Mesh);
 
-	Camera = AddComponent<UCameraComponent>();
-	GetRootComponent()->AddChild(Camera);
+	SpringArm = AddComponent<USpringArmComponent>();
+	GetRootComponent()->AddChild(SpringArm);
+	SpringArm->TargetArmLength = 10;
+	SpringArm->TargetOffset = FVector(0.f, 0.f, 10.f);
 
-	Camera->SetRelativeLocation(FVector(-10.f, 0.f, 10.f));
+	Camera = AddComponent<UCameraComponent>();
+	SpringArm->AddChild(Camera);
 	Camera->SetRelativeRotation(FVector(0.f, 45.f, 0.f));
 
 	CharacterMovement = AddComponent<UCharacterMovementComponent>();
 	CharacterMovement->SetUpdatedComponent(GetRootComponent());
+	SyncSpringArmRotationMode();
 
 	LuaScript = AddComponent<ULuaScriptComponent>();
 	LuaScript->SetScriptFile("PlayerController.lua");
@@ -44,6 +61,7 @@ void ACharacter::PostDuplicate()
 	}
 
 	Mesh = GetComponentByClass<USkeletalMeshComponent>();
+	SpringArm = GetComponentByClass<USpringArmComponent>();
 	Camera = GetComponentByClass<UCameraComponent>();
 	CharacterMovement = GetComponentByClass<UCharacterMovementComponent>();
 	LuaScript = GetComponentByClass<ULuaScriptComponent>();
@@ -52,6 +70,8 @@ void ACharacter::PostDuplicate()
 	{
 		CharacterMovement->SetUpdatedComponent(CapsuleComponent);
 	}
+
+	SyncSpringArmRotationMode();
 
 	if (LuaScript && LuaScript->GetScriptFile().empty())
 	{
@@ -137,4 +157,24 @@ bool ACharacter::IsFalling() const
 bool ACharacter::IsOnGround() const
 {
 	return CharacterMovement && CharacterMovement->IsMovingOnGround();
+}
+
+void ACharacter::SyncSpringArmRotationMode()
+{
+	if (!SpringArm || !CharacterMovement)
+	{
+		return;
+	}
+
+	if (CharacterMovement->ShouldUseControllerDesiredRotation())
+	{
+		// UseControllerDesiredRotation: 캐릭터와 카메라가 같은 yaw를 따라간다.
+		SpringArm->bInheritParentRotation = true;
+		return;
+	}
+
+	// OrientRotationToMovement 또는 회전 비활성 모드: 카메라는 캐릭터 회전과 분리한다.
+	// 둘 다 꺼져도 캐릭터만 고정될 뿐, 마우스 look으로 카메라는 회전해야 한다.
+	SpringArm->bInheritParentRotation = false;
+	SpringArm->SetFixedWorldYaw(CharacterMovement->GetControllerDesiredYaw());
 }

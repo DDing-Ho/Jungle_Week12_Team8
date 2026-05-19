@@ -4,6 +4,7 @@
 #include "Component/SkeletalMeshComponent.h"
 #include "Component/Movement/CharacterMovementComponent.h"
 #include "Component/LuaScriptComponent.h"
+#include "Component/SpringArmComponent.h"
 #include "Character.generated.h"
 
 class UCameraComponent;
@@ -16,6 +17,9 @@ public:
 
 	ACharacter();
 	~ACharacter() override = default;
+
+	void BeginPlay() override;
+	void Tick(float DeltaTime) override;
 
 	// TODO: 계속 duplicate 오류나서 임시로 사용
 	void InitDefaultComponents();
@@ -57,6 +61,7 @@ private:
 	UCapsuleComponent*				CapsuleComponent  = nullptr;
 	USkeletalMeshComponent*			Mesh              = nullptr;
 	UCharacterMovementComponent*	CharacterMovement = nullptr;
+	USpringArmComponent*			SpringArm         = nullptr;
 	ULuaScriptComponent*			LuaScript         = nullptr;
 
 	// 시연용 카메라
@@ -65,4 +70,6 @@ private:
 
 	bool  bPressedJump    = false;
 	float JumpKeyHoldTime = 0.0f;
+
+	void SyncSpringArmRotationMode();
 };

@@ -7,9 +7,14 @@
 #include <algorithm>
 #include <cmath>
 #include <cstring>
+#include "Core/Log.h"
 
 namespace
 {
+	// 시연을 위해 임시로 추가한 Ground 조건
+	// 반드시 시연 끝나고 제거해야함.
+	constexpr float TemporaryFlatGroundZ = 4.0f;
+
 	// float clamp 함수
 	float ClampFloat(float Value, float MinValue, float MaxValue)
 	{
@@ -31,11 +36,13 @@ namespace
 		return AngleDegrees;
 	}
 
+	// DeltaTime동안 Degree 변화량얻는 함수.
 	float FindDeltaAngleDegrees(float CurrentDegrees, float TargetDegrees)
 	{
 		return NormalizeAxisDegrees(TargetDegrees - CurrentDegrees);
 	}
 
+	// Yaw를 통해 방향값을 얻는 헬퍼 함수
 	float DirectionToYawDegrees(const FVector& Direction)
 	{
 		// Z-up LH 기준: +X가 Yaw 0도, +Y가 Yaw 90도입니다.
@@ -72,6 +79,16 @@ void UCharacterMovementComponent::BeginPlay()
 {
 	UMovementComponent::BeginPlay();
 	UpdatedPrimitive = Cast<UPrimitiveComponent>(GetUpdatedComponent());
+	if (UpdatedPrimitive)
+	{
+		FVector InitialForward = UpdatedPrimitive->GetForwardVector();
+		InitialForward.Z = 0.0f;
+		if (!InitialForward.IsNearlyZero())
+		{
+			InitialForward.Normalize();
+			ControllerDesiredYawDegrees = DirectionToYawDegrees(InitialForward);
+		}
+	}
 }
 
 void UCharacterMovementComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction& ThisTickFunction)
@@ -98,7 +115,6 @@ void UCharacterMovementComponent::TickComponent(float DeltaTime, ELevelTick Tick
 	case MOVE_None:
 		Acceleration = FVector::ZeroVector;
 		Velocity = FVector::ZeroVector;
-		UpdatedPrimitive->SetLinearVelocity(FVector::ZeroVector);
 		ClearLookInput();
 		return;
 
@@ -109,9 +125,10 @@ void UCharacterMovementComponent::TickComponent(float DeltaTime, ELevelTick Tick
 
 	UpdateRotation(DeltaTime);
 	ClearLookInput();
-	// MoveInput은 여기서 Clear하지 않는다.
-	// 왜냐하면 현재 입력 주입은 Lua/외부 컴포넌트 Tick 순서에 의존할 수 있기 때문이다.
-	// 이동 입력을 멈추고 싶다면 Lua 쪽에서 매 프레임 SetMoveInput(0.0f, 0.0f)을 호출해야 한다.
+
+	// MoveInput은 여기서 Clear하지 않는다
+	// 현재 입력 주입은 Lua/외부 컴포넌트 Tick 순서에 의존할 수 있기 때문
+	// Lua 쪽에서 매 프레임 SetMoveInput(0.0f, 0.0f)을 호출
 }
 
 void UCharacterMovementComponent::Serialize(FArchive& Ar)
@@ -157,14 +174,14 @@ void UCharacterMovementComponent::PostEditProperty(const char* PropertyName)
 
 void UCharacterMovementComponent::SetMoveInput(float ForwardValue, float RightValue)
 {
-	// Character/Lua 쪽에서 이번 프레임에 사용할 이동 입력을 직접 지정합니다.
+	// Character/Lua 쪽에서 이번 프레임에 사용할 이동 입력을 직접 지정
 	MoveForwardInput = std::clamp(ForwardValue, -1.0f, 1.0f);
 	MoveRightInput = std::clamp(RightValue, -1.0f, 1.0f);
 }
 
 void UCharacterMovementComponent::AddMoveInput(float ForwardValue, float RightValue)
 {
-	// 여러 입력 소스가 값을 더할 수 있으므로 누적 후 -1~1 범위로 제한합니다.
+	// 여러 입력 소스가 값을 더할 수 있으므로 누적 후 -1~1 범위로 제한
 	MoveForwardInput = std::clamp(MoveForwardInput + ForwardValue, -1.0f, 1.0f);
 	MoveRightInput = std::clamp(MoveRightInput + RightValue, -1.0f, 1.0f);
 }
@@ -212,10 +229,6 @@ void UCharacterMovementComponent::StopMovementImmediately()
 	Acceleration = FVector::ZeroVector;
 
 	UpdatedPrimitive = Cast<UPrimitiveComponent>(GetUpdatedComponent());
-	if (UpdatedPrimitive)
-	{
-		UpdatedPrimitive->SetLinearVelocity(FVector::ZeroVector);
-	}
 }
 
 void UCharacterMovementComponent::SetControllerDesiredYaw(float InYawDegrees)
@@ -246,11 +259,32 @@ void UCharacterMovementComponent::SetMovementMode(EMovementMode NewMovementMode)
 		// 지상 이동으로 전환되면 낙하 속도는 더 이상 유지하지 않습니다.
 		Velocity.Z = 0.0f;
 	}
+	// Debug
+	switch (MovementMode)
+	{
+	case 0: UE_LOG("Movement Mode: None"); break;
+	case 1: UE_LOG("Movement Mode: Walking"); break;
+	case 2: UE_LOG("Movement Mode: Falling"); break;
+	default: break;
+	}
+	
 }
 
 float UCharacterMovementComponent::GetControllerDesiredYaw() const
 {
 	return ControllerDesiredYawDegrees;
+}
+
+bool UCharacterMovementComponent::ShouldUseControllerDesiredRotation() const
+{
+	return bUseControllerDesiredRotation;
+}
+
+bool UCharacterMovementComponent::ShouldUseControllerYawForMovement() const
+{
+	// 현재 Character 조작은 회전 모드와 무관하게 카메라 yaw 기준 이동을 사용한다.
+	// 회전 모드는 캐릭터가 그 이동 방향을 볼지, 컨트롤 yaw를 직접 볼지, 아예 회전하지 않을지만 결정한다.
+	return true;
 }
 
 float UCharacterMovementComponent::GetSpeed2D() const
@@ -273,16 +307,21 @@ bool UCharacterMovementComponent::IsMovingOnGround() const
 	return IsWalking();
 }
 
+// 지금은 World Offset을 주는 방식으로 이동
+// 기존에 작성한 LinearVelocity는 PhsyX기반이라 제거
 void UCharacterMovementComponent::PhysWalking(float DeltaTime)
 {
 	UpdateVelocityWalking(DeltaTime);
-	UpdatedPrimitive->SetLinearVelocity(Velocity);
+	Velocity.Z = 0.0f;
+	MoveUpdatedComponentKinematic(DeltaTime);
+	ApplyTemporaryFlatGroundConstraint();
 }
 
 void UCharacterMovementComponent::PhysFalling(float DeltaTime)
 {
 	UpdateVelocityFalling(DeltaTime);
-	UpdatedPrimitive->SetLinearVelocity(Velocity);
+	MoveUpdatedComponentKinematic(DeltaTime);
+	ApplyTemporaryFlatGroundConstraint();
 }
 
 void UCharacterMovementComponent::UpdateVelocityWalking(float DeltaTime)
@@ -309,7 +348,7 @@ void UCharacterMovementComponent::UpdateVelocityWalking(float DeltaTime)
 		return;
 	}
 
-	// 입력이 없을 때는 마찰과 제동 감속을 함께 써서 수평 속도를 줄입니다.
+	// 입력이 없을 때는 마찰과 제동 감속을 함께 써서 수평 속도를 줄인다.
 	const float BrakingAmount = (BrakingDecelerationWalking + Speed2D * GroundFriction) * DeltaTime;
 	const float NewSpeed = std::max(0.0f, Speed2D - BrakingAmount);
 	const float SpeedScale = NewSpeed / Speed2D;
@@ -346,6 +385,10 @@ void UCharacterMovementComponent::UpdateRotation(float DeltaTime)
 	bool bHasTargetYaw = false;
 	float TargetYawDegrees = 0.0f;
 
+	// 진짜 PlayerController::ControlRotation이 아직 없으므로, Look 입력은 회전 모드와 무관하게
+	// CMC의 ControllerDesiredYaw에 누적해 카메라 yaw로 사용한다.
+	ControllerDesiredYawDegrees = NormalizeAxisDegrees(ControllerDesiredYawDegrees + LookInputX * MouseSensitivity);
+
 	if (bOrientRotationToMovement)
 	{
 		FVector VelocityDirection(Velocity.X, Velocity.Y, 0.0f);
@@ -358,8 +401,6 @@ void UCharacterMovementComponent::UpdateRotation(float DeltaTime)
 	}
 	else if (bUseControllerDesiredRotation)
 	{
-		// 컨트롤러 회전 모드에서는 Look X 입력을 목표 Yaw에 누적합니다.
-		ControllerDesiredYawDegrees = NormalizeAxisDegrees(ControllerDesiredYawDegrees + LookInputX * MouseSensitivity);
 		TargetYawDegrees = ControllerDesiredYawDegrees;
 		bHasTargetYaw = true;
 	}
@@ -399,7 +440,16 @@ FVector UCharacterMovementComponent::GetCurrentMoveDirection() const
 	const float ForwardInput = std::clamp(MoveForwardInput, -1.0f, 1.0f);
 	const float RightInput = std::clamp(MoveRightInput, -1.0f, 1.0f);
 
-	FVector Direction = GetPlanarForward() * ForwardInput + GetPlanarRight() * RightInput;
+	FVector Forward = FVector::ForwardVector;
+	FVector Right = FVector::RightVector;
+
+	// 이동 입력은 항상 카메라/컨트롤 yaw 기준이다.
+	// 현재 캡슐 회전을 다시 읽으면 OrientRotationToMovement에서 입력-회전 피드백이 생긴다.
+	const FQuat ControlYawQuat = MakeYawQuatDegrees(ControllerDesiredYawDegrees);
+	Forward = ControlYawQuat.RotateVector(FVector::ForwardVector);
+	Right = ControlYawQuat.RotateVector(FVector::RightVector);
+
+	FVector Direction = Forward * ForwardInput + Right * RightInput;
 	Direction.Z = 0.0f;
 
 	const float DirectionLength = Direction.Length();
@@ -415,28 +465,35 @@ FVector UCharacterMovementComponent::GetCurrentMoveDirection() const
 	return Direction;
 }
 
-FVector UCharacterMovementComponent::GetPlanarForward() const
+bool UCharacterMovementComponent::ApplyTemporaryFlatGroundConstraint()
 {
-	FVector Forward = UpdatedPrimitive ? UpdatedPrimitive->GetForwardVector() : FVector::ForwardVector;
-	Forward.Z = 0.0f;
-	if (Forward.IsNearlyZero())
+	if (!UpdatedPrimitive)
 	{
-		return FVector::ForwardVector;
+		return false;
 	}
-	Forward.Normalize();
-	return Forward;
-}
 
-FVector UCharacterMovementComponent::GetPlanarRight() const
-{
-	FVector Right = UpdatedPrimitive ? UpdatedPrimitive->GetRightVector() : FVector::RightVector;
-	Right.Z = 0.0f;
-	if (Right.IsNearlyZero())
+	FVector Location = UpdatedPrimitive->GetWorldLocation();
+
+	if (Location.Z > TemporaryFlatGroundZ)
 	{
-		return FVector::RightVector;
+		return false;
 	}
-	Right.Normalize();
-	return Right;
+	
+	// 시연을 위한 임시 바닥 판정 코드
+	// TODO: 시연 끝나고 제거해야함.
+	if (Location.Z < TemporaryFlatGroundZ)
+	{
+		Location.Z = TemporaryFlatGroundZ;
+		UpdatedPrimitive->SetWorldLocation(Location);
+	}
+	Velocity.Z = 0.0f;
+
+	if (MovementMode == MOVE_Falling)
+	{
+		SetMovementMode(MOVE_Walking);
+	}
+
+	return true;
 }
 
 void UCharacterMovementComponent::LimitVelocity2D(float MaxSpeed)
@@ -458,4 +515,20 @@ void UCharacterMovementComponent::LimitVelocity2D(float MaxSpeed)
 	const float SpeedScale = ClampedMaxSpeed / Speed2D;
 	Velocity.X *= SpeedScale;
 	Velocity.Y *= SpeedScale;
+}
+
+void UCharacterMovementComponent::MoveUpdatedComponentKinematic(float DeltaTime)
+{
+	if (!UpdatedPrimitive || DeltaTime <= 0.0f)
+	{
+		return;
+	}
+
+	const FVector Delta = Velocity * DeltaTime;
+	if (Delta.IsNearlyZero())
+	{
+		return;
+	}
+
+	UpdatedPrimitive->AddWorldOffset(Delta);
 }

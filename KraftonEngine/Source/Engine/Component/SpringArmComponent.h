@@ -30,6 +30,7 @@ public:
 	void BeginPlay() override;
 	void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction& ThisTickFunction) override;
 	void Serialize(FArchive& Ar) override;
+	void SetFixedWorldYaw(float YawDegrees);
 
 	// ─── 튜닝 파라미터 ─────────────────────────────────────────────
 	// arm 길이 — 부착점에서 카메라까지의 거리 (Local -X 방향).
@@ -43,6 +44,11 @@ public:
 	// 부착점 자체에 추가되는 offset (Lagged 회전 기준 적용). 보통 머리 위/어깨 높이.
 	UPROPERTY(Edit, Category="SpringArm", DisplayName="Target Offset")
 	FVector TargetOffset = FVector(0.0f, 0.0f, 0.0f);
+
+	// true면 부모 회전을 따라가고, false면 FixedWorldRot 월드 회전을 유지한다.
+	// Character 회전과 카메라 회전을 분리해야 하는 3인칭 카메라에서는 false로 둔다.
+	UPROPERTY(Edit, Category="SpringArm", DisplayName="Inherit Parent Rotation")
+	bool bInheritParentRotation = true;
 
 	// Lag 옵션 — 끄면 부모를 즉시 따라감 (lag 없는 부착).
 	UPROPERTY(Edit, Category="SpringArm", DisplayName="Enable Camera Lag")
@@ -70,4 +76,6 @@ private:
 	FVector LaggedAttachLoc = FVector(0.0f, 0.0f, 0.0f);
 	FQuat LaggedAttachRot;
 	bool bHasPreviousState = false;
+	FQuat FixedWorldRot;
+	bool bHasFixedWorldRot = false;
 };

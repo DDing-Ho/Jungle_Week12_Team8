@@ -422,6 +422,7 @@
           "Cast Shadow as Two-Sided" : false,
           "Center of Mass" : [0.000000, 0.000000, 0.000000],
           "Collision Enabled" : 0,
+          "Enable Two Bone IK" : true,
           "Generate Overlap Events" : false,
           "Is Visible" : true,
           "Mass (Kg)" : 1.000000,
@@ -447,6 +448,7 @@
           "Rotation" : [0.000000, -24.313141, 0.000000],
           "Simulate Physics" : false,
           "Skeletal Mesh" : "Asset/Mesh/hirasawa-yui/yui_SkeletalMesh.uasset",
+          "Two Bone IK Chains" : [],
           "bEditorOnly" : false,
           "bTickEnable" : true
         }
@@ -698,6 +700,7 @@
           "Cast Shadow as Two-Sided" : false,
           "Center of Mass" : [0.000000, 0.000000, 0.000000],
           "Collision Enabled" : 0,
+          "Enable Two Bone IK" : true,
           "Generate Overlap Events" : false,
           "Is Visible" : true,
           "Mass (Kg)" : 1.000000,
@@ -727,6 +730,7 @@
           "Rotation" : [0.000000, -80.009224, 0.000000],
           "Simulate Physics" : false,
           "Skeletal Mesh" : "Asset/Mesh/Samba Dancing/Samba Dancing (10)_SkeletalMesh.uasset",
+          "Two Bone IK Chains" : [],
           "bEditorOnly" : false,
           "bTickEnable" : true
         }
@@ -788,6 +792,7 @@
           "Cast Shadow as Two-Sided" : false,
           "Center of Mass" : [0.000000, 0.000000, 0.000000],
           "Collision Enabled" : 0,
+          "Enable Two Bone IK" : true,
           "Generate Overlap Events" : false,
           "Is Visible" : true,
           "Mass (Kg)" : 1.000000,
@@ -813,6 +818,158 @@
           "Rotation" : [0.000000, -64.088791, 0.000000],
           "Simulate Physics" : false,
           "Skeletal Mesh" : "Asset/Mesh/hirasawa-yui/yui_SkeletalMesh.uasset",
+          "Two Bone IK Chains" : [],
+          "bEditorOnly" : false,
+          "bTickEnable" : true
+        }
+      }
+    }, {
+      "ClassName" : "ACharacter",
+      "Name" : "ACharacter_1",
+      "NonSceneComponents" : [{
+          "ClassName" : "UCharacterMovementComponent",
+          "Properties" : {
+            "Air Control" : 0.200000,
+            "Auto Activate" : true,
+            "Auto Register Updated" : false,
+            "Braking Deceleration Walking" : 20.000000,
+            "Gravity Z" : -9.800000,
+            "Ground Friction" : 8.000000,
+            "Jump Z Velocity" : 6.000000,
+            "Max Acceleration" : 20.000000,
+            "Max Walk Speed" : 10.000000,
+            "Mouse Sensitivity" : 0.100000,
+            "Movement Mode" : 1,
+            "Orient Rotation To Movement" : true,
+            "Rotation Rate Yaw" : 1440.000000,
+            "Updated Component" : "Root",
+            "Use Controller Desired Rotation" : false,
+            "bEditorOnly" : false,
+            "bTickEnable" : true
+          }
+        }, {
+          "ClassName" : "ULuaScriptComponent",
+          "Properties" : {
+            "Auto Activate" : true,
+            "ScriptFile" : "PlayerController.lua",
+            "bEditorOnly" : false,
+            "bTickEnable" : true
+          }
+        }],
+      "Properties" : {
+
+      },
+      "RootComponent" : {
+        "Children" : [{
+            "Children" : [],
+            "ClassName" : "USkeletalMeshComponent",
+            "Properties" : {
+              "Auto Activate" : true,
+              "Cast Shadow" : true,
+              "Cast Shadow as Two-Sided" : false,
+              "Center of Mass" : [0.000000, 0.000000, 0.000000],
+              "Collision Enabled" : 0,
+              "Enable Two Bone IK" : true,
+              "Generate Overlap Events" : false,
+              "Is Visible" : true,
+              "Mass (Kg)" : 1.000000,
+              "Materials" : [{
+                  "Path" : "Asset/Mesh/Manny/Meshes/SKM_Manny_Simple_MI_Manny_01_New.mat"
+                }, {
+                  "Path" : "Asset/Mesh/Manny/Meshes/SKM_Manny_Simple_MI_Manny_02_New.mat"
+                }],
+              "Object Type" : 0,
+              "RelativeTransform" : {
+                "Location" : [0.000000, 0.000000, -3.000000],
+                "Scale" : [3.000000, 3.000000, 3.000000]
+              },
+              "Response Container" : {
+                "Pawn" : 2,
+                "Projectile" : 2,
+                "Trigger" : 2,
+                "WorldDynamic" : 2,
+                "WorldStatic" : 2
+              },
+              "Rotation" : [0.000000, -90.000000, 0.000000],
+              "Simulate Physics" : false,
+              "Skeletal Mesh" : "Asset/Mesh/Manny/Meshes/SKM_Manny_Simple_SkeletalMesh.uasset",
+              "Two Bone IK Chains" : [],
+              "bEditorOnly" : false,
+              "bTickEnable" : true
+            }
+          }, {
+            "Children" : [{
+                "Children" : [],
+                "ClassName" : "UCameraComponent",
+                "Properties" : {
+                  "Auto Activate" : true,
+                  "Camera State" : {
+                    "FOV" : 1.047198,
+                    "Far Z" : 1000.000000,
+                    "Is Orthogonal" : false,
+                    "Near Z" : 0.100000,
+                    "Ortho Width" : 10.000000
+                  },
+                  "RelativeTransform" : {
+                    "Location" : [0.000000, 0.000000, 0.000000],
+                    "Scale" : [1.000000, 1.000000, 1.000000]
+                  },
+                  "Rotation" : [45.000000, 0.000000, 0.000000],
+                  "bEditorOnly" : false,
+                  "bTickEnable" : true
+                }
+              }],
+            "ClassName" : "USpringArmComponent",
+            "Properties" : {
+              "Auto Activate" : true,
+              "Camera Lag Max Distance" : 0.000000,
+              "Camera Lag Speed" : 10.000000,
+              "Camera Rotation Lag Speed" : 10.000000,
+              "Do Collision Test" : false,
+              "Enable Camera Lag" : false,
+              "Enable Rotation Lag" : false,
+              "Inherit Parent Rotation" : false,
+              "Probe Size" : 0.120000,
+              "RelativeTransform" : {
+                "Location" : [0.000000, 0.000000, 0.000000],
+                "Scale" : [1.000000, 1.000000, 1.000000]
+              },
+              "Rotation" : [0.000000, 0.000000, 0.000000],
+              "Socket Offset" : [0.000000, 0.000000, 0.000000],
+              "Target Arm Length" : 10.000000,
+              "Target Offset" : [0.000000, 0.000000, 10.000000],
+              "bEditorOnly" : false,
+              "bTickEnable" : true
+            }
+          }],
+        "ClassName" : "UCapsuleComponent",
+        "Properties" : {
+          "Auto Activate" : true,
+          "Capsule Half Height" : 3.000000,
+          "Capsule Radius" : 1.800000,
+          "Cast Shadow" : false,
+          "Cast Shadow as Two-Sided" : false,
+          "Center of Mass" : [0.000000, 0.000000, 0.000000],
+          "Collision Enabled" : 0,
+          "Draw Only If Selected" : false,
+          "Generate Overlap Events" : false,
+          "Is Visible" : true,
+          "Mass (Kg)" : 1.000000,
+          "Object Type" : 0,
+          "RelativeTransform" : {
+            "Location" : [0.000000, 0.000000, 4.000000],
+            "Scale" : [1.000000, 1.000000, 1.000000]
+          },
+          "Response Container" : {
+            "Pawn" : 2,
+            "Projectile" : 2,
+            "Trigger" : 2,
+            "WorldDynamic" : 2,
+            "WorldStatic" : 2
+          },
+          "Rotation" : [0.000000, 0.000000, 0.000000],
+          "Shape Color" : [0.000000, 1.000000, 0.000000, 1.000000],
+          "Simulate Physics" : false,
           "bEditorOnly" : false,
           "bTickEnable" : true
         }
@@ -825,9 +982,9 @@
   "PerspectiveCamera" : {
     "FOV" : 1.047198,
     "FarClip" : 1000.000000,
-    "Location" : [-6.686399, 11.333605, 24.175905],
+    "Location" : [-10.774485, -1.500979, 11.687088],
     "NearClip" : 0.100000,
-    "Rotation" : [0.000000, 40.122131, -51.448151]
+    "Rotation" : [0.000000, 26.622124, -2.698126]
   },
   "Version" : 2,
   "WorldSettings" : {

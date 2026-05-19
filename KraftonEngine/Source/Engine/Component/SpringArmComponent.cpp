@@ -1,4 +1,4 @@
-#include "Component/SpringArmComponent.h"
+﻿#include "Component/SpringArmComponent.h"
 #include "Object/ObjectFactory.h"
 #include "Serialization/Archive.h"
 #include "GameFramework/AActor.h"
@@ -11,6 +11,7 @@ void USpringArmComponent::BeginPlay()
 {
 	Super::BeginPlay();
 	bHasPreviousState = false;
+	bHasFixedWorldRot = false;
 }
 
 void USpringArmComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction& ThisTickFunction)
@@ -29,9 +30,19 @@ void USpringArmComponent::TickComponent(float DeltaTime, ELevelTick TickType, FA
 	const FVector ParentWorldLoc = ParentComponent->GetWorldLocation();
 	const FQuat ParentWorldRot = ParentWorld.ToQuat().GetNormalized();
 
-	// (2) Desired attach point — 부모 위치 + 부모 회전 기준 TargetOffset 적용.
-	const FVector DesiredAttachLoc = ParentWorldLoc + ParentWorldRot.RotateVector(TargetOffset);
-	const FQuat DesiredAttachRot = ParentWorldRot;
+	FQuat DesiredAttachRot = ParentWorldRot;
+	if (!bInheritParentRotation)
+	{
+		if (!bHasFixedWorldRot)
+		{
+			FixedWorldRot = GetWorldMatrix().ToQuat().GetNormalized();
+			bHasFixedWorldRot = true;
+		}
+		DesiredAttachRot = FixedWorldRot;
+	}
+
+	// (2) Desired attach point — 부모 위치 + 선택된 arm 회전 기준 TargetOffset 적용.
+	const FVector DesiredAttachLoc = ParentWorldLoc + DesiredAttachRot.RotateVector(TargetOffset);
 
 	// (3) Lag 적용 — 첫 Tick 은 desired 로 초기화 (아직 비교할 prev 없음).
 	if (!bHasPreviousState)
@@ -117,6 +128,12 @@ void USpringArmComponent::TickComponent(float DeltaTime, ELevelTick TickType, FA
 	SetRelativeRotation(RelRot);
 }
 
+void USpringArmComponent::SetFixedWorldYaw(float YawDegrees)
+{
+	FixedWorldRot = FQuat::FromAxisAngle(FVector::UpVector, YawDegrees * DEG_TO_RAD).GetNormalized();
+	bHasFixedWorldRot = true;
+}
+
 void USpringArmComponent::Serialize(FArchive& Ar)
 {
 	USceneComponent::Serialize(Ar);
@@ -126,6 +143,7 @@ void USpringArmComponent::Serialize(FArchive& Ar)
 	Ar << TargetArmLength;
 	Ar << SocketOffset;
 	Ar << TargetOffset;
+	Ar << bInheritParentRotation;
 	Ar << bEnableCameraLag;
 	Ar << bEnableCameraRotationLag;
 	Ar << CameraLagSpeed;
