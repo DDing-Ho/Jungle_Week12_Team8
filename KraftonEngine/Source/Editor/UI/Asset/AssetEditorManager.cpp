@@ -3,7 +3,17 @@
 #include "AssetEditorWidget.h"
 #include "Viewport/EditorPreviewViewportClient.h"
 
-FAssetEditorManager::~FAssetEditorManager() = default;
+void FAssetEditorManager::Shutdown()
+{
+	for (const auto& Editor : OpenEditors)
+	{
+		if (Editor && Editor->IsOpen())
+		{
+			Editor->Close();
+		}
+	}
+	OpenEditors.clear();
+}
 
 void FAssetEditorManager::Tick(float DeltaTime)
 {

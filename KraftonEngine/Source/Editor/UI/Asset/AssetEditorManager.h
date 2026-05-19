@@ -12,7 +12,7 @@ class IEditorPreviewViewportClient;
 class FAssetEditorManager
 {
 public:
-	~FAssetEditorManager();
+	void Shutdown();
 
 	template<typename TEditor, typename... TArgs>
 	void RegisterEditor(TArgs&&... Args)

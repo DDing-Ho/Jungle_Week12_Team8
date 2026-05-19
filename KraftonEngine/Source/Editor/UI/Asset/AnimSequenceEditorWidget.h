@@ -25,6 +25,7 @@ class FAnimSequenceEditorWidget : public FAssetEditorWidget
 {
 public:
 	FAnimSequenceEditorWidget();
+	~FAnimSequenceEditorWidget();
 
 	bool CanEdit(UObject* Object) const override;
 	bool IsEditingObject(UObject* Object) const override;

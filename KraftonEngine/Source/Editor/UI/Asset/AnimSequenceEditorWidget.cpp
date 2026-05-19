@@ -138,6 +138,15 @@ FAnimSequenceEditorWidget::FAnimSequenceEditorWidget()
 	WindowIdSuffix = "###AnimSequenceEditor_" + Id;
 }
 
+FAnimSequenceEditorWidget::~FAnimSequenceEditorWidget()
+{
+	for (FAnimNotifyEvent& Notify : PreviewNotifyMarkers)
+	{
+		delete Notify.NotifyTrigger;
+		Notify.NotifyTrigger = nullptr;
+	}
+}
+
 bool FAnimSequenceEditorWidget::CanEdit(UObject* Object) const
 {
 	return Object && Object->IsA<UAnimSequence>();

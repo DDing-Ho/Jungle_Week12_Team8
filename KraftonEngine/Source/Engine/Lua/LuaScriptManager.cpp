@@ -4,6 +4,7 @@
 #include "Core/Log.h"
 #include "Core/Notification.h"
 #include "Audio/AudioManager.h"
+#include "Animation/AnimInstance.h"
 #include "Animation/LuaAnimStateMachine.h"
 #include "Component/ActionComponent.h"
 #include "Component/LuaScriptComponent.h"
@@ -1113,6 +1114,14 @@ void FLuaScriptManager::RegisterActorBindings(sol::state& Lua)
 
 void FLuaScriptManager::RegisterAnimBindings(sol::state& Lua)
 {
+	Lua.new_usertype<UAnimInstance>("AnimInstance",
+		"GetFloat", &UAnimInstance::GetFloat,
+		"GetBool",  &UAnimInstance::GetBool,
+		"GetInt",   &UAnimInstance::GetInt,
+		"SetFloat", &UAnimInstance::SetFloat,
+		"SetBool",  &UAnimInstance::SetBool,
+		"SetInt",   &UAnimInstance::SetInt);
+
 	Lua.new_usertype<ULuaAnimStateMachine>("AnimStateMachine",
 		"transitionTo",    &ULuaAnimStateMachine::TransitionTo,
 		"setSequence",     &ULuaAnimStateMachine::SetSequenceByName,
