@@ -6,6 +6,9 @@ DEVLOG.md
 # Codex
 AGENTS.md
 
+# Ingore Immediate files
+/KraftonEngine/Intermediate/*
+
 # ============================================================
 # Visual Studio — user/cache
 # ============================================================
