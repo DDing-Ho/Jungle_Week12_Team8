@@ -1,5 +1,6 @@
 ﻿#include "AnimInstance.h"
 #include "Animation/AnimationStateMachine.h"
+#include "Animation/LuaAnimStateMachine.h"
 #include "Object/ObjectFactory.h"
 #include "Component/SkeletalMeshComponent.h"
 
@@ -9,17 +10,13 @@ void UAnimInstance::Initialize(USkeletalMeshComponent* InOwner, const FString& I
 {
 	OwnerComponent = InOwner;
 
-	if (!InScriptPath.empty())
-	{
-		UObject* SMObj = FObjectFactory::Get().Create("ULuaAnimStateMachine");
-		StateMachine = Cast<UAnimationStateMachine>(SMObj); // 부모 클래스나 인터페이스로 캐스팅
+	if (InScriptPath.empty())
+		return;
 
-		if (StateMachine)
-		{
-			StateMachine->Initialize(InOwner, this);
-			StateMachine->LoadScript(InScriptPath);
-		}
-	}
+	ULuaAnimStateMachine* LuaSM = GUObjectArray.CreateObject<ULuaAnimStateMachine>(this);
+	LuaSM->Initialize(InOwner, this);
+	LuaSM->LoadScript(InScriptPath);
+	SetStateMachine(LuaSM);
 }
 
 void UAnimInstance::Update(float DeltaTime)

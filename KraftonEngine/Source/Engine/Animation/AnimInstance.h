@@ -9,7 +9,7 @@ class UAnimInstance : public UObject
 {
 public:
 	DECLARE_CLASS(UAnimInstance, UObject)
-	virtual void Initialize(USkeletalMeshComponent* InOwner, const FString& InScriptPath);
+	virtual void Initialize(USkeletalMeshComponent* InOwner, const FString& InScriptPath = "");
 	void Update(float DeltaTime);
 	virtual void NativeUpdateAnimation(float DeltaSeconds) {}
 

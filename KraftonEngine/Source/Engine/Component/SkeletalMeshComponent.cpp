@@ -5,13 +5,6 @@
 #include "GameFramework/AActor.h"
 #include <cctype>
 
-IMPLEMENT_CLASS(USkeletalMeshComponent, USkinnedMeshComponent)
-
-BEGIN_CLASS_PROPERTIES(USkeletalMeshComponent)
-REGISTER_PROPERTY(AnimInstanceClassName, "Anim Instance Class", EPropertyType::String, "Animation", CPF_Edit)
-REGISTER_PROPERTY(LuaScriptPath, "Lua State Machine", EPropertyType::String, "Animation", CPF_Edit)
-END_CLASS_PROPERTIES(USkeletalMeshComponent)
-
 void USkeletalMeshComponent::BeginPlay()
 {
 	Super::BeginPlay();
@@ -44,7 +37,7 @@ void USkeletalMeshComponent::SetAnimInstance(UAnimInstance* InInstance)
 {
 	AnimInstance = InInstance;
 	if (AnimInstance)
-		AnimInstance->Initialize(this);
+		AnimInstance->Initialize(this, "");
 }
 
 void USkeletalMeshComponent::TickComponent(float DeltaTime, ELevelTick TickType,

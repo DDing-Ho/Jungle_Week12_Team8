@@ -15,7 +15,7 @@ public:
 	void Stop();
 	void SetPlayRate(float Rate);
 
-	void Initialize(USkeletalMeshComponent* InOwner) override;
+	void Initialize(USkeletalMeshComponent* InOwner, const FString& InScriptPath = "") override;
 	void NativeUpdateAnimation(float DeltaSeconds) override;
 	void GetCurrentPose(FPoseContext& OutPose) override;
 

@@ -5,9 +5,9 @@
 
 IMPLEMENT_CLASS(UAnimSingleNodeInstance, UAnimInstance)
 
-void UAnimSingleNodeInstance::Initialize(USkeletalMeshComponent* InOwner)
+void UAnimSingleNodeInstance::Initialize(USkeletalMeshComponent* InOwner, const FString& InScriptPath)
 {
-	Super::Initialize(InOwner);
+	Super::Initialize(InOwner, InScriptPath);
 	CurrentTime = 0.0f;
 	bPlaying = false;
 }
