@@ -1,5 +1,7 @@
 ﻿#include "Editor/Subsystem/AssetFactory.h"
 
+#include "Animation/AnimInstanceAsset.h"
+#include "Animation/AnimInstanceAssetManager.h"
 #include "CameraShake/CameraShakeAsset.h"
 #include "CameraShake/CameraShakeManager.h"
 #include "FloatCurve/FloatCurveManager.h"
@@ -88,6 +90,44 @@ bool FAssetFactory::CreateCameraShake(const FString& DirectoryPath, const FStrin
 	NewAsset->ShakeType = ECameraShakeType::Sequence;
 
 	bool bSaved = FCameraShakeManager::Get().Save(NewAsset);
+	GUObjectArray.DestroyObject(NewAsset);
+
+	if (!bSaved)
+	{
+		return false;
+	}
+
+	OutCreatedPath = FPaths::ToUtf8(AssetPath.wstring());
+	return true;
+}
+
+bool FAssetFactory::CreateAnimInstanceAsset(const FString& DirectoryPath, const FString& AssetName, FString& OutCreatedPath)
+{
+	const std::filesystem::path Directory(FPaths::ToWide(DirectoryPath));
+	if (!std::filesystem::exists(Directory) || !std::filesystem::is_directory(Directory))
+	{
+		return false;
+	}
+
+	const FString DefaultName = AssetName.empty() ? FString("NewAnimInstance") : AssetName;
+	const std::filesystem::path AssetPath = BuildUniqueAssetPath(Directory, DefaultName, L".uasset");
+
+	UAnimInstanceAsset* NewAsset = GUObjectArray.CreateObject<UAnimInstanceAsset>();
+	NewAsset->SetAssetPathFileName(FPaths::ToUtf8(AssetPath.wstring()));
+
+	FAnimGraphData& Graph = NewAsset->GetGraph();
+
+	FAnimGraphNodeData OutputNode;
+	OutputNode.NodeId = "Output";
+	OutputNode.DisplayName = "Output";
+	OutputNode.NodeType = EAnimGraphNodeType::Output;
+	OutputNode.EditorPosX = 360.0f;
+	OutputNode.EditorPosY = 80.0f;
+
+	Graph.OutputNodeId = OutputNode.NodeId;
+	Graph.Nodes.push_back(OutputNode);
+
+	bool bSaved = FAnimInstanceAssetManager::Get().Save(NewAsset);
 	GUObjectArray.DestroyObject(NewAsset);
 
 	if (!bSaved)

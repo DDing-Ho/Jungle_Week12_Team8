@@ -38,7 +38,7 @@ protected:
 
 	float BlendAlpha     = 1.0f; // 현재 애니메이션에서 다음 애니메이션까지 얼마나 blend 되었는지
 	float BlendDuration  = 0.2f; // Blend 되는 시간
-	float BeldingPrevStateTime = 0.0f;
+	float BlendingPrevStateTime = 0.0f;
 
 	float PlayRate = 1.0f;
 };

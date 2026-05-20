@@ -1,6 +1,8 @@
 ﻿#include "ContentBrowserElement.h"
 
 #include "Animation/AnimDataModel.h"
+#include "Animation/AnimInstanceAsset.h"
+#include "Animation/AnimInstanceAssetManager.h"
 #include "Animation/AnimSequence.h"
 #include "Animation/AnimSequenceManager.h"
 #include "Asset/AssetPackage.h"
@@ -545,6 +547,21 @@ void AnimSequenceElement::RenderDetail()
 
 	//	ImGui::EndTable();
 	//}
+}
+
+void AnimInstanceElement::OnDoubleLeftClicked(ContentBrowserContext& Context)
+{
+	if (!Context.EditorEngine)
+	{
+		ShellExecuteW(nullptr, L"open", ContentItem.Path.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
+		return;
+	}
+
+	const FString FilePath = FPaths::ToUtf8(ContentItem.Path.wstring());
+	if (UAnimInstanceAsset* AnimInstanceAsset = FAnimInstanceAssetManager::Get().Load(FilePath))
+	{
+		Context.EditorEngine->OpenAssetEditorForObject(AnimInstanceAsset);
+	}
 }
 
 void MaterialElement::OnLeftClicked(ContentBrowserContext& Context)

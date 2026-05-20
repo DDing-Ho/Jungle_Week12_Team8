@@ -331,6 +331,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\lua\bin\lua51.dll" "$(OutDir)"</Command>
     <ClCompile Include="Source\Editor\Slate\SWindow.cpp" />
     <ClCompile Include="Source\Editor\Slate\SlateApplication.cpp" />
     <ClCompile Include="Source\Editor\Subsystem\AssetFactory.cpp" />
+    <ClCompile Include="Source\Editor\Subsystem\EditorAnimationAssetLibrary.cpp" />
     <ClCompile Include="Source\Editor\Subsystem\OverlayStatSystem.cpp" />
     <ClCompile Include="Source\Editor\UI\EditorConsoleWidget.cpp" />
     <ClCompile Include="Source\Editor\UI\EditorControlWidget.cpp" />
@@ -350,6 +351,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\lua\bin\lua51.dll" "$(OutDir)"</Command>
     <ClCompile Include="Source\Editor\UI\EditorWorldSettingsWidget.cpp" />
     <ClCompile Include="Source\Editor\UI\ImGuiSetting.cpp" />
     <ClCompile Include="Source\Editor\UI\NotificationToast.cpp" />
+    <ClCompile Include="Source\Editor\UI\Asset\AnimInstanceEditorWidget.cpp" />
     <ClCompile Include="Source\Editor\UI\Asset\AnimSequenceEditorWidget.cpp" />
     <ClCompile Include="Source\Editor\UI\Asset\AssetEditorManager.cpp" />
     <ClCompile Include="Source\Editor\UI\Asset\AssetEditorWidget.cpp" />
@@ -367,8 +369,11 @@ xcopy /Y "$(ProjectDir)ThirdParty\lua\bin\lua51.dll" "$(OutDir)"</Command>
     <ClCompile Include="Source\Editor\Viewport\MeshEditorViewportClient.cpp" />
     <ClCompile Include="Source\Editor\Viewport\StaticMeshEditorViewportClient.cpp" />
     <ClCompile Include="Source\Editor\Viewport\ViewportCameraTransform.cpp" />
+    <ClCompile Include="Source\Engine\Animation\AnimGraphInstance.cpp" />
     <ClCompile Include="Source\Engine\Animation\AnimDataModel.cpp" />
     <ClCompile Include="Source\Engine\Animation\AnimInstance.cpp" />
+    <ClCompile Include="Source\Engine\Animation\AnimInstanceAsset.cpp" />
+    <ClCompile Include="Source\Engine\Animation\AnimInstanceAssetManager.cpp" />
     <ClCompile Include="Source\Engine\Animation\AnimSequence.cpp" />
     <ClCompile Include="Source\Engine\Animation\AnimSequenceBase.cpp" />
     <ClCompile Include="Source\Engine\Animation\AnimSequenceManager.cpp" />
@@ -612,6 +617,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\lua\bin\lua51.dll" "$(OutDir)"</Command>
     <ClInclude Include="Source\Editor\Slate\SWindow.h" />
     <ClInclude Include="Source\Editor\Slate\SlateApplication.h" />
     <ClInclude Include="Source\Editor\Subsystem\AssetFactory.h" />
+    <ClInclude Include="Source\Editor\Subsystem\EditorAnimationAssetLibrary.h" />
     <ClInclude Include="Source\Editor\Subsystem\OverlayStatSystem.h" />
     <ClInclude Include="Source\Editor\UI\EditorConsoleWidget.h" />
     <ClInclude Include="Source\Editor\UI\EditorControlWidget.h" />
@@ -631,6 +637,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\lua\bin\lua51.dll" "$(OutDir)"</Command>
     <ClInclude Include="Source\Editor\UI\EditorWorldSettingsWidget.h" />
     <ClInclude Include="Source\Editor\UI\ImGuiSetting.h" />
     <ClInclude Include="Source\Editor\UI\NotificationToast.h" />
+    <ClInclude Include="Source\Editor\UI\Asset\AnimInstanceEditorWidget.h" />
     <ClInclude Include="Source\Editor\UI\Asset\AnimSequenceEditorWidget.h" />
     <ClInclude Include="Source\Editor\UI\Asset\AssetEditorManager.h" />
     <ClInclude Include="Source\Editor\UI\Asset\AssetEditorWidget.h" />
@@ -653,8 +660,11 @@ xcopy /Y "$(ProjectDir)ThirdParty\lua\bin\lua51.dll" "$(OutDir)"</Command>
     <ClInclude Include="Source\Editor\Viewport\MeshEditorViewportClient.h" />
     <ClInclude Include="Source\Editor\Viewport\StaticMeshEditorViewportClient.h" />
     <ClInclude Include="Source\Editor\Viewport\ViewportCameraTransform.h" />
+    <ClInclude Include="Source\Engine\Animation\AnimGraphInstance.h" />
     <ClInclude Include="Source\Engine\Animation\AnimDataModel.h" />
     <ClInclude Include="Source\Engine\Animation\AnimInstance.h" />
+    <ClInclude Include="Source\Engine\Animation\AnimInstanceAsset.h" />
+    <ClInclude Include="Source\Engine\Animation\AnimInstanceAssetManager.h" />
     <ClInclude Include="Source\Engine\Animation\AnimSequence.h" />
     <ClInclude Include="Source\Engine\Animation\AnimSequenceBase.h" />
     <ClInclude Include="Source\Engine\Animation\AnimSequenceManager.h" />

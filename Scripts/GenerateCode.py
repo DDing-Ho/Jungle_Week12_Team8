@@ -689,19 +689,16 @@ def emit_struct_schema(
         "    bRegistered = true;",
     ]
     for p in s.properties:
-        if p.prop_type == "EPropertyType::Array":
-            raise CodegenError(f"array struct field {p.name}: v1 struct arrays are not supported")
-        lines.append(
-            "    Struct->AddProperty("
-            + emit_property_constructor_expr(
+        lines.extend(
+            "    " + line
+            for line in emit_property_registration_into(
                 p,
-                offset_expr=f"offsetof({s.name}, {p.name})",
-                size_expr=f"sizeof((({s.name}*)0)->{p.name})",
+                container_expr="Struct",
+                owner_type=s.name,
                 known_enums=known_enums,
                 known_structs=known_structs,
                 error_context="struct field",
-            )
-            + ");"
+            ).splitlines()
         )
     lines.extend([
         "}",
@@ -893,10 +890,14 @@ def emit_property_registrar(
     return "\n".join(lines)
 
 
-def emit_property_registration(
+def emit_property_registration_into(
     p: PropertyInfo,
+    *,
+    container_expr: str,
+    owner_type: str,
     known_enums: dict[str, EnumInfo],
     known_structs: dict[str, StructInfo],
+    error_context: str,
 ) -> str:
     if p.prop_type == "EPropertyType::Array":
         if not p.array_inner_type:
@@ -914,11 +915,11 @@ def emit_property_registration(
         )
         expr = emit_property_constructor_expr(
             p,
-            offset_expr=f"offsetof(ThisClass, {p.name})",
-            size_expr=f"sizeof(((ThisClass*)0)->{p.name})",
+            offset_expr=f"offsetof({owner_type}, {p.name})",
+            size_expr=f"sizeof((({owner_type}*)0)->{p.name})",
             known_enums=known_enums,
             known_structs=known_structs,
-            error_context="property",
+            error_context=error_context,
         )
         inner_expr = emit_property_constructor_expr(
             inner_info,
@@ -926,11 +927,11 @@ def emit_property_registration(
             size_expr=f"sizeof({p.array_inner_type})",
             known_enums=known_enums,
             known_structs=known_structs,
-            error_context="array inner",
+            error_context=f"{error_context} array inner",
         )
         return "\n".join([
             "{",
-            f"    Cls->AddProperty({expr[:-1]},",
+            f"    {container_expr}->AddProperty({expr[:-1]},",
             f"        std::unique_ptr<FProperty>({inner_expr}),",
             f"        GetTArrayAccessor<{p.array_inner_type}>()));",
             "}",
@@ -938,17 +939,32 @@ def emit_property_registration(
 
     expr = emit_property_constructor_expr(
         p,
-        offset_expr=f"offsetof(ThisClass, {p.name})",
-        size_expr=f"sizeof(((ThisClass*)0)->{p.name})",
+        offset_expr=f"offsetof({owner_type}, {p.name})",
+        size_expr=f"sizeof((({owner_type}*)0)->{p.name})",
+        known_enums=known_enums,
+        known_structs=known_structs,
+        error_context=error_context,
+    )
+    return "\n".join([
+        "{",
+        f"    {container_expr}->AddProperty({expr});",
+        "}",
+    ])
+
+
+def emit_property_registration(
+    p: PropertyInfo,
+    known_enums: dict[str, EnumInfo],
+    known_structs: dict[str, StructInfo],
+) -> str:
+    return emit_property_registration_into(
+        p,
+        container_expr="Cls",
+        owner_type="ThisClass",
         known_enums=known_enums,
         known_structs=known_structs,
         error_context="property",
     )
-    return "\n".join([
-        "{",
-        f"    Cls->AddProperty({expr});",
-        "}",
-    ])
 
 
 _LUA_PREFIX_STRIP = re.compile(r"^[UAF][A-Z]")
