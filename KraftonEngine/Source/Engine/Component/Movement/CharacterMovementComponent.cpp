@@ -7,7 +7,6 @@
 #include <algorithm>
 #include <cmath>
 #include <cstring>
-#include "Core/Log.h"
 
 namespace
 {
@@ -19,6 +18,11 @@ namespace
 	float ClampFloat(float Value, float MinValue, float MaxValue)
 	{
 		return std::max(MinValue, std::min(MaxValue, Value));
+	}
+
+	float ClampFloatRange(float Value, float A, float B)
+	{
+		return ClampFloat(Value, std::min(A, B), std::max(A, B));
 	}
 
 	// -180.0f ~ 180.0f 사이로 Degree 정규화
@@ -146,6 +150,8 @@ void UCharacterMovementComponent::Serialize(FArchive& Ar)
 	Ar << bUseControllerDesiredRotation;
 	Ar << RotationRateYaw;
 	Ar << MouseSensitivity;
+	Ar << MinControllerPitchDegrees;
+	Ar << MaxControllerPitchDegrees;
 }
 
 void UCharacterMovementComponent::PostEditProperty(const char* PropertyName)
@@ -179,30 +185,11 @@ void UCharacterMovementComponent::SetMoveInput(float ForwardValue, float RightVa
 	MoveRightInput = std::clamp(RightValue, -1.0f, 1.0f);
 }
 
-void UCharacterMovementComponent::AddMoveInput(float ForwardValue, float RightValue)
-{
-	// 여러 입력 소스가 값을 더할 수 있으므로 누적 후 -1~1 범위로 제한
-	MoveForwardInput = std::clamp(MoveForwardInput + ForwardValue, -1.0f, 1.0f);
-	MoveRightInput = std::clamp(MoveRightInput + RightValue, -1.0f, 1.0f);
-}
-
-void UCharacterMovementComponent::ClearMoveInput()
-{
-	MoveForwardInput = 0.0f;
-	MoveRightInput = 0.0f;
-}
-
 void UCharacterMovementComponent::SetLookInput(float DeltaX, float DeltaY)
 {
 	// Look 입력은 회전 단계에서 매 프레임 소비할 델타값입니다.
 	LookInputX = DeltaX;
 	LookInputY = DeltaY;
-}
-
-void UCharacterMovementComponent::AddLookInput(float DeltaX, float DeltaY)
-{
-	LookInputX += DeltaX;
-	LookInputY += DeltaY;
 }
 
 void UCharacterMovementComponent::ClearLookInput()
@@ -231,24 +218,9 @@ void UCharacterMovementComponent::StopMovementImmediately()
 	UpdatedPrimitive = Cast<UPrimitiveComponent>(GetUpdatedComponent());
 }
 
-void UCharacterMovementComponent::SetControllerDesiredYaw(float InYawDegrees)
-{
-	ControllerDesiredYawDegrees = NormalizeAxisDegrees(InYawDegrees);
-}
-
 const FVector& UCharacterMovementComponent::GetVelocity() const
 {
 	return Velocity;
-}
-
-void UCharacterMovementComponent::SetVelocity(const FVector& InVelocity)
-{
-	Velocity = InVelocity;
-}
-
-EMovementMode UCharacterMovementComponent::GetMovementMode() const
-{
-	return MovementMode;
 }
 
 void UCharacterMovementComponent::SetMovementMode(EMovementMode NewMovementMode)
@@ -259,15 +231,6 @@ void UCharacterMovementComponent::SetMovementMode(EMovementMode NewMovementMode)
 		// 지상 이동으로 전환되면 낙하 속도는 더 이상 유지하지 않습니다.
 		Velocity.Z = 0.0f;
 	}
-	// Debug
-	switch (MovementMode)
-	{
-	case 0: UE_LOG("Movement Mode: None"); break;
-	case 1: UE_LOG("Movement Mode: Walking"); break;
-	case 2: UE_LOG("Movement Mode: Falling"); break;
-	default: break;
-	}
-	
 }
 
 float UCharacterMovementComponent::GetControllerDesiredYaw() const
@@ -275,26 +238,14 @@ float UCharacterMovementComponent::GetControllerDesiredYaw() const
 	return ControllerDesiredYawDegrees;
 }
 
-bool UCharacterMovementComponent::ShouldUseControllerDesiredRotation() const
+float UCharacterMovementComponent::GetControllerDesiredPitch() const
 {
-	return bUseControllerDesiredRotation;
-}
-
-bool UCharacterMovementComponent::ShouldUseControllerYawForMovement() const
-{
-	// 현재 Character 조작은 회전 모드와 무관하게 카메라 yaw 기준 이동을 사용한다.
-	// 회전 모드는 캐릭터가 그 이동 방향을 볼지, 컨트롤 yaw를 직접 볼지, 아예 회전하지 않을지만 결정한다.
-	return true;
+	return ControllerDesiredPitchDegrees;
 }
 
 float UCharacterMovementComponent::GetSpeed2D() const
 {
 	return std::sqrt(Velocity.X * Velocity.X + Velocity.Y * Velocity.Y);
-}
-
-bool UCharacterMovementComponent::IsWalking() const
-{
-	return MovementMode == MOVE_Walking;
 }
 
 bool UCharacterMovementComponent::IsFalling() const
@@ -304,7 +255,7 @@ bool UCharacterMovementComponent::IsFalling() const
 
 bool UCharacterMovementComponent::IsMovingOnGround() const
 {
-	return IsWalking();
+	return MovementMode == MOVE_Walking;
 }
 
 // 지금은 World Offset을 주는 방식으로 이동
@@ -386,8 +337,12 @@ void UCharacterMovementComponent::UpdateRotation(float DeltaTime)
 	float TargetYawDegrees = 0.0f;
 
 	// 진짜 PlayerController::ControlRotation이 아직 없으므로, Look 입력은 회전 모드와 무관하게
-	// CMC의 ControllerDesiredYaw에 누적해 카메라 yaw로 사용한다.
+	// CMC의 ControllerDesiredYaw/Pitch에 누적해 카메라 회전으로 사용한다.
 	ControllerDesiredYawDegrees = NormalizeAxisDegrees(ControllerDesiredYawDegrees + LookInputX * MouseSensitivity);
+	ControllerDesiredPitchDegrees = ClampFloatRange(
+		ControllerDesiredPitchDegrees + LookInputY * MouseSensitivity,
+		MinControllerPitchDegrees,
+		MaxControllerPitchDegrees);
 
 	if (bOrientRotationToMovement)
 	{

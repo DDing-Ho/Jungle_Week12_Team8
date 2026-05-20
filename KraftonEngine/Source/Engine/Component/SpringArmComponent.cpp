@@ -4,6 +4,7 @@
 #include "GameFramework/AActor.h"
 #include "GameFramework/World.h"
 #include "Core/CollisionTypes.h"
+#include "Math/Rotator.h"
 #include <algorithm>
 #include <cmath>
 
@@ -130,7 +131,12 @@ void USpringArmComponent::TickComponent(float DeltaTime, ELevelTick TickType, FA
 
 void USpringArmComponent::SetFixedWorldYaw(float YawDegrees)
 {
-	FixedWorldRot = FQuat::FromAxisAngle(FVector::UpVector, YawDegrees * DEG_TO_RAD).GetNormalized();
+	SetFixedWorldRotation(0.0f, YawDegrees);
+}
+
+void USpringArmComponent::SetFixedWorldRotation(float PitchDegrees, float YawDegrees)
+{
+	FixedWorldRot = FRotator(PitchDegrees, YawDegrees, 0.0f).ToQuaternion().GetNormalized();
 	bHasFixedWorldRot = true;
 }
 
