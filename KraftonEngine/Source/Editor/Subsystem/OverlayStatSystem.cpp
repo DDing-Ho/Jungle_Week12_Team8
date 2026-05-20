@@ -5,6 +5,7 @@
 #include "Engine/Profiling/Stats.h"
 #include "Engine/Profiling/MemoryStats.h"
 #include "Engine/Profiling/ShadowStats.h"
+#include "Engine/Profiling/SkinningStats.h"
 #include "Engine/Profiling/GPUProfiler.h"
 #include "Engine/Render/Types/RenderFeatureSettings.h"
 #include "Slate/SWindow.h"
@@ -13,7 +14,7 @@
 #include <cstdio>
 #include <cstring>
 
-// バイト数を適切な単位 (B / KB / MB / GB) に変換して文字列化
+// 바이트 수를 적절한 단위(B / KB / MB / GB)로 변환해서 문자열로 만든다
 static int FormatBytes(char* Buffer, int32 BufferSize, const char* Label, uint64 Bytes)
 {
 	const double B = static_cast<double>(Bytes);
@@ -28,6 +29,22 @@ static int FormatBytes(char* Buffer, int32 BufferSize, const char* Label, uint64
 	if (KB >= 1.0)
 		return snprintf(Buffer, BufferSize, "%s : %.2f KB", Label, KB);
 	return snprintf(Buffer, BufferSize, "%s : %llu B", Label, static_cast<unsigned long long>(Bytes));
+}
+
+static int FormatBytesValue(char* Buffer, int32 BufferSize, uint64 Bytes)
+{
+	const double B = static_cast<double>(Bytes);
+	const double KB = B / 1024.0;
+	const double MB = KB / 1024.0;
+	const double GB = MB / 1024.0;
+
+	if (GB >= 1.0)
+		return snprintf(Buffer, BufferSize, "%.2f GB", GB);
+	if (MB >= 1.0)
+		return snprintf(Buffer, BufferSize, "%.2f MB", MB);
+	if (KB >= 1.0)
+		return snprintf(Buffer, BufferSize, "%.2f KB", KB);
+	return snprintf(Buffer, BufferSize, "%llu B", static_cast<unsigned long long>(Bytes));
 }
 
 void FOverlayStatSystem::AppendLine(TArray<FOverlayStatLine>& OutLines, float Y, const FString& Text) const
@@ -197,12 +214,8 @@ void FOverlayStatSystem::BuildSkinningLines(TArray<FString>& OutLines) const
 	const char* StatNames[] =
 	{
 		"UpdateSkinMatrices",
-		"EnsureCPUSkinnedVertices",
-		"PrepareCPUSkinningDrawBuffer",
-		"PrepareGPUSkinningDrawBuffer",
-		"UploadSkinMatrices",
-		"PrepareSkinningBindings",
-		"UpdateAABB (SkeletalMesh)",
+		"Prepare Buffer(CPU)",
+		"Prepare Buffer(GPU)",
 	};
 
 	const TArray<FStatEntry>& Snapshot = FStatManager::Get().GetSnapshot();
@@ -222,18 +235,49 @@ void FOverlayStatSystem::BuildSkinningLines(TArray<FString>& OutLines) const
 
 		if (FoundEntry)
 		{
-			snprintf(Buffer, sizeof(Buffer), "%s : %.3f ms (avg %.3f, calls %u)",
+			snprintf(Buffer, sizeof(Buffer), "%s : %.3f ms (avg %.3f)",
 				StatName,
 				FoundEntry->LastTime * 1000.0,
-				FoundEntry->AvgTime * 1000.0,
-				FoundEntry->CallCount);
+				FoundEntry->AvgTime * 1000.0);
 		}
 		else
 		{
-			snprintf(Buffer, sizeof(Buffer), "%s : 0.000 ms (avg 0.000, calls 0)", StatName);
+			snprintf(Buffer, sizeof(Buffer), "%s : 0.000 ms (avg 0.000)", StatName);
 		}
 		OutLines.push_back(FString(Buffer));
 	}
+
+	char UsedBytesText[64] = {};
+	char UploadBytesText[64] = {};
+
+	FormatBytesValue(
+		UsedBytesText,
+		sizeof(UsedBytesText),
+		SkinningStats::GetSkinMatrixUsedBytes()
+	);
+
+	snprintf(Buffer, sizeof(Buffer),
+		"SkinMatrix Buffer : %u matrices, %s",
+		SkinningStats::GetSkinMatrixUsedCount(),
+		UsedBytesText);
+
+	OutLines.push_back(FString(Buffer));
+
+	char CPUSkinnedBytesText[64] = {};
+	FormatBytesValue(
+		CPUSkinnedBytesText,
+		sizeof(CPUSkinnedBytesText),
+		SkinningStats::GetCPUSkinnedMeshVertexBytes()
+	);
+
+	snprintf(Buffer, sizeof(Buffer),
+		"CPU Skinning Vertices : %u vertices, %s",
+		SkinningStats::GetCPUSkinnedMeshVertexCount(),
+		CPUSkinnedBytesText);
+
+	OutLines.push_back(FString(Buffer));
+
+
 #else
 	OutLines.push_back(FString("Skinning stats unavailable (STATS=0)"));
 #endif
@@ -262,7 +306,7 @@ void FOverlayStatSystem::BuildLines(const UEditorEngine& Editor, TArray<FOverlay
 	}
 	if (bShowSkinning)
 	{
-		EstimatedLineCount += 8;
+		EstimatedLineCount += 7;
 	}
 	OutLines.reserve(EstimatedLineCount);
 

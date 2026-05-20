@@ -27,33 +27,17 @@ public:
 	UFUNCTION(Lua)
 	void			SetMoveInput(float ForwardValue, float RightValue);
 	UFUNCTION(Lua)
-	void			AddMoveInput(float ForwardValue, float RightValue);
-	UFUNCTION(Lua)
-	void			ClearMoveInput();
-	UFUNCTION(Lua)
 	void			SetLookInput(float DeltaX, float DeltaY);
-	UFUNCTION(Lua)
-	void			AddLookInput(float DeltaX, float DeltaY);
-	UFUNCTION(Lua)
-	void			ClearLookInput();
 	UFUNCTION(Lua)
 	void			Jump();
 	UFUNCTION(Lua)
 	void			StopMovementImmediately();
-	UFUNCTION(Lua)
-	void			SetControllerDesiredYaw(float InYawDegrees);
 
 	const FVector&	GetVelocity() const;
-	void			SetVelocity(const FVector& InVelocity);
-	EMovementMode	GetMovementMode() const;
-	void			SetMovementMode(EMovementMode NewMovementMode);
 	float			GetControllerDesiredYaw() const;
-	bool			ShouldUseControllerDesiredRotation() const;
-	bool			ShouldUseControllerYawForMovement() const;
+	float			GetControllerDesiredPitch() const;
 	UFUNCTION(Lua)
 	float			GetSpeed2D() const;
-	UFUNCTION(Lua)
-	bool			IsWalking() const;
 	UFUNCTION(Lua)
 	bool			IsFalling() const;
 	UFUNCTION(Lua)
@@ -66,6 +50,8 @@ private:
 	void			UpdateVelocityFalling(float DeltaTime);
 	void			UpdateRotation(float DeltaTime);
 	FVector			GetCurrentMoveDirection() const;
+	void			ClearLookInput();
+	void			SetMovementMode(EMovementMode NewMovementMode);
 	bool			ApplyTemporaryFlatGroundConstraint();
 	void			LimitVelocity2D(float MaxSpeed);
 	void			MoveUpdatedComponentKinematic(float DeltaTime);
@@ -76,14 +62,15 @@ private:
 	FVector Velocity = FVector::ZeroVector;
 	FVector Acceleration = FVector::ZeroVector;
 
-	// 외부 Character/Lua/Controller가 이후 단계에서 주입할 입력 누적값.
+	// 외부 Lua/Controller가 매 프레임 주입하는 입력값.
 	float MoveForwardInput = 0.0f;
 	float MoveRightInput = 0.0f;
 	float LookInputX = 0.0f;
 	float LookInputY = 0.0f;
 
-	// 컨트롤러 방향 회전 모드에서 사용할 목표 월드 Yaw
+	// 카메라와 컨트롤러 회전 모드에서 사용할 목표 월드 회전.
 	float ControllerDesiredYawDegrees = 0.0f;
+	float ControllerDesiredPitchDegrees = 0.0f;
 
 	// 현재 캐릭터 이동 상태.
 	UPROPERTY(Edit, Category="Character Movement", DisplayName="Movement Mode")
@@ -132,5 +119,10 @@ private:
 	// Look 입력에 곱할 마우스 감도
 	UPROPERTY(Edit, Category="Character Movement|Input", DisplayName="Mouse Sensitivity", Min=0.0f, Max=10.0f, Speed=0.01f)
 	float MouseSensitivity = 0.1f;
-};
 
+	UPROPERTY(Edit, Category="Character Movement|Input", DisplayName="Min Controller Pitch", Min=-89.0f, Max=89.0f, Speed=1.0f)
+	float MinControllerPitchDegrees = -80.0f;
+
+	UPROPERTY(Edit, Category="Character Movement|Input", DisplayName="Max Controller Pitch", Min=-89.0f, Max=89.0f, Speed=1.0f)
+	float MaxControllerPitchDegrees = 45.0f;
+};

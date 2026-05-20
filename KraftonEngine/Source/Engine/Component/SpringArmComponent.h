@@ -31,6 +31,7 @@ public:
 	void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction& ThisTickFunction) override;
 	void Serialize(FArchive& Ar) override;
 	void SetFixedWorldYaw(float YawDegrees);
+	void SetFixedWorldRotation(float PitchDegrees, float YawDegrees);
 
 	// ─── 튜닝 파라미터 ─────────────────────────────────────────────
 	// arm 길이 — 부착점에서 카메라까지의 거리 (Local -X 방향).

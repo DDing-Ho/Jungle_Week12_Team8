@@ -4,13 +4,9 @@
 #include "Animation/AnimGraphInstance.h"
 #include <Component/CameraComponent.h>
 
-ACharacter::ACharacter()
-{
-	
-}
-
 void ACharacter::BeginPlay()
 {
+	ConfigureTickOrder();
 	SyncSpringArmRotationMode();
 	APawn::BeginPlay();
 }
@@ -60,10 +56,12 @@ void ACharacter::InitDefaultComponents()
 
 	CharacterMovement = AddComponent<UCharacterMovementComponent>();
 	CharacterMovement->SetUpdatedComponent(GetRootComponent());
+	ConfigureTickOrder();
 	SyncSpringArmRotationMode();
 
 	LuaScript = AddComponent<ULuaScriptComponent>();
 	LuaScript->SetScriptFile("PlayerController.lua");
+	ConfigureTickOrder();
 }
 
 void ACharacter::Serialize(FArchive& Ar)
@@ -91,6 +89,7 @@ void ACharacter::PostDuplicate()
 		CharacterMovement->SetUpdatedComponent(CapsuleComponent);
 	}
 
+	ConfigureTickOrder();
 	SyncSpringArmRotationMode();
 
 	if (LuaScript && LuaScript->GetScriptFile().empty())
@@ -109,69 +108,51 @@ void ACharacter::UnPossessed()
 	APawn::UnPossessed();
 }
 
-// ── 이동 입력 ─────────────────────────────────────────────────
-
-void ACharacter::AddMovementInput(FVector WorldDir, float Scale)
+void ACharacter::ConfigureTickOrder()
 {
-	if (!CharacterMovement)
+	if (LuaScript)
 	{
-		return;
+		// 입력은 이동보다 먼저 갱신한다. CMC는 이 프레임의 Lua 입력을 소비한다.
+		LuaScript->PrimaryComponentTick.SetTickGroup(TG_PrePhysics);
 	}
-	CharacterMovement->AddMoveInput(WorldDir.X * Scale, WorldDir.Y * Scale);
-}
 
-void ACharacter::AddControllerYawInput(float Val)
-{
-	if (!CharacterMovement)
+	if (CharacterMovement)
 	{
-		return;
+		// 루트 이동/회전은 카메라 보정 전에 끝나야 한다.
+		CharacterMovement->PrimaryComponentTick.SetTickGroup(TG_DuringPhysics);
 	}
-	CharacterMovement->AddLookInput(Val, 0.0f);
-}
 
-void ACharacter::AddControllerPitchInput(float Val)
-{
-	if (!CharacterMovement)
+	PrimaryActorTick.SetTickGroup(TG_PostUpdateWork);
+	if (Mesh)
 	{
-		return;
+		// ACharacter::Tick에서 갱신한 애니메이션 파라미터를 같은 프레임에 소비한다.
+		Mesh->PrimaryComponentTick.SetTickGroup(TG_PostUpdateWork);
 	}
-	CharacterMovement->AddLookInput(0.0f, Val);
+
+	if (SpringArm)
+	{
+		// SpringArm은 루트 회전 이후에 월드 고정 yaw를 상대 transform으로 환산한다.
+		SpringArm->PrimaryComponentTick.SetTickGroup(TG_PostUpdateWork);
+	}
 }
 
 // ── 점프 ─────────────────────────────────────────────────────
-
 void ACharacter::Jump()
 {
-	if (!CanJump())
+	if (!CharacterMovement || !CharacterMovement->IsMovingOnGround())
 	{
 		return;
 	}
-	bPressedJump = true;
 	CharacterMovement->Jump();
-	OnJumped();
-}
-
-void ACharacter::StopJumping()
-{
-	bPressedJump = false;
-	JumpKeyHoldTime = 0.0f;
-}
-
-bool ACharacter::CanJump() const
-{
-	return CharacterMovement && CharacterMovement->IsMovingOnGround();
 }
 
 // ── 상태 조회 ─────────────────────────────────────────────────
 
 bool ACharacter::IsJumping() const
 {
-	return bPressedJump && IsFalling();
-}
-
-bool ACharacter::IsFalling() const
-{
-	return CharacterMovement && CharacterMovement->IsFalling();
+	return CharacterMovement
+		&& CharacterMovement->IsFalling()
+		&& CharacterMovement->GetVelocity().Z > 0.0f;
 }
 
 bool ACharacter::IsOnGround() const
@@ -186,25 +167,19 @@ void ACharacter::SyncSpringArmRotationMode()
 		return;
 	}
 
-	if (CharacterMovement->ShouldUseControllerDesiredRotation())
-	{
-		// UseControllerDesiredRotation: 캐릭터와 카메라가 같은 yaw를 따라간다.
-		SpringArm->bInheritParentRotation = true;
-		return;
-	}
-
-	// OrientRotationToMovement 또는 회전 비활성 모드: 카메라는 캐릭터 회전과 분리한다.
-	// 둘 다 꺼져도 캐릭터만 고정될 뿐, 마우스 look으로 카메라는 회전해야 한다.
+	// 카메라는 캐릭터 루트 회전 상속 대신 controller pitch/yaw를 직접 사용
 	SpringArm->bInheritParentRotation = false;
-	SpringArm->SetFixedWorldYaw(CharacterMovement->GetControllerDesiredYaw());
+	SpringArm->SetFixedWorldRotation(
+		CharacterMovement->GetControllerDesiredPitch(),
+		CharacterMovement->GetControllerDesiredYaw());
 }
 
 float ACharacter::GetJumpState() const
 {
-	if (LandingTimer > 0.0f)                          return 3; // Land
+	if (LandingTimer > 0.0f)                          return 3.0f; // Land
 	if (CharacterMovement->IsFalling())
 	{
-		return (CharacterMovement->GetVelocity().Z > 0.0f) ? 1 : 2;
+		return (CharacterMovement->GetVelocity().Z > 0.0f) ? 1.0f : 2.0f;
 	}
-	return 0; // Ground
+	return 0.0f; // Ground
 }

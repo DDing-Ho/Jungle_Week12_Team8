@@ -424,6 +424,7 @@ void FMeshEditorWidget::RenderMeshStatsOverlay(ImDrawList* DrawList, const ImVec
 
 	size_t VertexCount = 0;
 	size_t TriangleCount = 0;
+	size_t BoneCount = 0;
 
 	if (const USkeletalMesh* SkeletalMesh = Cast<USkeletalMesh>(EditedObject))
 	{
@@ -432,11 +433,17 @@ void FMeshEditorWidget::RenderMeshStatsOverlay(ImDrawList* DrawList, const ImVec
 			VertexCount = Asset->Vertices.size();
 			TriangleCount = Asset->Indices.size() / 3;
 		}
+		if (const FSkeletonAsset* Asset = SkeletalMesh->GetSkeletonAsset())
+		{
+			BoneCount = Asset->Bones.size();
+		}
+
 	}
 
 	const FString Text =
 		"Triangles: " + FormatMeshStatCount(TriangleCount) + "\n" +
-		"Vertices: " + FormatMeshStatCount(VertexCount);
+		"Vertices: " + FormatMeshStatCount(VertexCount) + "\n" + 
+		"Bones: " + FormatMeshStatCount(BoneCount);
 
 	const ImVec2 TextPos(ViewportPos.x + 8.0f, ViewportPos.y + 36.0f);
 	DrawList->AddText(ImVec2(TextPos.x + 1.0f, TextPos.y + 1.0f), IM_COL32(0, 0, 0, 220), Text.c_str());

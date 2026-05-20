@@ -56,11 +56,13 @@ enum class EPropertyType : uint8_t
 };
 
 enum EPropertyFlags : uint32 {
-	CPF_None			= 0,
-	CPF_Edit			= 1 << 1,
-	CPF_FixedSize		= 1 << 2,
-	CPF_Transient		= 1 << 3,
-	CPF_Config			= 1 << 4,
+	CPF_None						= 0,
+	CPF_Edit						= 1 << 1,
+	CPF_FixedSize					= 1 << 2,
+	CPF_Transient					= 1 << 3,
+	CPF_DuplicateTransient			= 1 << 4,
+	CPF_NonPIEDuplicateTransient	= 1 << 5,
+	CPF_Config						= 1 << 6,
 };
 
 struct FMaterialSlot
