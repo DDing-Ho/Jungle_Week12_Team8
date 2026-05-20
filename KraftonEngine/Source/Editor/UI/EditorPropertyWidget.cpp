@@ -3,8 +3,11 @@
 #include "Editor/EditorEngine.h"
 #include "Editor/Import/EditorFbxImportService.h"
 #include "Editor/Import/EditorObjImportService.h"
+#include "Editor/Subsystem/EditorAnimationAssetLibrary.h"
+#include "Editor/UI/ContentBrowser/ContentItem.h"
 
 #include "ImGui/imgui.h"
+#include "Animation/AnimInstanceAsset.h"
 #include "Component/ActorComponent.h"
 #include "Component/BillboardComponent.h"
 #include "Component/MeshComponent.h"
@@ -1638,6 +1641,99 @@ bool FEditorPropertyWidget::RenderPropertyWidget(
 						// 원본 FBX 경로는 Binary 안의 PathFileName에만 남긴다.
 						Val->SetPath(Loaded->GetAssetPathFileName());
 						bChanged = true;
+					}
+				}
+			}
+		}
+		else if (SoftObjectProp.PropertyClass == UAnimInstanceAsset::StaticClass())
+		{
+			auto* Val = static_cast<TSoftObjectPtr<UAnimInstanceAsset>*>(ValuePtr);
+			FString CurrentPath = FPaths::MakeProjectRelative(Val->GetPath().ToString());
+			FString Preview = CurrentPath.empty() ? "None" : GetStemFromPath(CurrentPath);
+			if (CurrentPath == "None") Preview = "None";
+
+			USkeletalMeshComponent* MeshComponent = (SelectedComponent && SelectedComponent->IsA<USkeletalMeshComponent>())
+				? static_cast<USkeletalMeshComponent*>(SelectedComponent)
+				: nullptr;
+			USkeletalMesh* Mesh = MeshComponent ? MeshComponent->GetSkeletalMesh() : nullptr;
+			const FSkeletalMesh* MeshAsset = Mesh ? Mesh->GetSkeletalMeshAsset() : nullptr;
+			const FString SkeletonPath = MeshAsset ? FPaths::MakeProjectRelative(MeshAsset->SkeletonPath) : FString();
+			const bool bHasSkeleton = !SkeletonPath.empty();
+
+			if (!bHasSkeleton)
+			{
+				ImGui::BeginDisabled();
+			}
+
+			ImGui::SetNextItemWidth(-1);
+			if (ImGui::BeginCombo("##AnimInstanceAsset", Preview.c_str()))
+			{
+				const bool bSelectedNone = CurrentPath.empty() || CurrentPath == "None";
+				if (ImGui::Selectable("None", bSelectedNone))
+				{
+					Val->Reset();
+					CurrentPath = "None";
+					bChanged = true;
+				}
+				if (bSelectedNone)
+				{
+					ImGui::SetItemDefaultFocus();
+				}
+
+				if (bHasSkeleton)
+				{
+					const TArray<FEditorAnimationAssetListItem> Items =
+						FEditorAnimationAssetLibrary::ScanAnimInstanceAssetsForSkeleton(SkeletonPath);
+					for (const FEditorAnimationAssetListItem& Item : Items)
+					{
+						const bool bSelected = CurrentPath == Item.FullPath;
+						if (ImGui::Selectable(Item.DisplayName.c_str(), bSelected))
+						{
+							Val->SetPath(Item.FullPath);
+							CurrentPath = Item.FullPath;
+							bChanged = true;
+						}
+						if (bSelected)
+						{
+							ImGui::SetItemDefaultFocus();
+						}
+					}
+				}
+
+				ImGui::EndCombo();
+			}
+
+			if (!bHasSkeleton)
+			{
+				ImGui::EndDisabled();
+				ImGui::TextDisabled("Select Skeletal Mesh first.");
+			}
+			else
+			{
+				if (ImGui::BeginDragDropTarget())
+				{
+					if (const ImGuiPayload* Payload = ImGui::AcceptDragDropPayload("AnimInstanceContentItem"))
+					{
+						FContentItem ContentItem = *reinterpret_cast<const FContentItem*>(Payload->Data);
+						const FString DroppedPath = FPaths::MakeProjectRelative(FPaths::ToUtf8(ContentItem.Path.generic_wstring()));
+						if (FEditorAnimationAssetLibrary::IsAnimInstanceAssetCompatibleWithSkeleton(DroppedPath, SkeletonPath))
+						{
+							Val->SetPath(DroppedPath);
+							CurrentPath = DroppedPath;
+							bChanged = true;
+						}
+					}
+					ImGui::EndDragDropTarget();
+				}
+
+				if (!CurrentPath.empty() && CurrentPath != "None")
+				{
+					FString ActualSkeletonPath;
+					if (!FEditorAnimationAssetLibrary::IsAnimInstanceAssetCompatibleWithSkeleton(CurrentPath, SkeletonPath, &ActualSkeletonPath))
+					{
+						ImGui::TextColored(ImVec4(1.0f, 0.42f, 0.32f, 1.0f),
+							"Invalid Skeleton: %s",
+							ActualSkeletonPath.empty() ? "missing asset or Skeleton" : ActualSkeletonPath.c_str());
 					}
 				}
 			}

@@ -74,6 +74,46 @@ void FAnimSequenceManager::RegisterAnimSequence(const FString& Path, UAnimSequen
 	AnimSequenceCache[NormalizedPath] = AnimSequence;
 }
 
+bool FAnimSequenceManager::Save(UAnimSequence* AnimSequence)
+{
+	if (!AnimSequence)
+	{
+		return false;
+	}
+
+	const FString& Path = AnimSequence->GetAssetPathFileName();
+	if (Path.empty() || Path == "None")
+	{
+		return false;
+	}
+
+	const FString NormalizedPath = FPaths::MakeProjectRelative(Path);
+	FAssetImportMetadata Metadata;
+	FAssetPackage::ReadMetadata(NormalizedPath, EAssetPackageType::AnimSequence, Metadata);
+
+	FWindowsBinWriter Writer(NormalizedPath);
+	if (!Writer.IsValid())
+	{
+		return false;
+	}
+
+	FAssetPackageHeader Header;
+	Header.Type = static_cast<uint32>(EAssetPackageType::AnimSequence);
+
+	Writer << Header;
+	Writer << Metadata;
+	AnimSequence->Serialize(Writer);
+
+	if (!Writer.IsValid())
+	{
+		return false;
+	}
+
+	AnimSequence->SetAssetPathFileName(NormalizedPath);
+	AnimSequenceCache[NormalizedPath] = AnimSequence;
+	return true;
+}
+
 bool FAnimSequenceManager::IsAnimSequencePackage(const FString& Path) const
 {
 	FAssetImportMetadata Metadata;

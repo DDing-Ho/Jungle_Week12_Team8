@@ -136,6 +136,7 @@ protected:
 class AnimInstanceElement final : public ContentBrowserElement
 {
 public:
+	virtual const char* GetDragItemType() override { return "AnimInstanceContentItem"; }
 	void OnDoubleLeftClicked(ContentBrowserContext& Context) override;
 
 protected:

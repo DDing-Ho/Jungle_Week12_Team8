@@ -1,16 +1,27 @@
 #include "Animation/AnimDataModel.h"
 
+#include "Animation/Notify.h"
+#include "Animation/NotifyRegistry.h"
+#include "Core/Log.h"
+#include "Core/Property/FEnumProperty.h"
+#include "Core/UObject/FSoftObjectPtr.h"
 #include "Object/ObjectFactory.h"
 #include "Serialization/Archive.h"
 
 #include <algorithm>
 #include <cmath>
+#include <cstring>
 #include <utility>
 
 IMPLEMENT_CLASS(UAnimDataModel, UObject)
 
 namespace
 {
+	constexpr uint32 AnimNotifyPayloadMagic = 0x544F4E41; // ANOT
+	constexpr uint32 AnimNotifyPayloadVersion = 1;
+	constexpr uint32 MaxNotifyPayloadStringBytes = 4096;
+	constexpr uint32 MaxNotifyPayloadProperties = 256;
+
 	float Clamp01(float Value)
 	{
 		return std::max(0.0f, std::min(1.0f, Value));
@@ -65,16 +76,471 @@ namespace
 		const float Alpha = Clamp01(KeyPosition - static_cast<float>(Key0));
 		return FQuat::Slerp(Keys[Key0], Keys[Key1], Alpha);
 	}
+
+	template <typename T>
+	bool ReadValue(FArchive& Ar, T& OutValue)
+	{
+		if (!Ar.CanSerialize(sizeof(T)))
+		{
+			return false;
+		}
+
+		Ar << OutValue;
+		return true;
+	}
+
+	template <typename T>
+	void WriteValue(FArchive& Ar, T& Value)
+	{
+		Ar << Value;
+	}
+
+	void WritePayloadString(FArchive& Ar, const FString& Value)
+	{
+		uint32 Length = static_cast<uint32>(Value.size());
+		Ar << Length;
+		if (Length > 0)
+		{
+			Ar.Serialize(const_cast<char*>(Value.data()), Length);
+		}
+	}
+
+	bool ReadPayloadString(FArchive& Ar, FString& OutValue)
+	{
+		uint32 Length = 0;
+		if (!ReadValue(Ar, Length))
+		{
+			return false;
+		}
+
+		if (Length > MaxNotifyPayloadStringBytes || !Ar.CanSerialize(Length))
+		{
+			return false;
+		}
+
+		OutValue.resize(Length);
+		if (Length > 0)
+		{
+			Ar.Serialize(OutValue.data(), Length);
+		}
+		return true;
+	}
+
+	bool IsSupportedNotifyPropertyType(EPropertyType Type)
+	{
+		switch (Type)
+		{
+		case EPropertyType::Bool:
+		case EPropertyType::ByteBool:
+		case EPropertyType::Int:
+		case EPropertyType::Float:
+		case EPropertyType::Vec3:
+		case EPropertyType::Vec4:
+		case EPropertyType::Rotator:
+		case EPropertyType::String:
+		case EPropertyType::Name:
+		case EPropertyType::SceneComponentRef:
+		case EPropertyType::Color4:
+		case EPropertyType::MaterialSlot:
+		case EPropertyType::Enum:
+		case EPropertyType::Script:
+		case EPropertyType::SoftObject:
+			return true;
+		default:
+			return false;
+		}
+	}
+
+	const FProperty* FindNotifyPropertyByName(const TArray<const FProperty*>& Properties, const FString& Name)
+	{
+		for (const FProperty* Property : Properties)
+		{
+			if (Property && Property->Name == Name)
+			{
+				return Property;
+			}
+		}
+		return nullptr;
+	}
+
+	uint32 CountSupportedNotifyProperties(const TArray<const FProperty*>& Properties)
+	{
+		uint32 Count = 0;
+		for (const FProperty* Property : Properties)
+		{
+			if (Property && IsSupportedNotifyPropertyType(Property->GetType()))
+			{
+				++Count;
+			}
+		}
+		return Count;
+	}
+
+	bool SerializeFloatValues(FArchive& Ar, float* Values, uint32 Count)
+	{
+		const size_t ByteCount = sizeof(float) * Count;
+		if (!Ar.CanSerialize(ByteCount))
+		{
+			return false;
+		}
+
+		Ar.Serialize(Values, ByteCount);
+		return true;
+	}
+
+	void WriteNotifyPropertyValue(FArchive& Ar, const FProperty& Property, const void* Container)
+	{
+		const void* ValuePtr = Property.ContainerPtrToValuePtr(Container);
+		switch (Property.GetType())
+		{
+		case EPropertyType::Bool:
+		{
+			bool Value = *static_cast<const bool*>(ValuePtr);
+			WriteValue(Ar, Value);
+			break;
+		}
+		case EPropertyType::ByteBool:
+		{
+			uint8 Value = *static_cast<const uint8*>(ValuePtr);
+			WriteValue(Ar, Value);
+			break;
+		}
+		case EPropertyType::Int:
+		{
+			int32 Value = *static_cast<const int32*>(ValuePtr);
+			WriteValue(Ar, Value);
+			break;
+		}
+		case EPropertyType::Float:
+		{
+			float Value = *static_cast<const float*>(ValuePtr);
+			WriteValue(Ar, Value);
+			break;
+		}
+		case EPropertyType::Vec3:
+		case EPropertyType::Rotator:
+		{
+			float Values[3] = {};
+			std::memcpy(Values, ValuePtr, sizeof(Values));
+			Ar.Serialize(Values, sizeof(Values));
+			break;
+		}
+		case EPropertyType::Vec4:
+		case EPropertyType::Color4:
+		{
+			float Values[4] = {};
+			std::memcpy(Values, ValuePtr, sizeof(Values));
+			Ar.Serialize(Values, sizeof(Values));
+			break;
+		}
+		case EPropertyType::String:
+		case EPropertyType::Script:
+		case EPropertyType::SceneComponentRef:
+		{
+			WritePayloadString(Ar, *static_cast<const FString*>(ValuePtr));
+			break;
+		}
+		case EPropertyType::Name:
+		{
+			WritePayloadString(Ar, static_cast<const FName*>(ValuePtr)->ToString());
+			break;
+		}
+		case EPropertyType::Enum:
+		{
+			int64 Value = 0;
+			std::memcpy(&Value, ValuePtr, std::min<uint32>(Property.ElementSize, sizeof(Value)));
+			WriteValue(Ar, Value);
+			break;
+		}
+		case EPropertyType::MaterialSlot:
+		{
+			WritePayloadString(Ar, static_cast<const FMaterialSlot*>(ValuePtr)->Path);
+			break;
+		}
+		case EPropertyType::SoftObject:
+		{
+			WritePayloadString(Ar, static_cast<const FSoftObjectPtr*>(ValuePtr)->GetPath().ToString());
+			break;
+		}
+		default:
+			break;
+		}
+	}
+
+	bool ReadNotifyPropertyValue(FArchive& Ar, EPropertyType StoredType, const FProperty* TargetProperty, void* Container)
+	{
+		const bool bCanApply = TargetProperty
+			&& TargetProperty->GetType() == StoredType
+			&& Container;
+
+		void* ValuePtr = bCanApply ? TargetProperty->ContainerPtrToValuePtr(Container) : nullptr;
+		switch (StoredType)
+		{
+		case EPropertyType::Bool:
+		{
+			bool Value = false;
+			if (!ReadValue(Ar, Value)) return false;
+			if (bCanApply) *static_cast<bool*>(ValuePtr) = Value;
+			return true;
+		}
+		case EPropertyType::ByteBool:
+		{
+			uint8 Value = 0;
+			if (!ReadValue(Ar, Value)) return false;
+			if (bCanApply) *static_cast<uint8*>(ValuePtr) = Value;
+			return true;
+		}
+		case EPropertyType::Int:
+		{
+			int32 Value = 0;
+			if (!ReadValue(Ar, Value)) return false;
+			if (bCanApply) *static_cast<int32*>(ValuePtr) = Value;
+			return true;
+		}
+		case EPropertyType::Float:
+		{
+			float Value = 0.0f;
+			if (!ReadValue(Ar, Value)) return false;
+			if (bCanApply) *static_cast<float*>(ValuePtr) = Value;
+			return true;
+		}
+		case EPropertyType::Vec3:
+		case EPropertyType::Rotator:
+		{
+			float Values[3] = {};
+			if (!SerializeFloatValues(Ar, Values, 3)) return false;
+			if (bCanApply) std::memcpy(ValuePtr, Values, sizeof(Values));
+			return true;
+		}
+		case EPropertyType::Vec4:
+		case EPropertyType::Color4:
+		{
+			float Values[4] = {};
+			if (!SerializeFloatValues(Ar, Values, 4)) return false;
+			if (bCanApply) std::memcpy(ValuePtr, Values, sizeof(Values));
+			return true;
+		}
+		case EPropertyType::String:
+		case EPropertyType::Script:
+		case EPropertyType::SceneComponentRef:
+		{
+			FString Value;
+			if (!ReadPayloadString(Ar, Value)) return false;
+			if (bCanApply) *static_cast<FString*>(ValuePtr) = Value;
+			return true;
+		}
+		case EPropertyType::Name:
+		{
+			FString Value;
+			if (!ReadPayloadString(Ar, Value)) return false;
+			if (bCanApply) *static_cast<FName*>(ValuePtr) = FName(Value);
+			return true;
+		}
+		case EPropertyType::Enum:
+		{
+			int64 Value = 0;
+			if (!ReadValue(Ar, Value)) return false;
+			if (bCanApply)
+			{
+				std::memcpy(ValuePtr, &Value, std::min<uint32>(TargetProperty->ElementSize, sizeof(Value)));
+			}
+			return true;
+		}
+		case EPropertyType::MaterialSlot:
+		{
+			FString Value;
+			if (!ReadPayloadString(Ar, Value)) return false;
+			if (bCanApply) static_cast<FMaterialSlot*>(ValuePtr)->Path = Value;
+			return true;
+		}
+		case EPropertyType::SoftObject:
+		{
+			FString Value;
+			if (!ReadPayloadString(Ar, Value)) return false;
+			if (bCanApply) static_cast<FSoftObjectPtr*>(ValuePtr)->SetPath(Value);
+			return true;
+		}
+		default:
+			return false;
+		}
+	}
+
+	void WriteNotifyTriggerPayload(FArchive& Ar, const FAnimNotifyEvent& Notify)
+	{
+		uint8 bHasTrigger = Notify.NotifyTrigger ? 1 : 0;
+		WriteValue(Ar, bHasTrigger);
+		if (!Notify.NotifyTrigger)
+		{
+			return;
+		}
+
+		FString ClassName = Notify.NotifyTrigger->GetClass()->GetName();
+		WritePayloadString(Ar, ClassName);
+
+		TArray<const FProperty*> Properties;
+		Notify.NotifyTrigger->GetEditableProperties(Properties);
+		uint32 PropertyCount = CountSupportedNotifyProperties(Properties);
+		WriteValue(Ar, PropertyCount);
+
+		for (const FProperty* Property : Properties)
+		{
+			if (!Property || !IsSupportedNotifyPropertyType(Property->GetType()))
+			{
+				continue;
+			}
+
+			WritePayloadString(Ar, Property->Name);
+			uint8 TypeValue = static_cast<uint8>(Property->GetType());
+			WriteValue(Ar, TypeValue);
+			WriteNotifyPropertyValue(Ar, *Property, Notify.NotifyTrigger);
+		}
+	}
+
+	bool ReadNotifyTriggerPayload(FArchive& Ar, FAnimNotifyEvent& Notify)
+	{
+		uint8 bHasTrigger = 0;
+		if (!ReadValue(Ar, bHasTrigger))
+		{
+			return false;
+		}
+
+		Notify.NotifyTrigger = nullptr;
+		if (!bHasTrigger)
+		{
+			return true;
+		}
+
+		FString ClassName;
+		if (!ReadPayloadString(Ar, ClassName))
+		{
+			return false;
+		}
+
+		uint32 PropertyCount = 0;
+		if (!ReadValue(Ar, PropertyCount) || PropertyCount > MaxNotifyPayloadProperties)
+		{
+			return false;
+		}
+
+		UNotify* Trigger = nullptr;
+		const TMap<FString, UClass*>& NotifyClasses = FNotifyRegistry::Get().GetNotifyClasses();
+		if (NotifyClasses.find(ClassName) != NotifyClasses.end())
+		{
+			UObject* Object = FObjectFactory::Get().Create(ClassName);
+			Trigger = Cast<UNotify>(Object);
+		}
+		else
+		{
+			UE_LOG("AnimNotify load warning: unknown notify class. Class=%s", ClassName.c_str());
+		}
+
+		TArray<const FProperty*> Properties;
+		if (Trigger)
+		{
+			Trigger->GetEditableProperties(Properties);
+		}
+
+		for (uint32 PropertyIndex = 0; PropertyIndex < PropertyCount; ++PropertyIndex)
+		{
+			FString PropertyName;
+			if (!ReadPayloadString(Ar, PropertyName))
+			{
+				return false;
+			}
+
+			uint8 TypeValue = 0;
+			if (!ReadValue(Ar, TypeValue))
+			{
+				return false;
+			}
+
+			const EPropertyType StoredType = static_cast<EPropertyType>(TypeValue);
+			const FProperty* TargetProperty = Trigger ? FindNotifyPropertyByName(Properties, PropertyName) : nullptr;
+			if (!ReadNotifyPropertyValue(Ar, StoredType, TargetProperty, Trigger))
+			{
+				return false;
+			}
+		}
+
+		Notify.NotifyTrigger = Trigger;
+		return true;
+	}
+
+	void SerializeNotifyPayload(FArchive& Ar, TArray<FAnimNotifyEvent>& Notifies)
+	{
+		if (Ar.IsSaving())
+		{
+			uint32 Magic = AnimNotifyPayloadMagic;
+			uint32 Version = AnimNotifyPayloadVersion;
+			uint32 NotifyCount = static_cast<uint32>(Notifies.size());
+			WriteValue(Ar, Magic);
+			WriteValue(Ar, Version);
+			WriteValue(Ar, NotifyCount);
+
+			for (const FAnimNotifyEvent& Notify : Notifies)
+			{
+				WriteNotifyTriggerPayload(Ar, Notify);
+			}
+			return;
+		}
+
+		if (!Ar.IsLoading() || !Ar.CanSerialize(sizeof(uint32)))
+		{
+			return;
+		}
+
+		uint32 Magic = 0;
+		if (!ReadValue(Ar, Magic) || Magic != AnimNotifyPayloadMagic)
+		{
+			return;
+		}
+
+		uint32 Version = 0;
+		if (!ReadValue(Ar, Version) || Version != AnimNotifyPayloadVersion)
+		{
+			UE_LOG("AnimNotify load warning: unsupported notify payload version.");
+			return;
+		}
+
+		uint32 NotifyCount = 0;
+		if (!ReadValue(Ar, NotifyCount) || NotifyCount != static_cast<uint32>(Notifies.size()))
+		{
+			UE_LOG("AnimNotify load warning: notify payload count mismatch.");
+			return;
+		}
+
+		for (FAnimNotifyEvent& Notify : Notifies)
+		{
+			if (!ReadNotifyTriggerPayload(Ar, Notify))
+			{
+				for (FAnimNotifyEvent& ExistingNotify : Notifies)
+				{
+					ExistingNotify.NotifyTrigger = nullptr;
+				}
+				UE_LOG("AnimNotify load warning: notify payload is incomplete.");
+				return;
+			}
+		}
+	}
 }
 
 void UAnimDataModel::Serialize(FArchive& Ar)
 {
 	Ar << BoneAnimationTracks;
 	Ar << Notifies;
+	if (Ar.IsLoading())
+	{
+		for (FAnimNotifyEvent& Notify : Notifies)
+		{
+			Notify.NotifyTrigger = nullptr;
+		}
+	}
+
 	Ar << PlayLength;
 	Ar << FrameRate;
 	Ar << NumberOfFrames;
 	Ar << NumberOfKeys;
+	SerializeNotifyPayload(Ar, Notifies);
 }
 
 const FBoneAnimationTrack* UAnimDataModel::GetBoneTrackByIndex(int32 TrackIndex) const

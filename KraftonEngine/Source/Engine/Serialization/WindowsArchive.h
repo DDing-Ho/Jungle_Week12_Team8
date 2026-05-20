@@ -34,6 +34,11 @@ public:
 			FileStream.write(static_cast<const char*>(Data), Num);
 		}
 	}
+
+	bool CanSerialize(size_t Num) override
+	{
+		return FileStream.is_open() && FileStream.good();
+	}
 };
 
 class FWindowsBinReader : public FArchive
@@ -62,5 +67,31 @@ public:
 			// 하드 디스크에서 데이터를 읽어옵니다.
 			FileStream.read(static_cast<char*>(Data), Num);
 		}
+	}
+
+	bool CanSerialize(size_t Num) override
+	{
+		if (Num == 0)
+		{
+			return true;
+		}
+
+		if (!FileStream.is_open() || !FileStream.good())
+		{
+			return false;
+		}
+
+		const std::streampos Current = FileStream.tellg();
+		if (Current == std::streampos(-1))
+		{
+			return false;
+		}
+
+		FileStream.seekg(0, std::ios::end);
+		const std::streampos End = FileStream.tellg();
+		FileStream.seekg(Current);
+
+		return End != std::streampos(-1)
+			&& static_cast<size_t>(End - Current) >= Num;
 	}
 };

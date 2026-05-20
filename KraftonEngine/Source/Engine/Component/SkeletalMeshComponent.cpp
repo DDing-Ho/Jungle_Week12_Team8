@@ -1,4 +1,6 @@
 ﻿#include "SkeletalMeshComponent.h"
+#include "Animation/AnimInstanceAssetManager.h"
+#include "Animation/AnimGraphInstance.h"
 #include "Animation/AnimationRuntime.h"
 #include "Animation/CharacterAnimInstance.h"
 #include "Core/Log.h"
@@ -7,8 +9,10 @@
 #include "Mesh/SkeletalMesh.h"
 #include "Mesh/SkeletonAsset.h"
 #include "GameFramework/AActor.h"
+#include "Platform/Paths.h"
 #include "Serialization/Archive.h"
 #include <cctype>
+#include <cstring>
 
 void USkeletalMeshComponent::BeginPlay()
 {
@@ -27,6 +31,11 @@ void USkeletalMeshComponent::BeginPlay()
 	UCharacterAnimInstance* Inst = GUObjectArray.CreateObject<UCharacterAnimInstance>();
 	AnimInstance = Inst;
 	Inst->Initialize(this, AnimScriptPath);
+
+	if (!AnimInstanceAsset.IsNull() && !AnimInstance)
+	{
+		RebuildAnimInstanceFromAsset();
+	}
 }
 
 void USkeletalMeshComponent::EndPlay()
@@ -37,6 +46,35 @@ void USkeletalMeshComponent::EndPlay()
 		AnimInstance = nullptr;
 	}
 	Super::EndPlay();
+}
+
+void USkeletalMeshComponent::SetSkeletalMesh(USkeletalMesh* InMesh)
+{
+	Super::SetSkeletalMesh(InMesh);
+	if (!AnimInstanceAsset.IsNull())
+	{
+		RebuildAnimInstanceFromAsset();
+	}
+}
+
+void USkeletalMeshComponent::PostDuplicate()
+{
+	Super::PostDuplicate();
+	if (!AnimInstanceAsset.IsNull())
+	{
+		RebuildAnimInstanceFromAsset();
+	}
+}
+
+void USkeletalMeshComponent::PostEditProperty(const char* PropertyName)
+{
+	Super::PostEditProperty(PropertyName);
+
+	if (PropertyName
+		&& (strcmp(PropertyName, "Anim Instance") == 0 || strcmp(PropertyName, "AnimInstanceAsset") == 0))
+	{
+		RebuildAnimInstanceFromAsset();
+	}
 }
 
 FPrimitiveSceneProxy* USkeletalMeshComponent::CreateSceneProxy()
@@ -63,11 +101,82 @@ void USkeletalMeshComponent::Serialize(FArchive& Ar)
 	{
 		Ar << Chain;
 	}
+
+	Ar << AnimInstanceAsset;
 }
 
 void USkeletalMeshComponent::SetAnimInstance(UAnimInstance* InInstance)
 {
 	AnimInstance = InInstance;
+}
+
+void USkeletalMeshComponent::SetAnimInstanceAsset(UAnimInstanceAsset* InAsset)
+{
+	if (InAsset)
+	{
+		AnimInstanceAsset = InAsset;
+	}
+	else
+	{
+		AnimInstanceAsset.Reset();
+	}
+	RebuildAnimInstanceFromAsset();
+}
+
+bool USkeletalMeshComponent::RebuildAnimInstanceFromAsset()
+{
+	if (AnimInstanceAsset.IsNull())
+	{
+		SetAnimInstance(nullptr);
+		return false;
+	}
+
+	const FString AssetPath = FPaths::MakeProjectRelative(AnimInstanceAsset.GetPath().ToString());
+	if (AssetPath.empty() || AssetPath == "None")
+	{
+		SetAnimInstance(nullptr);
+		return false;
+	}
+
+	UAnimInstanceAsset* Asset = AnimInstanceAsset.Get();
+	if (!Asset)
+	{
+		Asset = FAnimInstanceAssetManager::Get().Load(AssetPath);
+		if (Asset)
+		{
+			AnimInstanceAsset.SetCache(Asset);
+		}
+	}
+
+	if (!Asset)
+	{
+		UE_LOG("SkeletalMeshComponent AnimInstanceAsset load failed: %s", AssetPath.c_str());
+		SetAnimInstance(nullptr);
+		return false;
+	}
+
+	USkeletalMesh* Mesh = GetSkeletalMesh();
+	const FSkeletalMesh* MeshAsset = Mesh ? Mesh->GetSkeletalMeshAsset() : nullptr;
+	const FString MeshSkeletonPath = MeshAsset ? FPaths::MakeProjectRelative(MeshAsset->SkeletonPath) : FString();
+	const FString AnimSkeletonPath = FPaths::MakeProjectRelative(Asset->GetSkeletonPath());
+	if (MeshSkeletonPath.empty())
+	{
+		UE_LOG("SkeletalMeshComponent AnimInstanceAsset skipped: SkeletalMesh has no Skeleton. Asset=%s", AssetPath.c_str());
+		SetAnimInstance(nullptr);
+		return false;
+	}
+
+	if (AnimSkeletonPath.empty() || MeshSkeletonPath != AnimSkeletonPath)
+	{
+		UE_LOG("SkeletalMeshComponent AnimInstanceAsset skeleton mismatch. MeshSkeleton=%s AnimSkeleton=%s Asset=%s",
+			MeshSkeletonPath.c_str(), AnimSkeletonPath.c_str(), AssetPath.c_str());
+		SetAnimInstance(nullptr);
+		return false;
+	}
+
+	UAnimGraphInstance* RuntimeInstance = Asset->CreateRuntimeInstance();
+	SetAnimInstance(RuntimeInstance);
+	return RuntimeInstance != nullptr;
 }
 
 void USkeletalMeshComponent::TickComponent(float DeltaTime, ELevelTick TickType,

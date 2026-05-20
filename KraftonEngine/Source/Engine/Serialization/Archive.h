@@ -21,6 +21,7 @@ public:
 	// 핵심 순수 가상 함수: 파생 클래스(Writer/Reader)가 구현해야 할 실제 입출력 로직
 	// Data 포인터부터 Num 바이트만큼을 읽거나 씁니다.
 	virtual void Serialize(void* Data, size_t Num) = 0;
+	virtual bool CanSerialize(size_t Num) { return true; }
 
 	// ----------------------------------------------------
 	// 마법의 연산자 오버로딩 (기본 자료형: int, float, 구조체 등)

@@ -294,8 +294,7 @@ void FAnimSequenceEditorWidget::InitializeFromAnimSequence()
 	bDraggingNotify = false;
 	ContextTimelineTime = 0.0f;
 
-	// Notify는 아직 AnimSequenceBase에 정식 저장 구조가 없기 때문에 에디터 미리보기 배열만 초기화합니다.
-	// TODO(AnimNotify): 추후 AnimSequenceBase의 Notifies로 이동 필요.
+	// DataModel이 없는 예외 상황에서만 사용하는 fallback preview notify 배열입니다.
 	PreviewNotifyMarkers.clear();
 	RelatedAnimSequences.clear();
 
@@ -760,6 +759,45 @@ void FAnimSequenceEditorWidget::Render(float DeltaTime)
 	{
 		FSlateApplication::Get().BringViewportToFront(&ViewportClient);
 	}
+
+	FString SaveReason;
+	const bool bHasAssetPath = AnimSequence && !AnimSequence->GetAssetPathFileName().empty()
+		&& AnimSequence->GetAssetPathFileName() != "None";
+	const bool bHasDataModel = AnimSequence && AnimSequence->GetDataModel();
+	const bool bCanSave = bHasAssetPath && bHasDataModel;
+	if (!bHasAssetPath)
+	{
+		SaveReason = "Unsaved AnimSequence path.";
+	}
+	else if (!bHasDataModel)
+	{
+		SaveReason = "AnimDataModel is missing.";
+	}
+
+	ImGui::BeginDisabled(!bCanSave);
+	if (ImGui::Button("Save"))
+	{
+		if (FAnimSequenceManager::Get().Save(AnimSequence))
+		{
+			ClearDirty();
+			PreviewStatusMessage = "AnimSequence saved.";
+		}
+		else
+		{
+			PreviewStatusMessage = "AnimSequence save failed.";
+		}
+	}
+	ImGui::EndDisabled();
+	ImGui::SameLine();
+	if (!bCanSave)
+	{
+		ImGui::TextColored(ImVec4(1.0f, 0.45f, 0.35f, 1.0f), "%s", SaveReason.c_str());
+	}
+	else
+	{
+		ImGui::TextDisabled("%s", IsDirty() ? "Unsaved changes" : "Saved");
+	}
+	ImGui::Separator();
 
 	constexpr float SplitterH = 4.0f;
 	const float MainHeight = std::max(220.0f, ImGui::GetContentRegionAvail().y - SplitterH - TimelinePanelHeight);
@@ -1474,8 +1512,7 @@ void FAnimSequenceEditorWidget::RenderTimelinePanel()
 		ImGui::Spacing();
 		ImGui::PushID("AnimSequenceSelectedNotifyEditor");
 
-		// Notify 편집은 현재 임시 PreviewNotifyMarkers에만 반영합니다.
-		// TODO(AnimNotify): 추후 AnimSequenceBase의 Notifies로 이동 필요. 정식 Event 구조가 들어오면 이 임시 UI 저장 경로는 삭제해야 합니다.
+		// Notify 편집은 DataModel에 즉시 반영되고 Save 버튼으로 AnimSequence package에 저장됩니다.
 		ImGui::TextDisabled("Selected Notify");
 		ImGui::SameLine();
 
@@ -2003,7 +2040,6 @@ void FAnimSequenceEditorWidget::AddVisualNotifyAtTime(float Time)
 	Markers.push_back(NewNotify);
 	SelectedNotifyIndex = static_cast<int32>(Markers.size()) - 1;
 
-	// TODO(AnimNotify): 저장 기능은 UAnimSequenceBase::Notifies 병합 후 구현한다.
 	MarkDirty();
 }
 
@@ -2036,7 +2072,6 @@ void FAnimSequenceEditorWidget::DeleteSelectedVisualNotify()
 	DraggingNotifyIndex = -1;
 	bDraggingNotify = false;
 
-	// TODO(AnimNotify): 저장 기능은 UAnimSequenceBase::Notifies 병합 후 구현한다.
 	MarkDirty();
 }
 

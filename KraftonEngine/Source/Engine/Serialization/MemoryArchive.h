@@ -51,6 +51,11 @@ public:
 		}
 	}
 
+	bool CanSerialize(size_t Num) override
+	{
+		return bIsSaving || Offset + Num <= Buffer.size();
+	}
+
 private:
 	TArray<uint8> Buffer;
 	size_t Offset = 0;
