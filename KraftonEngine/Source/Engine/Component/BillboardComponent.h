@@ -16,7 +16,6 @@ public:
 	void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction& ThisTickFunction) override;
 	FPrimitiveSceneProxy* CreateSceneProxy() override;
 
-	void Serialize(FArchive& Ar) override;
 	void PostDuplicate() override;
 	void PostEditProperty(const char* PropertyName) override;
 

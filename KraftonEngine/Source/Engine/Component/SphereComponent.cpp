@@ -1,4 +1,4 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
+﻿// Copyright Epic Games, Inc. All Rights Reserved.
 #include "SphereComponent.h"
 #include "Object/ObjectFactory.h"
 #include "Serialization/Archive.h"
@@ -78,10 +78,4 @@ void USphereComponent::PostEditProperty(const char* PropertyName)
 	{
 		SetSphereRadius(SphereRadius);
 	}
-}
-
-void USphereComponent::Serialize(FArchive& Ar)
-{
-	UShapeComponent::Serialize(Ar);
-	Ar << SphereRadius;
 }

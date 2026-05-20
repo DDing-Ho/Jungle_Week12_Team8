@@ -40,8 +40,6 @@ public:
 
 	// --- Property / Serialization ---
 	void PostEditProperty(const char* PropertyName) override;
-
-	void Serialize(FArchive& Ar) override;
 	void PostDuplicate() override;
 
 	FPrimitiveSceneProxy* CreateSceneProxy() override;

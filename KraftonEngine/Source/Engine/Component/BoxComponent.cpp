@@ -1,4 +1,4 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
+﻿// Copyright Epic Games, Inc. All Rights Reserved.
 #include "BoxComponent.h"
 #include "Object/ObjectFactory.h"
 #include "Serialization/Archive.h"
@@ -75,10 +75,4 @@ void UBoxComponent::PostEditProperty(const char* PropertyName)
 	{
 		SetBoxExtent(BoxExtent);
 	}
-}
-
-void UBoxComponent::Serialize(FArchive& Ar)
-{
-	UShapeComponent::Serialize(Ar);
-	Ar << BoxExtent;
 }

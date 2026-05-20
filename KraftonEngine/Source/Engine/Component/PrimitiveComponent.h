@@ -68,8 +68,6 @@ public:
 
 	void PostEditProperty(const char* PropertyName) override;
 
-	void Serialize(FArchive& Ar) override;
-
 	virtual FMeshBuffer* GetMeshBuffer() const { return nullptr; }
 	virtual FMeshDataView GetMeshDataView() const { return {}; }
 

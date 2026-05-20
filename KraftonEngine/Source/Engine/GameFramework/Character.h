@@ -24,7 +24,6 @@ public:
 	// TODO: 계속 duplicate 오류나서 임시로 사용
 	void InitDefaultComponents();
 
-	void Serialize(FArchive& Ar) override;
 	void PostDuplicate() override;
 	
 

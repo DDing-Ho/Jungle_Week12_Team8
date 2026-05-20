@@ -8,8 +8,6 @@ class ULightComponent : public ULightComponentBase
 public:
 	GENERATED_BODY(ULightComponent)
 
-	virtual void Serialize(FArchive& Ar) override;
-
 	float GetShadowResolutionScale() const { return ShadowResolutionScale; }
 	float GetShadowBias() const { return ShadowBias; }
 	float GetShadowSlopeBias() const { return ShadowSlopeBias; }

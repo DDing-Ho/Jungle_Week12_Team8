@@ -1,4 +1,4 @@
-#include "Component/CylindricalBillboardComponent.h"
+﻿#include "Component/CylindricalBillboardComponent.h"
 #include "GameFramework/World.h"
 #include "Component/CameraComponent.h"
 #include "Render/Proxy/CylindricalBillboardSceneProxy.h"
@@ -10,12 +10,6 @@
 FPrimitiveSceneProxy* UCylindricalBillboardComponent::CreateSceneProxy()
 {
 	return new FCylindricalBillboardSceneProxy(this);
-}
-
-void UCylindricalBillboardComponent::Serialize(FArchive& Ar)
-{
-	UBillboardComponent::Serialize(Ar);
-	Ar << BillboardAxis;
 }
 
 void UCylindricalBillboardComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction& ThisTickFunction)

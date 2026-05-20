@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "SceneComponent.h"
 #include "Render/Types/FogParams.h"
@@ -16,8 +16,6 @@ public:
 	void DestroyRenderState() override;
 
 	void PostEditProperty(const char* PropertyName) override;
-
-	void Serialize(FArchive& Ar) override;
 
 	// Transform 변경 시 FogBaseHeight 갱신
 	void OnTransformDirty() override;

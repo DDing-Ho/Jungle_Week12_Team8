@@ -211,11 +211,13 @@ def parse_attributes(attr_text: str) -> tuple[list[str], dict[str, str]]:
 
 
 PROPERTY_FLAG_MAP = {
-    "None":      "CPF_None",
-    "Edit":      "CPF_Edit",
-    "Transient": "CPF_Transient",
-    "Config":    "CPF_Config",
-    "FixedSize": "CPF_FixedSize",
+    "None":                      "CPF_None",
+    "Edit":                      "CPF_Edit",
+    "Transient":                 "CPF_Transient",
+    "DuplicateTransient":        "CPF_DuplicateTransient",
+    "NonPIEDuplicateTransient":  "CPF_NonPIEDuplicateTransient",
+    "Config":                    "CPF_Config",
+    "FixedSize":                 "CPF_FixedSize",
 }
 
 CLASS_FLAG_MAP = {

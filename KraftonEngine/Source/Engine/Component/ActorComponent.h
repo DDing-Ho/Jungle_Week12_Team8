@@ -44,7 +44,6 @@ public:
 	inline void SetComponentTickEnabled(bool bEnabled) {
 		PrimaryComponentTick.SetTickEnabled(bEnabled);
 	}
-	virtual void Serialize(FArchive& Ar) override;
 
 	inline bool IsActive() { return bIsActive; }
 
@@ -75,6 +74,8 @@ protected:
 private:
 	UPROPERTY(Edit, Category="Component", DisplayName="bEditorOnly")
 	bool bEditorOnly = false;
+	UPROPERTY()
 	bool bIsActive = true;
+	UPROPERTY()
 	bool bHiddenInComponentTree = false;
 };

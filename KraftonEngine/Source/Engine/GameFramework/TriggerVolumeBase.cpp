@@ -63,12 +63,6 @@ void ATriggerVolumeBase::BeginPlay()
 	}
 }
 
-void ATriggerVolumeBase::Serialize(FArchive& Ar)
-{
-	Super::Serialize(Ar);
-	Ar << TriggerTag;
-}
-
 void ATriggerVolumeBase::HandleBeginOverlap(
 	UPrimitiveComponent* /*OverlappedComponent*/,
 	AActor* OtherActor,

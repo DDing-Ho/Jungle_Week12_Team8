@@ -68,24 +68,6 @@ bool UTextRenderComponent::LineTraceComponent(const FRay& Ray, FHitResult& OutHi
 	return false;
 }
 
-void UTextRenderComponent::Serialize(FArchive& Ar)
-{
-	UBillboardComponent::Serialize(Ar);
-
-	Ar << Text;
-	Ar << FontName;
-	Ar << Color;
-	Ar << FontSize;
-	Ar << Spacing;
-	Ar << CharWidth;
-	Ar << CharHeight;
-	Ar << RenderSpace;
-	Ar << HAlign;
-	Ar << VAlign;
-	Ar << ScreenX;
-	Ar << ScreenY;
-}
-
 void UTextRenderComponent::PostDuplicate()
 {
 	UBillboardComponent::PostDuplicate();

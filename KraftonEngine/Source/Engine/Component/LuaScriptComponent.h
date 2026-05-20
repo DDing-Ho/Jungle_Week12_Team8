@@ -26,8 +26,6 @@ public:
 
 	void GetEditableProperties(TArray<const FProperty*>& OutProps) override;
 
-	void Serialize(FArchive& Ar) override;
-
 	const FString& GetScriptFile() const { return ScriptFile; }
 	void SetScriptFile(const FString& InScriptFile) { ScriptFile = InScriptFile; }
 	void DispatchOverlap(class AActor* OtherActor);

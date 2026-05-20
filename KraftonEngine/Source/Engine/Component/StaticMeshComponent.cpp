@@ -215,13 +215,6 @@ static FArchive& operator<<(FArchive& Ar, FMaterialSlot& Slot)
 	return Ar;
 }
 
-void UStaticMeshComponent::Serialize(FArchive& Ar)
-{
-	UMeshComponent::Serialize(Ar);
-	Ar << StaticMesh;
-	Ar << MaterialSlots;
-}
-
 void UStaticMeshComponent::PostDuplicate()
 {
 	UMeshComponent::PostDuplicate();

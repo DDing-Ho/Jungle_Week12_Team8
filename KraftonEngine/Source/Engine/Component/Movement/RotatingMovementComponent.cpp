@@ -68,14 +68,3 @@ void URotatingMovementComponent::TickComponent(float DeltaTime, ELevelTick TickT
 		UpdatedSceneComponent->SetWorldLocation(CachedWorldPivotLocation + NewOrbitOffsetWorld);
 	}
 }
-
-void URotatingMovementComponent::Serialize(FArchive& Ar)
-{
-	UMovementComponent::Serialize(Ar);
-	Ar << RotationRate.Pitch;
-	Ar << RotationRate.Yaw;
-	Ar << RotationRate.Roll;
-	Ar << bRotationInLocalSpace;
-	Ar << PivotTranslation;
-}
-
