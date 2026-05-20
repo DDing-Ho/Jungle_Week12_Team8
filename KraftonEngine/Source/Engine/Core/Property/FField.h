@@ -4,7 +4,7 @@
 // TODO
 // FField is the base class for all reflection fields (Properties, Functions) 
 // that do NOT need to be UObjects.
-//class FField
+//class FField final
 //{
 //public:
 //	// Every FField has a 'Class' that defines its type behavior, 
