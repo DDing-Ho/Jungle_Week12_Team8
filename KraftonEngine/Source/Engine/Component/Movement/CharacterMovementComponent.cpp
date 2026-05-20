@@ -1,6 +1,7 @@
 ﻿#include "CharacterMovementComponent.h"
 #include "Component/PrimitiveComponent.h"
 #include "Component/SceneComponent.h"
+#include "GameFramework/World.h"
 #include "Math/Quat.h"
 #include "Serialization/Archive.h"
 
@@ -11,10 +12,6 @@
 
 namespace
 {
-	// 시연을 위해 임시로 추가한 Ground 조건
-	// 반드시 시연 끝나고 제거해야함.
-	constexpr float TemporaryFlatGroundZ = 4.0f;
-
 	// float clamp 함수
 	float ClampFloat(float Value, float MinValue, float MaxValue)
 	{
@@ -88,6 +85,12 @@ void UCharacterMovementComponent::BeginPlay()
 			InitialForward.Normalize();
 			ControllerDesiredYawDegrees = DirectionToYawDegrees(InitialForward);
 		}
+
+		FHitResult FloorHit;
+		if (FindFloorAtLocation(UpdatedPrimitive->GetWorldLocation(), FloorHit))
+		{
+			EnsureFloorCenterOffset(FloorHit, UpdatedPrimitive->GetWorldLocation());
+		}
 	}
 }
 
@@ -139,6 +142,10 @@ void UCharacterMovementComponent::Serialize(FArchive& Ar)
 	Ar << MaxAcceleration;
 	Ar << BrakingDecelerationWalking;
 	Ar << GroundFriction;
+	Ar << MaxStepHeight;
+	Ar << MaxStepDownHeight;
+	Ar << FloorProbeUp;
+	Ar << FloorProbeDown;
 	Ar << GravityZ;
 	Ar << JumpZVelocity;
 	Ar << AirControl;
@@ -313,15 +320,14 @@ void UCharacterMovementComponent::PhysWalking(float DeltaTime)
 {
 	UpdateVelocityWalking(DeltaTime);
 	Velocity.Z = 0.0f;
-	MoveUpdatedComponentKinematic(DeltaTime);
-	ApplyTemporaryFlatGroundConstraint();
+	MoveUpdatedComponentWalking(DeltaTime);
 }
 
 void UCharacterMovementComponent::PhysFalling(float DeltaTime)
 {
 	UpdateVelocityFalling(DeltaTime);
 	MoveUpdatedComponentKinematic(DeltaTime);
-	ApplyTemporaryFlatGroundConstraint();
+	TryLandAfterFalling();
 }
 
 void UCharacterMovementComponent::UpdateVelocityWalking(float DeltaTime)
@@ -465,35 +471,148 @@ FVector UCharacterMovementComponent::GetCurrentMoveDirection() const
 	return Direction;
 }
 
-bool UCharacterMovementComponent::ApplyTemporaryFlatGroundConstraint()
+bool UCharacterMovementComponent::FindFloorAtLocation(const FVector& CapsuleCenterLocation, FHitResult& OutFloorHit) const
 {
 	if (!UpdatedPrimitive)
 	{
 		return false;
 	}
 
-	FVector Location = UpdatedPrimitive->GetWorldLocation();
-
-	if (Location.Z > TemporaryFlatGroundZ)
+	UWorld* World = GetWorld();
+	if (!World)
 	{
 		return false;
 	}
-	
-	// 시연을 위한 임시 바닥 판정 코드
-	// TODO: 시연 끝나고 제거해야함.
-	if (Location.Z < TemporaryFlatGroundZ)
-	{
-		Location.Z = TemporaryFlatGroundZ;
-		UpdatedPrimitive->SetWorldLocation(Location);
-	}
-	Velocity.Z = 0.0f;
 
-	if (MovementMode == MOVE_Falling)
+	const float UpDistance = std::max(0.0f, FloorProbeUp);
+	const float DownDistance = std::max(0.0f, FloorProbeDown);
+	const float TraceDistance = UpDistance + DownDistance;
+	if (TraceDistance <= 0.0f)
 	{
-		SetMovementMode(MOVE_Walking);
+		return false;
+	}
+
+	const FVector TraceStart = CapsuleCenterLocation + FVector::UpVector * UpDistance;
+	return World->PhysicsRaycast(
+		TraceStart,
+		FVector::DownVector,
+		TraceDistance,
+		OutFloorHit,
+		ECollisionChannel::WorldStatic,
+		GetOwner());
+}
+
+bool UCharacterMovementComponent::EnsureFloorCenterOffset(const FHitResult& FloorHit, const FVector& CapsuleCenterLocation)
+{
+	if (!FloorHit.bHit)
+	{
+		return false;
+	}
+
+	if (!bHasFloorCenterOffset)
+	{
+		FloorCenterOffset = std::max(0.0f, CapsuleCenterLocation.Z - FloorHit.WorldHitLocation.Z);
+		bHasFloorCenterOffset = true;
 	}
 
 	return true;
+}
+
+void UCharacterMovementComponent::MoveUpdatedComponentWalking(float DeltaTime)
+{
+	if (!UpdatedPrimitive || DeltaTime <= 0.0f)
+	{
+		return;
+	}
+
+	const FVector StartLocation = UpdatedPrimitive->GetWorldLocation();
+	FHitResult CurrentFloorHit;
+	if (!FindFloorAtLocation(StartLocation, CurrentFloorHit))
+	{
+		SetMovementMode(MOVE_Falling);
+		return;
+	}
+
+	EnsureFloorCenterOffset(CurrentFloorHit, StartLocation);
+	if (!bHasFloorCenterOffset)
+	{
+		return;
+	}
+
+	const FVector HorizontalDelta(Velocity.X * DeltaTime, Velocity.Y * DeltaTime, 0.0f);
+	FVector TargetLocation = StartLocation + HorizontalDelta;
+
+	FHitResult TargetFloorHit;
+	if (!FindFloorAtLocation(TargetLocation, TargetFloorHit))
+	{
+		TargetLocation.Z = StartLocation.Z;
+		UpdatedPrimitive->SetWorldLocation(TargetLocation);
+		SetMovementMode(MOVE_Falling);
+		return;
+	}
+
+	const float CurrentFloorZ = CurrentFloorHit.WorldHitLocation.Z;
+	const float TargetFloorZ = TargetFloorHit.WorldHitLocation.Z;
+	const float FloorDeltaZ = TargetFloorZ - CurrentFloorZ;
+
+	if (FloorDeltaZ > MaxStepHeight)
+	{
+		Velocity.X = 0.0f;
+		Velocity.Y = 0.0f;
+
+		FVector SnappedLocation = StartLocation;
+		SnappedLocation.Z = CurrentFloorZ + FloorCenterOffset;
+		UpdatedPrimitive->SetWorldLocation(SnappedLocation);
+		return;
+	}
+
+	if (FloorDeltaZ < -MaxStepDownHeight)
+	{
+		TargetLocation.Z = StartLocation.Z;
+		UpdatedPrimitive->SetWorldLocation(TargetLocation);
+		SetMovementMode(MOVE_Falling);
+		return;
+	}
+
+	TargetLocation.Z = TargetFloorZ + FloorCenterOffset;
+	UpdatedPrimitive->SetWorldLocation(TargetLocation);
+	Velocity.Z = 0.0f;
+}
+
+void UCharacterMovementComponent::TryLandAfterFalling()
+{
+	if (!UpdatedPrimitive || Velocity.Z > 0.0f)
+	{
+		return;
+	}
+
+	const FVector Location = UpdatedPrimitive->GetWorldLocation();
+	FHitResult FloorHit;
+	if (!FindFloorAtLocation(Location, FloorHit))
+	{
+		return;
+	}
+
+	if (!bHasFloorCenterOffset)
+	{
+		EnsureFloorCenterOffset(FloorHit, Location);
+	}
+
+	if (!bHasFloorCenterOffset)
+	{
+		return;
+	}
+
+	const float LandingZ = FloorHit.WorldHitLocation.Z + FloorCenterOffset;
+	if (Location.Z > LandingZ)
+	{
+		return;
+	}
+
+	FVector SnappedLocation = Location;
+	SnappedLocation.Z = LandingZ;
+	UpdatedPrimitive->SetWorldLocation(SnappedLocation);
+	SetMovementMode(MOVE_Walking);
 }
 
 void UCharacterMovementComponent::LimitVelocity2D(float MaxSpeed)

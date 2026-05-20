@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include "Core/CollisionTypes.h"
 #include "Core/EngineTypes.h"
 #include "MovementComponent.h"
 #include "CharacterMovementComponent.generated.h"
@@ -66,7 +67,10 @@ private:
 	void			UpdateVelocityFalling(float DeltaTime);
 	void			UpdateRotation(float DeltaTime);
 	FVector			GetCurrentMoveDirection() const;
-	bool			ApplyTemporaryFlatGroundConstraint();
+	bool			FindFloorAtLocation(const FVector& CapsuleCenterLocation, FHitResult& OutFloorHit) const;
+	bool			EnsureFloorCenterOffset(const FHitResult& FloorHit, const FVector& CapsuleCenterLocation);
+	void			MoveUpdatedComponentWalking(float DeltaTime);
+	void			TryLandAfterFalling();
 	void			LimitVelocity2D(float MaxSpeed);
 	void			MoveUpdatedComponentKinematic(float DeltaTime);
 
@@ -104,6 +108,25 @@ private:
 	// 지상 감속에 사용할 마찰 계수.
 	UPROPERTY(Edit, Category="Character Movement|Walking", DisplayName="Ground Friction", Min=0.0f, Max=64.0f, Speed=0.1f)
 	float GroundFriction = 8.0f;
+
+	// 한 프레임에 자동으로 올라갈 수 있는 최대 단차 높이.
+	UPROPERTY(Edit, Category="Character Movement|Step", DisplayName="Max Step Height", Min=0.0f, Max=10.0f, Speed=0.01f)
+	float MaxStepHeight = 0.75f;
+
+	// Walking 상태에서 따라 내려갈 수 있는 최대 낮은 단차. 이보다 크면 Falling으로 전환한다.
+	UPROPERTY(Edit, Category="Character Movement|Step", DisplayName="Max Step Down Height", Min=0.0f, Max=20.0f, Speed=0.01f)
+	float MaxStepDownHeight = 1.25f;
+
+	// 바닥 탐지 raycast 시작점을 캡슐 중심보다 위로 올리는 거리.
+	UPROPERTY(Edit, Category="Character Movement|Step", DisplayName="Floor Probe Up", Min=0.0f, Max=10.0f, Speed=0.01f)
+	float FloorProbeUp = 0.25f;
+
+	// 바닥 탐지 raycast 길이 중 아래 방향 거리.
+	UPROPERTY(Edit, Category="Character Movement|Step", DisplayName="Floor Probe Down", Min=0.0f, Max=100.0f, Speed=0.1f)
+	float FloorProbeDown = 8.0f;
+
+	float FloorCenterOffset = 0.0f;
+	bool bHasFloorCenterOffset = false;
 
 	// 낙하 중 Z축에 적용할 중력 가속도. Z-up 기준이므로 기본값은 음수
 	UPROPERTY(Edit, Category="Character Movement|Falling", DisplayName="Gravity Z", Min=-100.0f, Max=0.0f, Speed=0.1f)

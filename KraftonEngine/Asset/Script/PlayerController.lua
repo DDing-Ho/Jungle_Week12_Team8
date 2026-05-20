@@ -11,10 +11,14 @@
 --- 4. Lua에 GetCharacterMovement()를 UFUNCTION(Lua)로 제공한다.
 --- =========================================================================
 
+local FootIK = require("FootIK")
+
 local movement = nil
+local footIK = nil
 
 function BeginPlay()
     movement = obj:GetCharacterMovement()
+    footIK = FootIK.new(obj)
 
     if movement == nil then
         print("[CharacterController] CharacterMovementComponent not found: " .. obj.UUID)
@@ -26,6 +30,11 @@ function BeginPlay()
 end
 
 function EndPlay()
+    if footIK ~= nil then
+        footIK:Disable()
+        footIK = nil
+    end
+
     if movement ~= nil then
         movement:SetMoveInput(0, 0)
         movement:SetLookInput(0, 0)
@@ -56,5 +65,9 @@ function Tick(dt)
 
     if Input.GetKeyDown(Key.Space) then
         movement:Jump()
+    end
+
+    if footIK ~= nil then
+        footIK:Tick(dt)
     end
 end

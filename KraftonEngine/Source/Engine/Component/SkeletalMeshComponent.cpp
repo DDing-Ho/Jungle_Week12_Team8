@@ -18,6 +18,17 @@ void USkeletalMeshComponent::BeginPlay()
 {
 	Super::BeginPlay();
 
+	if (!AnimInstanceAsset.IsNull())
+	{
+		if (AnimInstance)
+		{
+			GUObjectArray.DestroyObject(AnimInstance);
+			AnimInstance = nullptr;
+		}
+		RebuildAnimInstanceFromAsset();
+		return;
+	}
+
 	if (AnimScriptPath.empty())
 		return;
 
@@ -31,11 +42,6 @@ void USkeletalMeshComponent::BeginPlay()
 	UCharacterAnimInstance* Inst = GUObjectArray.CreateObject<UCharacterAnimInstance>();
 	AnimInstance = Inst;
 	Inst->Initialize(this, AnimScriptPath);
-
-	if (!AnimInstanceAsset.IsNull() && !AnimInstance)
-	{
-		RebuildAnimInstanceFromAsset();
-	}
 }
 
 void USkeletalMeshComponent::EndPlay()
@@ -186,7 +192,11 @@ void USkeletalMeshComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
 	if (!AnimInstance)
+	{
+		PreIKBoneWorldLocations.clear();
+		bHasPreIKPoseCache = false;
 		return;
+	}
 
 	AnimInstance->Update(DeltaTime);
 
@@ -196,8 +206,15 @@ void USkeletalMeshComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 
 	if (!Pose.BoneLocalTransforms.empty())
 	{
+		ApplyComponentPoseOverrides(Pose);
+		CachePreIKPoseBoneWorldLocations(Pose);
 		ApplyTwoBoneIKChains(Pose);
 		ApplyPoseToComponent(Pose);
+	}
+	else
+	{
+		PreIKBoneWorldLocations.clear();
+		bHasPreIKPoseCache = false;
 	}
 }
 
@@ -227,6 +244,17 @@ bool USkeletalMeshComponent::SetIKTargetPosition(int32 ChainIndex, const FVector
 	return true;
 }
 
+bool USkeletalMeshComponent::SetIKChainEnabled(int32 ChainIndex, bool bEnabled)
+{
+	if (ChainIndex < 0 || ChainIndex >= static_cast<int32>(TwoBoneIKChains.size()))
+	{
+		return false;
+	}
+
+	TwoBoneIKChains[ChainIndex].bEnabled = bEnabled;
+	return true;
+}
+
 int32 USkeletalMeshComponent::FindBoneIndexByName(const FString& BoneName) const
 {
 	if (!SkeletalMesh || BoneName.empty())
@@ -249,6 +277,26 @@ int32 USkeletalMeshComponent::FindBoneIndexByName(const FString& BoneName) const
 	}
 
 	return -1;
+}
+
+FVector USkeletalMeshComponent::GetPreIKBoneLocationByIndex(int32 BoneIndex) const
+{
+	if (bHasPreIKPoseCache
+		&& BoneIndex >= 0
+		&& BoneIndex < static_cast<int32>(PreIKBoneWorldLocations.size()))
+	{
+		return PreIKBoneWorldLocations[BoneIndex];
+	}
+
+	return GetBoneLocationByIndex(BoneIndex);
+}
+
+void USkeletalMeshComponent::ApplyComponentPoseOverrides(FPoseContext& Pose) const
+{
+	if (bIgnoreRootMotion && TargetRootBoneIndex < static_cast<uint32>(Pose.BoneLocalTransforms.size()))
+	{
+		Pose.BoneLocalTransforms[TargetRootBoneIndex].Location = FVector::ZeroVector;
+	}
 }
 
 void USkeletalMeshComponent::ApplyPoseToComponent(const FPoseContext& Pose)
@@ -278,6 +326,39 @@ void USkeletalMeshComponent::ApplyPoseToComponent(const FPoseContext& Pose)
 	bUseBoneEditPose = true;
 	UpdateSkinMatrices();
 	MarkWorldBoundsDirty();
+}
+
+void USkeletalMeshComponent::CachePreIKPoseBoneWorldLocations(const FPoseContext& Pose)
+{
+	PreIKBoneWorldLocations.clear();
+	bHasPreIKPoseCache = false;
+
+	if (!SkeletalMesh)
+	{
+		return;
+	}
+
+	const FSkeletonAsset* SkeletonAsset = SkeletalMesh->GetSkeletonAsset();
+	if (!SkeletonAsset)
+	{
+		return;
+	}
+
+	TArray<FMatrix> GlobalMatrices;
+	FAnimationRuntime::BuildPoseGlobalMatrices(Pose, SkeletonAsset, GlobalMatrices);
+	if (GlobalMatrices.empty())
+	{
+		return;
+	}
+
+	const FMatrix& ComponentToWorld = GetWorldMatrix();
+	PreIKBoneWorldLocations.resize(GlobalMatrices.size());
+	for (int32 BoneIndex = 0; BoneIndex < static_cast<int32>(GlobalMatrices.size()); ++BoneIndex)
+	{
+		PreIKBoneWorldLocations[BoneIndex] = ComponentToWorld.TransformPositionWithW(GlobalMatrices[BoneIndex].GetLocation());
+	}
+
+	bHasPreIKPoseCache = true;
 }
 
 void USkeletalMeshComponent::ApplyTwoBoneIKChains(FPoseContext& Pose)

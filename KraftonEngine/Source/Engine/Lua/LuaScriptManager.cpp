@@ -12,6 +12,7 @@
 #include "Component/CameraComponent.h"
 #include "Component/PrimitiveComponent.h"
 #include "Component/SceneComponent.h"
+#include "Component/SkeletalMeshComponent.h"
 #include "Component/StaticMeshComponent.h"
 #include "Core/CollisionTypes.h"
 #include "Runtime/Engine.h"
@@ -865,6 +866,32 @@ void FLuaScriptManager::RegisterActorBindings(sol::state& Lua)
 		"MeshPath", sol::property([](UStaticMeshComponent& C) { return C.GetStaticMeshPath(); }),
 		"GetMeshPath", [](UStaticMeshComponent& C) { return C.GetStaticMeshPath(); });
 
+	Lua.new_usertype<USkeletalMeshComponent>("SkeletalMeshComponent",
+		sol::base_classes, sol::bases<UPrimitiveComponent, USceneComponent>(),
+		"SetTwoBoneIKEnabled", &USkeletalMeshComponent::SetTwoBoneIKEnabled,
+		"ClearTwoBoneIKChains", &USkeletalMeshComponent::ClearTwoBoneIKChains,
+		"FindBoneIndexByName", &USkeletalMeshComponent::FindBoneIndexByName,
+		"GetBoneLocationByIndex", &USkeletalMeshComponent::GetBoneLocationByIndex,
+		"GetPreIKBoneLocationByIndex", &USkeletalMeshComponent::GetPreIKBoneLocationByIndex,
+		"SetIKTargetPosition", &USkeletalMeshComponent::SetIKTargetPosition,
+		"SetIKChainEnabled", &USkeletalMeshComponent::SetIKChainEnabled,
+		"AddTwoBoneIKChainByName", [](USkeletalMeshComponent& Mesh, const FString& RootBoneName, const FString& MidBoneName, const FString& EndBoneName, const FVector& PoleWorldPosition) -> int32
+	{
+		FTwoBoneIKChain Chain;
+		Chain.RootBoneIndex = Mesh.FindBoneIndexByName(RootBoneName);
+		Chain.MidBoneIndex = Mesh.FindBoneIndexByName(MidBoneName);
+		Chain.EndBoneIndex = Mesh.FindBoneIndexByName(EndBoneName);
+		if (Chain.RootBoneIndex < 0 || Chain.MidBoneIndex < 0 || Chain.EndBoneIndex < 0)
+		{
+			return -1;
+		}
+
+		Chain.PolePosition = Mesh.GetWorldInverseMatrix().TransformPositionWithW(PoleWorldPosition);
+		const int32 ChainIndex = static_cast<int32>(Mesh.GetTwoBoneIKChains().size());
+		Mesh.AddTwoBoneIKChain(Chain);
+		return ChainIndex;
+	});
+
 	Lua.new_usertype<FHitResult>("HitResult",
 		"HitComponent", &FHitResult::HitComponent,
 		"HitActor", &FHitResult::HitActor,
@@ -962,7 +989,21 @@ void FLuaScriptManager::RegisterActorBindings(sol::state& Lua)
 		"GetCharacterMovement", [](AActor& Actor) -> UCharacterMovementComponent*
 	{
 		ACharacter* Character = Cast<ACharacter>(&Actor);
-		return Character ? Character->GetCharacterMovement() : nullptr;
+		if (Character && Character->GetCharacterMovement())
+		{
+			return Character->GetCharacterMovement();
+		}
+		return Actor.GetComponentByClass<UCharacterMovementComponent>();
+	},
+
+		"GetMesh", [](AActor& Actor) -> USkeletalMeshComponent*
+	{
+		ACharacter* Character = Cast<ACharacter>(&Actor);
+		if (Character && Character->GetMesh())
+		{
+			return Character->GetMesh();
+		}
+		return Actor.GetComponentByClass<USkeletalMeshComponent>();
 	},
 
 		"GetCamera", [](AActor& Actor)
@@ -1081,6 +1122,26 @@ void FLuaScriptManager::RegisterActorBindings(sol::state& Lua)
 			}
 		}
 		return nullptr;
+	});
+	World.set_function("PhysicsRaycast", [](const FVector& Start, const FVector& Dir, float MaxDist, sol::optional<AActor*> IgnoreActor) -> sol::object
+	{
+		sol::state& State = FLuaScriptManager::GetState();
+		if (!GEngine || !GEngine->GetWorld() || MaxDist <= 0.0f || Dir.IsNearlyZero())
+		{
+			return sol::make_object(State, sol::nil);
+		}
+
+		FVector NormalizedDir = Dir;
+		NormalizedDir.Normalize();
+
+		FHitResult Hit;
+		const AActor* Ignored = IgnoreActor.value_or(nullptr);
+		if (!GEngine->GetWorld()->PhysicsRaycast(Start, NormalizedDir, MaxDist, Hit, ECollisionChannel::WorldStatic, Ignored))
+		{
+			return sol::make_object(State, sol::nil);
+		}
+
+		return sol::make_object(State, Hit);
 	});
 	World.set_function("FindFirstActorByClass", [](const FString& ClassName) -> AActor*
 	{

@@ -177,6 +177,7 @@ bool UStaticMeshComponent::LineTraceStaticMeshFast(
 		const FVector LocalHitPoint = LocalOrigin + LocalDirection * OutHitResult.Distance;
 		const FVector WorldHitPoint = WorldMatrix.TransformPositionWithW(LocalHitPoint);
 		OutHitResult.Distance = FVector::Distance(Ray.Origin, WorldHitPoint);
+		OutHitResult.WorldHitLocation = WorldHitPoint;
 		OutHitResult.HitComponent = this;
 		return true;
 	}

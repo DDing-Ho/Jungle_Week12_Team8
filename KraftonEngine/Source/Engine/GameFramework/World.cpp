@@ -224,9 +224,78 @@ bool UWorld::RaycastPrimitives(const FRay& Ray, FHitResult& OutHitResult, AActor
 bool UWorld::PhysicsRaycast(const FVector& Start, const FVector& Dir, float MaxDist, FHitResult& OutHit,
 	ECollisionChannel TraceChannel, const AActor* IgnoreActor) const
 {
+	if (MaxDist <= 0.0f || Dir.IsNearlyZero())
+	{
+		return false;
+	}
+
+	FVector NormalizedDir = Dir;
+	NormalizedDir.Normalize();
+
+	FHitResult BestHit;
+	BestHit.Distance = MaxDist;
+	bool bFound = false;
+
 	if (PhysicsScene)
-		return PhysicsScene->Raycast(Start, Dir, MaxDist, OutHit, TraceChannel, IgnoreActor);
-	return false;
+	{
+		FHitResult PhysicsHit;
+		if (PhysicsScene->Raycast(Start, NormalizedDir, MaxDist, PhysicsHit, TraceChannel, IgnoreActor)
+			&& PhysicsHit.Distance >= 0.0f
+			&& PhysicsHit.Distance <= MaxDist)
+		{
+			BestHit = PhysicsHit;
+			bFound = true;
+		}
+	}
+
+	// PhysX currently registers simple shape components only. StaticMeshComponent floors/stairs
+	// still need query raycasts for gameplay helpers such as foot IK.
+	FRay Ray;
+	Ray.Origin = Start;
+	Ray.Direction = NormalizedDir;
+
+	for (AActor* Actor : GetActors())
+	{
+		if (!Actor || Actor == IgnoreActor)
+		{
+			continue;
+		}
+
+		for (UPrimitiveComponent* Primitive : Actor->GetPrimitiveComponents())
+		{
+			if (!Primitive
+				|| !Primitive->IsQueryCollisionEnabled()
+				|| Primitive->GetCollisionResponseToChannel(TraceChannel) != ECollisionResponse::Block)
+			{
+				continue;
+			}
+
+			FHitResult CandidateHit;
+			if (!Primitive->LineTraceComponent(Ray, CandidateHit) || !CandidateHit.bHit)
+			{
+				continue;
+			}
+
+			if (CandidateHit.Distance < 0.0f || CandidateHit.Distance > BestHit.Distance)
+			{
+				continue;
+			}
+
+			CandidateHit.HitComponent = Primitive;
+			CandidateHit.HitActor = Actor;
+			CandidateHit.WorldHitLocation = Start + NormalizedDir * CandidateHit.Distance;
+			BestHit = CandidateHit;
+			bFound = true;
+		}
+	}
+
+	if (!bFound)
+	{
+		return false;
+	}
+
+	OutHit = BestHit;
+	return true;
 }
 
 
