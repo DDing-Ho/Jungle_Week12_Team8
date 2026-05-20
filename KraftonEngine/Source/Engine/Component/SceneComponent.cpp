@@ -75,12 +75,10 @@ void USceneComponent::PostEditProperty(const char* PropertyName)
 
 void USceneComponent::Serialize(FArchive& Ar)
 {
+	// RelativeTransform.Location/Scale, CachedEditRotator 는 UPROPERTY 로 SerializeBin 이 처리한다.
+	// FQuat Rotation 만 USTRUCT 트리에서 빠져있어 여기서 별도 직렬화.
 	UActorComponent::Serialize(Ar);
-	// ParentComponent / ChildComponents 는 직렬화 제외 — 복제 단계에서 명시적으로 재구성.
-	// FTransform은 trivially copyable이 아닐 수 있으므로 멤버 단위로 직렬화한다.
-	Ar << RelativeTransform.Location;
 	Ar << RelativeTransform.Rotation;
-	Ar << RelativeTransform.Scale;
 
 	if (Ar.IsLoading())
 	{

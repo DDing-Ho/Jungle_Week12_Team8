@@ -36,8 +36,6 @@ public:
 	virtual void CreateRenderState() override { PushToScene(); }
 	virtual void DestroyRenderState() override { DestroyFromScene(); }
 
-	virtual void Serialize(FArchive& Ar) override;
-
 	float GetIntensity() const { return Intensity; }
 	FVector4 GetLightColor() const { return LightColor; }
 	bool IsVisible() const { return bVisible; }

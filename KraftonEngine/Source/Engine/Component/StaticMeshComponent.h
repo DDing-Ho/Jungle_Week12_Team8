@@ -36,8 +36,6 @@ public:
 	void SetMaterial(int32 ElementIndex, UMaterial* InMaterial);
 	UMaterial* GetMaterial(int32 ElementIndex) const;
 	const TArray<UMaterial*>& GetOverrideMaterials() const { return OverrideMaterials; }
-
-	void Serialize(FArchive& Ar) override;
 	void PostDuplicate() override;
 
 	// Property Editor 지원

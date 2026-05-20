@@ -332,12 +332,6 @@ void ULuaScriptComponent::GetEditableProperties(TArray<const FProperty*>& OutPro
 	UActorComponent::GetEditableProperties(OutProps);
 }
 
-void ULuaScriptComponent::Serialize(FArchive& Ar)
-{
-	UActorComponent::Serialize(Ar);
-	Ar << ScriptFile;
-}
-
 void ULuaScriptComponent::EnsureDefaultScriptFile()
 {
 	if (!ScriptFile.empty())

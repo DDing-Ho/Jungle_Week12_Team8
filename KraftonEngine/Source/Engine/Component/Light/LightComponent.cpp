@@ -2,16 +2,6 @@
 #include "Serialization/Archive.h"
 #include "Object/ObjectFactory.h"
 
-void ULightComponent::Serialize(FArchive& Ar)
-{
-	ULightComponentBase::Serialize(Ar);
-	Ar << ShadowResolutionScale;
-	Ar << ShadowBias;
-	Ar << ShadowSlopeBias;
-	Ar << ShadowNormalBias;
-	Ar << ShadowSharpen;
-}
-
 //void ULightComponent::GetEditableProperties(TArray<FProperty>& OutProps)
 //{
 //	ULightComponentBase::GetEditableProperties(OutProps);

@@ -1,4 +1,4 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
+﻿// Copyright Epic Games, Inc. All Rights Reserved.
 #include "CapsuleComponent.h"
 #include "Object/ObjectFactory.h"
 #include "Serialization/Archive.h"
@@ -127,11 +127,4 @@ void UCapsuleComponent::PostEditProperty(const char* PropertyName)
 	{
 		SetCapsuleSize(CapsuleRadius, CapsuleHalfHeight);
 	}
-}
-
-void UCapsuleComponent::Serialize(FArchive& Ar)
-{
-	UShapeComponent::Serialize(Ar);
-	Ar << CapsuleRadius;
-	Ar << CapsuleHalfHeight;
 }

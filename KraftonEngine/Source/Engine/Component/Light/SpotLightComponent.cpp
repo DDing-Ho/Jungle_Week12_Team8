@@ -85,13 +85,6 @@ void USpotLightComponent::DestroyFromScene()
 	World->GetScene().GetEnvironment().RemoveSpotLight(this);
 }
 
-void USpotLightComponent::Serialize(FArchive& Ar)
-{
-	UPointLightComponent::Serialize(Ar);
-	Ar << InnerConeAngle;
-	Ar << OuterConeAngle;
-}
-
 bool USpotLightComponent::GetLightViewProj(FLightViewProjResult& OutResult, const FMinimalViewInfo* /*POV*/, int32 /*FaceIndex*/) const
 {
 	FSpotLightParams Params;

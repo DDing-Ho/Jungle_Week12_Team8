@@ -18,7 +18,6 @@ public:
 	// UpdateWorldAABB는 base UPrimitiveComponent의 회전 반영 버전을 그대로 사용.
 	// (BoxComponent::SetBoxExtent가 LocalExtents = BoxExtent로 동기화)
 	void PostEditProperty(const char* PropertyName) override;
-	void Serialize(FArchive& Ar) override;
 
 protected:
 	UPROPERTY(Edit, Category="Shape", DisplayName="Box Extent")

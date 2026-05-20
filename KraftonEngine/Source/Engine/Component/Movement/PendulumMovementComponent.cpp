@@ -49,15 +49,3 @@ void UPendulumMovementComponent::TickComponent(float DeltaTime, ELevelTick TickT
 
 	Target->SetRelativeRotation(FinalQuat);
 }
-
-void UPendulumMovementComponent::Serialize(FArchive& Ar)
-{
-	UMovementComponent::Serialize(Ar);
-	Ar << Axis.X;
-	Ar << Axis.Y;
-	Ar << Axis.Z;
-	Ar << Amplitude;
-	Ar << Frequency;
-	Ar << Phase;
-	Ar << AngleOffset;
-}

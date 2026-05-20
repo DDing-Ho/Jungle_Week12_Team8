@@ -14,7 +14,6 @@ public:
 	UShapeComponent();
 
 	void PostEditProperty(const char* PropertyName) override;
-	void Serialize(FArchive& Ar) override;
 
 	bool SupportsOutline() const override { return false; }
 	FPrimitiveSceneProxy* CreateSceneProxy() override;

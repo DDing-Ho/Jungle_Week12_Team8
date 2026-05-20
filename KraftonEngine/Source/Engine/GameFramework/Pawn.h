@@ -33,9 +33,8 @@ public:
 	void SetAutoPossessPlayer(bool bIn) { bAutoPossessPlayer = bIn; }
 	bool GetAutoPossessPlayer() const { return bAutoPossessPlayer; }
 
-	void Serialize(FArchive& Ar) override;
-
 protected:
 	APlayerController* Controller = nullptr;  // 직렬화 제외 — 런타임에 PC가 세팅
-	bool bAutoPossessPlayer = true;            // 직렬화 — GameMode가 시작 시 자동 Possess할 후보로 사용
+	UPROPERTY()
+	bool bAutoPossessPlayer = true;            // GameMode가 시작 시 자동 Possess할 후보로 사용
 };

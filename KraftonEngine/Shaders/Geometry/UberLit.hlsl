@@ -64,10 +64,10 @@ float3 ComputeBoneWeightHeatmapBaseColor(float3 N)
 {
     float3 normal = normalize(N);
     float3 lightDir = normalize(float3(-0.35f, 0.70f, -0.45f));
-    float light = 0.76f + 0.24f * saturate(dot(normal, lightDir));
+    float light = 0.92f + 0.08f * saturate(dot(normal, lightDir));
 
-    float3 basePink = float3(1.00f, 0.66f, 0.88f);
-    float3 baseLavender = float3(0.72f, 0.58f, 1.00f);
+    float3 basePink = float3(1.00f, 0.12f, 0.92f);
+    float3 baseLavender = float3(0.92f, 0.10f, 1.00f);
     float tint = 0.5f + 0.5f * saturate(normal.z * 0.5f + 0.5f);
 
     return lerp(baseLavender, basePink, tint) * light;
@@ -75,15 +75,15 @@ float3 ComputeBoneWeightHeatmapBaseColor(float3 N)
 
 float3 ComputeRainbowBoneWeightColor(float weight)
 {
-    float t = saturate(weight);
+    float t = smoothstep(0.0f, 1.0f, saturate(weight));
 
-    float3 c0 = float3(0.50f, 0.16f, 0.95f); // 보라
-    float3 c1 = float3(0.12f, 0.08f, 0.70f); // 남색
-    float3 c2 = float3(0.02f, 0.30f, 1.00f); // 파랑
-    float3 c3 = float3(0.00f, 0.88f, 0.30f); // 초록
-    float3 c4 = float3(1.00f, 0.92f, 0.00f); // 노랑
-    float3 c5 = float3(1.00f, 0.42f, 0.00f); // 주황
-    float3 c6 = float3(1.00f, 0.02f, 0.00f); // 빨강
+    float3 c0 = float3(0.48f, 0.00f, 1.00f); // violet
+    float3 c1 = float3(0.05f, 0.00f, 0.86f); // indigo
+    float3 c2 = float3(0.00f, 0.18f, 1.00f); // blue
+    float3 c3 = float3(0.00f, 0.92f, 0.08f); // green
+    float3 c4 = float3(1.00f, 0.95f, 0.00f); // yellow
+    float3 c5 = float3(1.00f, 0.42f, 0.00f); // orange
+    float3 c6 = float3(1.00f, 0.00f, 0.00f); // red
 
     if (t < (1.0f / 6.0f))
     {
@@ -113,6 +113,20 @@ float3 ComputeRainbowBoneWeightColor(float weight)
 
     float s = smoothstep(5.0f / 6.0f, 1.0f, t);
     return lerp(c5, c6, s);
+}
+
+float3 ApplyBoneWeightHeatmap(float weight, float3 baseColor, float3 N)
+{
+    float w = saturate(weight);
+    float aa = max(fwidth(w), 0.012f);
+    float influence = smoothstep(0.01f - aa, 0.08f + aa, w);
+    float3 heatColor = ComputeRainbowBoneWeightColor(w);
+
+    float3 normal = normalize(N);
+    float3 lightDir = normalize(float3(-0.35f, 0.70f, -0.45f));
+    float light = 0.96f + 0.04f * saturate(dot(normal, lightDir));
+
+    return lerp(baseColor, heatColor * light, influence);
 }
 
 
@@ -243,10 +257,7 @@ UberPS_Output PS(UberVS_Output input)
         if (SelectedBoneIndex >= 0)
         {
             float weight = saturate(input.boneWeightHeat);
-            if (weight > 0.0f)
-            {
-                finalColor = ComputeRainbowBoneWeightColor(weight);
-            }
+            finalColor = ApplyBoneWeightHeatmap(weight, finalColor, N);
         }
 
         output.Color = float4(ApplyWireframe(finalColor), 1.0f);

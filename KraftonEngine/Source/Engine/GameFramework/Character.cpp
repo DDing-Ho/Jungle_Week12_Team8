@@ -64,12 +64,6 @@ void ACharacter::InitDefaultComponents()
 	ConfigureTickOrder();
 }
 
-void ACharacter::Serialize(FArchive& Ar)
-{
-	APawn::Serialize(Ar);
-}
-
-
 void ACharacter::PostDuplicate()
 {
 	CapsuleComponent = Cast<UCapsuleComponent>(GetRootComponent());

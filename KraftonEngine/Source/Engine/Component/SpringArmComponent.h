@@ -29,7 +29,6 @@ public:
 
 	void BeginPlay() override;
 	void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction& ThisTickFunction) override;
-	void Serialize(FArchive& Ar) override;
 	void SetFixedWorldYaw(float YawDegrees);
 	void SetFixedWorldRotation(float PitchDegrees, float YawDegrees);
 
@@ -68,6 +67,7 @@ public:
 	// (본 엔진은 sphere sweep 미지원이라 단일 ray + ProbeSize 안전 거리로 근사한다.)
 	UPROPERTY(Edit, Category="SpringArm", DisplayName="Do Collision Test")
 	bool bDoCollisionTest = false;
+	UPROPERTY(Type=Enum, Enum=StaticEnum_ECollisionChannel())
 	ECollisionChannel ProbeChannel = ECollisionChannel::WorldStatic;
 	UPROPERTY(Edit, Category="SpringArm", DisplayName="Probe Size", Min=0.0, Max=100.0, Speed=0.01)
 	float ProbeSize = 0.12f;               // hit 지점에서 ProbeSize 만큼 안쪽에 정지

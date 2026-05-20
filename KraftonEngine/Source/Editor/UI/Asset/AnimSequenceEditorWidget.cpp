@@ -1090,7 +1090,14 @@ void FAnimSequenceEditorWidget::RenderViewportPanel(float Deltatime)
 			{
 				ViewportClient.SetBoneDebugDrawMode(static_cast<EBoneDebugDrawMode>(BoneDrawMode));
 			}
+			ImGui::Separator();
 
+			bool bHeatmap = ViewportClient.IsBoneWeightHeatmapEnabled();
+
+			if (ImGui::Checkbox("Bone Weight Heatmap", &bHeatmap))
+			{
+				ViewportClient.SetBoneWeightHeatmapEnabled(bHeatmap);
+			}
 		};
 
 		FViewportToolbar::Render(Context);

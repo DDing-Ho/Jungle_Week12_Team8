@@ -22,7 +22,6 @@ public:
 
 	// Render access 섹션: SceneProxy
 	FPrimitiveSceneProxy* CreateSceneProxy() override;
-	void Serialize(FArchive& Ar) override;
 
 	// AnimationInstance 관리
 	void SetAnimInstance(UAnimInstance* InInstance);

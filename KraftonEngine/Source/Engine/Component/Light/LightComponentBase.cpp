@@ -5,15 +5,6 @@
 #include "Component/BillboardComponent.h"
 #include "Materials/MaterialManager.h"
 
-void ULightComponentBase::Serialize(FArchive& Ar)
-{
-	USceneComponent::Serialize(Ar);
-	Ar << Intensity;
-	Ar << LightColor;
-	Ar << bVisible;
-	Ar << bCastShadows;
-}
-
 UBillboardComponent* ULightComponentBase::EnsureEditorBillboard()
 {
 	if (!Owner)

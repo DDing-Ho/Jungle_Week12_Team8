@@ -52,16 +52,6 @@ void UActorComponent::SetActive(bool bNewActive)
 	}
 }
 
-void UActorComponent::Serialize(FArchive& Ar)
-{
-	UObject::Serialize(Ar);
-	Ar << bTickEnable;
-	Ar << bEditorOnly;
-	Ar << bIsActive;
-	Ar << bAutoActivate;
-	Ar << bHiddenInComponentTree;
-}
-
 void UActorComponent::SetEditorOnly(bool bInEditorOnly)
 {
 	if (bEditorOnly == bInEditorOnly) return;

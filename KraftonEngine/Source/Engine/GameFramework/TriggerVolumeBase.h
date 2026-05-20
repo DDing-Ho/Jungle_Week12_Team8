@@ -47,8 +47,6 @@ public:
 	FName GetTriggerTag() const { return TriggerTag; }
 	void SetTriggerTag(const FName& InTag) { TriggerTag = InTag; }
 
-	void Serialize(FArchive& Ar) override;
-
 protected:
 	// 델리게이트 시그니처 — UPrimitiveComponent의 Begin/End Overlap에 매칭.
 	void HandleBeginOverlap(

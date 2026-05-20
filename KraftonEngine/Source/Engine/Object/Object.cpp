@@ -47,7 +47,12 @@ bool UObject::IsA(const UClass* Other) const
 void UObject::Serialize(FArchive& Ar)
 {
 	// UUID/InternalIndex/Outer는 직렬화 금지 (복제 시 새로 발급/Outer는 호출자가 지정).
-	Ar << ObjectName;
+	// ObjectName은 복제 컨텍스트에서도 제외 — Factory가 새 인스턴스에 유니크 이름을 부여하므로
+	// 원본 이름으로 덮어쓰면 UObjectManager 내 충돌이 발생한다.
+	if (!Ar.IsDuplicating())
+	{
+		Ar << ObjectName;
+	}
 
 	if (UClass* Cls = GetClass())
 	{

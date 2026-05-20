@@ -30,7 +30,6 @@ public:
 
 	bool HasActorBegunPlay() const { return bActorHasBegunPlay; }
 
-	void Serialize(FArchive& Ar) override;
 	UObject* Duplicate(UObject* NewOuter = nullptr) const override;
 
 	void GetEditableProperties(TArray<const FProperty*>& OutProps) override;
@@ -110,6 +109,7 @@ public:
 	void SetTags(TArray<FName> InTags) { Tags = std::move(InTags); }
 
 	// Tick 필요 여부 — false면 Tick 호출 자체를 건너뜀 (StaticMesh 등)
+	UPROPERTY()
 	bool bNeedsTick = true;
 	bool bTickInEditor = false;
 
@@ -127,8 +127,10 @@ protected:
 
 	bool PendingActorVisible = true;
 
+	UPROPERTY()
 	bool bVisible = true;
 
+	UPROPERTY()
 	TArray<FName> Tags;
 	FString PendingTagsString;  // 에디터용 — 콤마 구분 직렬화 캐시
 

@@ -278,15 +278,6 @@ FVector AActor::GetActorRight() const
 	return FVector(0, 1, 0);
 }
 
-void AActor::Serialize(FArchive& Ar)
-{
-	UObject::Serialize(Ar);
-	// 소유 포인터(OwnedComponents/RootComponent/Outer)는 직렬화 제외 — 복제 단계에서 재구성.
-	Ar << bVisible;
-	Ar << bNeedsTick;
-	Ar << Tags;
-}
-
 bool AActor::HasTag(const FName& Tag) const
 {
 	for (const FName& T : Tags)

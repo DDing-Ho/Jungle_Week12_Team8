@@ -140,29 +140,4 @@ void USpringArmComponent::SetFixedWorldRotation(float PitchDegrees, float YawDeg
 	bHasFixedWorldRot = true;
 }
 
-void USpringArmComponent::Serialize(FArchive& Ar)
-{
-	USceneComponent::Serialize(Ar);
-
-	// 튜닝 파라미터만 직렬화. LaggedAttachLoc / LaggedAttachRot / bHasPreviousState 는
-	// 매 BeginPlay 시 첫 Tick 에서 부모 World 로 다시 초기화되는 런타임 상태라 제외.
-	Ar << TargetArmLength;
-	Ar << SocketOffset;
-	Ar << TargetOffset;
-	Ar << bInheritParentRotation;
-	Ar << bEnableCameraLag;
-	Ar << bEnableCameraRotationLag;
-	Ar << CameraLagSpeed;
-	Ar << CameraRotationLagSpeed;
-	Ar << CameraLagMaxDistance;
-	Ar << bDoCollisionTest;
-	Ar << ProbeSize;
-	// ProbeChannel 은 enum class — Archive operator 가 enum 도 받지만, 안전하게 underlying 으로 직렬화.
-	uint8 ProbeChannelByte = static_cast<uint8>(ProbeChannel);
-	Ar << ProbeChannelByte;
-	if (Ar.IsLoading())
-	{
-		ProbeChannel = static_cast<ECollisionChannel>(ProbeChannelByte);
-	}
-}
 

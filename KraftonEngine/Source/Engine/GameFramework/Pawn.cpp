@@ -29,8 +29,3 @@ void APawn::UnPossessed()
 	Controller = nullptr;
 }
 
-void APawn::Serialize(FArchive& Ar)
-{
-	Super::Serialize(Ar);
-	Ar << bAutoPossessPlayer;
-}

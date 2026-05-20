@@ -74,14 +74,6 @@ void UProjectileMovementComponent::TickComponent(float DeltaTime, ELevelTick Tic
 	UpdatedSceneComponent->SetWorldLocation(UpdatedSceneComponent->GetWorldLocation() + MoveDelta);
 }
 
-void UProjectileMovementComponent::Serialize(FArchive& Ar)
-{
-	UMovementComponent::Serialize(Ar);
-	Ar << Velocity;
-	Ar << InitialSpeed;
-	Ar << MaxSpeed;
-}
-
 void UProjectileMovementComponent::ContributeSelectedVisuals(FScene& Scene) const
 {
 	const FVector PreviewVelocity = GetPreviewVelocity();

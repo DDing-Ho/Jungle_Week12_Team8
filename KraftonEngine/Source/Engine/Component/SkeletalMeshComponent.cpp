@@ -88,29 +88,6 @@ FPrimitiveSceneProxy* USkeletalMeshComponent::CreateSceneProxy()
 	return new FSkeletalMeshSceneProxy(this);
 }
 
-void USkeletalMeshComponent::Serialize(FArchive& Ar)
-{
-	Super::Serialize(Ar);
-
-	Ar << AnimScriptPath;
-	Ar << bEnableTwoBoneIK;
-
-	uint32 ChainCount = static_cast<uint32>(TwoBoneIKChains.size());
-	Ar << ChainCount;
-
-	if (Ar.IsLoading())
-	{
-		TwoBoneIKChains.resize(ChainCount);
-	}
-
-	for (FTwoBoneIKChain& Chain : TwoBoneIKChains)
-	{
-		Ar << Chain;
-	}
-
-	Ar << AnimInstanceAsset;
-}
-
 void USkeletalMeshComponent::SetAnimInstance(UAnimInstance* InInstance)
 {
 	AnimInstance = InInstance;
