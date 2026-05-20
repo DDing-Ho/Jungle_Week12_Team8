@@ -66,8 +66,6 @@ void ULuaAnimStateMachine::ProcessState(float DeltaSeconds)
 	if (!bScriptLoaded || !LuaOnUpdate.valid())
 		return;
 
-	StateLocalTime += DeltaSeconds;
-
 	sol::protected_function_result Result = LuaOnUpdate(DeltaSeconds);
 	if (!Result.valid())
 	{

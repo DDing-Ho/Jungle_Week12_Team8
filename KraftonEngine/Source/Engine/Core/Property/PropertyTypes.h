@@ -70,6 +70,7 @@ struct FMaterialSlot
 
 class FProperty;
 
+// Should inherit from FField when ready
 class FProperty
 {
 public:

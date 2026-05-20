@@ -3,6 +3,8 @@
 #include "Object/ObjectFactory.h"
 #include "Component/SkeletalMeshComponent.h"
 
+#include "Core/Log.h"
+
 IMPLEMENT_CLASS(UAnimInstance, UObject)
 
 void UAnimInstance::Initialize(USkeletalMeshComponent* InOwner, const FString& InScriptPath)
@@ -17,6 +19,7 @@ void UAnimInstance::Update(float DeltaTime)
 	if (StateMachine)
 	{
 		StateMachine->UpdateAnimationState(DeltaTime);
+		LastEvaluatedTime = StateMachine->GetCurrentStateTime();
 	}
 }
 
@@ -27,8 +30,6 @@ void UAnimInstance::GetCurrentPose(FPoseContext& OutPose)
 
 	TArray<FAnimNotifyEvent> CollectedNotifies;
 	StateMachine->GenerateFinalPose(OutPose, CollectedNotifies);
-
-	LastEvaluatedTime = StateMachine->GetCurrentStateTime();
 
 	for (const FAnimNotifyEvent& Notify : CollectedNotifies)
 		RouteNotify(Notify);
@@ -46,6 +47,7 @@ void UAnimInstance::TriggerAnimNotifies()
 	for (auto it = ActiveStateNotifies.begin(); it != ActiveStateNotifies.end(); )
 	{
 		float EndTime = it->Notify.TriggerTime + it->Notify.Duration;
+
 		if (LastEvaluatedTime >= it->Notify.TriggerTime && LastEvaluatedTime <= EndTime)
 		{
 			OwnerComponent->HandleAnimNotify(it->Notify);

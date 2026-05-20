@@ -8,6 +8,7 @@
 void UAnimationStateMachine::UpdateAnimationState(float DeltaTime)
 {
 	PrevStateLocalTime = StateLocalTime;
+	StateLocalTime += DeltaTime;
 
 	if (BlendAlpha < 1.0f)
 	{

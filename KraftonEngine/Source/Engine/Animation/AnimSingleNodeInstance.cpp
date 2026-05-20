@@ -65,6 +65,8 @@ void UAnimSingleNodeInstance::NativeUpdateAnimation(float DeltaSeconds)
 		CurrentTime = 0.0f;
 		bPlaying = false;
 	}
+
+	LastEvaluatedTime = CurrentTime;
 }
 
 void UAnimSingleNodeInstance::SetCurrentTime(float InTime)
@@ -81,8 +83,9 @@ void UAnimSingleNodeInstance::GetCurrentPose(FPoseContext& OutPose)
 	if (!Sequence->EvaluatePose(CurrentTime, OutPose))
 		return;
 
-	Sequence->CollectNotifies(PrevTime, CurrentTime, bLooping, PlayRate < 0.0f, NotifyQueue);
+	TArray<FAnimNotifyEvent> Notifies;
+	Sequence->CollectNotifies(PrevTime, CurrentTime, bLooping, PlayRate < 0.0f, Notifies);
 
-	for (const FAnimNotifyEvent& Notify : NotifyQueue)
+	for (const FAnimNotifyEvent& Notify : Notifies)
 		RouteNotify(Notify);
 }

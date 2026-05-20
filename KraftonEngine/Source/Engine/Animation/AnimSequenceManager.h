@@ -18,6 +18,7 @@ public:
 	UAnimSequence* Load(const FString& Path);
 	UAnimSequence* Find(const FString& Path) const;
 	void RegisterAnimSequence(const FString& Path, UAnimSequence* AnimSequence);
+	bool Save(UAnimSequence* AnimSequence);
 	bool IsAnimSequencePackage(const FString& Path) const;
 
 private:

@@ -72,4 +72,15 @@ private:
 	float JumpKeyHoldTime = 0.0f;
 
 	void SyncSpringArmRotationMode();
+
+	// 시연용 state를 위한 변수들
+	// 착지 상태 관련
+	float LandingTimer = 0.0f;
+	float LandingDuration = 0.02f; // 애니메이션 길이에 맞게 조정
+
+	bool bWasFallingLastFrame = false;
+
+	// JumpState
+	// 0: Ground, 1: Rise, 2: Fall, 3: Land
+	float GetJumpState() const;
 };

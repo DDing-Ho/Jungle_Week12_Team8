@@ -3,8 +3,10 @@
 #include "ShaderInclude.h"
 #include "Profiling/MemoryStats.h"
 #include "Materials/Material.h"
+#include "Render/Types/MaterialTextureSlot.h"
 #include "Core/Log.h"
 #include "Core/Notification.h"
+#include <algorithm>
 #include <iostream>
 #pragma comment(lib, "dxguid.lib")
 #pragma comment(lib, "d3dcompiler.lib")
@@ -62,6 +64,7 @@ FShader::FShader(FShader&& Other) noexcept
 	, CachedVertexShaderSize(Other.CachedVertexShaderSize)
 	, CachedPixelShaderSize(Other.CachedPixelShaderSize)
 	, ShaderParameterLayout(std::move(Other.ShaderParameterLayout))
+	, TextureBindings(std::move(Other.TextureBindings))
 {
 	Other.VertexShader = nullptr;
 	Other.PixelShader = nullptr;
@@ -81,6 +84,7 @@ FShader& FShader::operator=(FShader&& Other) noexcept
 		CachedVertexShaderSize = Other.CachedVertexShaderSize;
 		CachedPixelShaderSize = Other.CachedPixelShaderSize;
 		ShaderParameterLayout = std::move(Other.ShaderParameterLayout);
+		TextureBindings = std::move(Other.TextureBindings);
 		Other.VertexShader = nullptr;
 		Other.PixelShader = nullptr;
 		Other.InputLayout = nullptr;
@@ -181,6 +185,8 @@ void FShader::Create(ID3D11Device* InDevice, const wchar_t* InFilePath, const ch
 
 	ExtractCBufferInfo(vertexShaderCSO, ShaderParameterLayout);
 	ExtractCBufferInfo(pixelShaderCSO, ShaderParameterLayout);
+	ExtractTextureBindings(vertexShaderCSO);
+	ExtractTextureBindings(pixelShaderCSO);
 
 	vertexShaderCSO->Release();
 	pixelShaderCSO->Release();
@@ -188,6 +194,8 @@ void FShader::Create(ID3D11Device* InDevice, const wchar_t* InFilePath, const ch
 
 void FShader::Release()
 {
+	TextureBindings.clear();
+
 	if (InputLayout)
 	{
 		InputLayout->Release();
@@ -310,6 +318,67 @@ void FShader::CreateInputLayoutFromReflection(ID3D11Device* InDevice, ID3DBlob* 
 	{
 		std::cerr << "Failed to create Input Layout from reflection (HRESULT: " << hr << ")" << std::endl;
 	}
+
+	Reflector->Release();
+}
+
+void FShader::ExtractTextureBindings(ID3DBlob* ShaderBlob)
+{
+	ID3D11ShaderReflection* Reflector = nullptr;
+	D3DReflect(ShaderBlob->GetBufferPointer(), ShaderBlob->GetBufferSize(),
+		IID_ID3D11ShaderReflection, (void**)&Reflector);
+	if (!Reflector)
+	{
+		return;
+	}
+
+	D3D11_SHADER_DESC ShaderDesc;
+	Reflector->GetDesc(&ShaderDesc);
+
+	for (UINT i = 0; i < ShaderDesc.BoundResources; ++i)
+	{
+		D3D11_SHADER_INPUT_BIND_DESC BindDesc;
+		if (FAILED(Reflector->GetResourceBindingDesc(i, &BindDesc)))
+		{
+			continue;
+		}
+
+		if (BindDesc.Type != D3D_SIT_TEXTURE)
+		{
+			continue;
+		}
+
+		if (BindDesc.BindPoint >= static_cast<UINT>(EMaterialTextureSlot::Max))
+		{
+			continue;
+		}
+
+		const FString BindingName = BindDesc.Name;
+		bool bAlreadyAdded = false;
+		for (const FMaterialTextureBindingInfo& Existing : TextureBindings)
+		{
+			if (Existing.Name == BindingName)
+			{
+				bAlreadyAdded = true;
+				break;
+			}
+		}
+		if (bAlreadyAdded)
+		{
+			continue;
+		}
+
+		FMaterialTextureBindingInfo Info;
+		Info.Name = BindingName;
+		Info.SlotIndex = BindDesc.BindPoint;
+		TextureBindings.push_back(Info);
+	}
+
+	std::sort(TextureBindings.begin(), TextureBindings.end(),
+		[](const FMaterialTextureBindingInfo& A, const FMaterialTextureBindingInfo& B)
+		{
+			return A.SlotIndex < B.SlotIndex;
+		});
 
 	Reflector->Release();
 }

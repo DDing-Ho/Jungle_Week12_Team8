@@ -12,6 +12,7 @@
   "RenderPass" : "Opaque",
   "ShaderPath" : "Shaders/Geometry/UberLit.hlsl",
   "Textures" : {
-    "NormalTexture" : "C:/Program Files/Epic Games/temp/render/ttt/M_tex/Baked/T_Manny_02_BN.TGA"
+    "DiffuseTexture" : "Asset/Mesh/Manny/Textures/Manny/T_Manny_02_D.PNG",
+    "NormalTexture" : "Asset/Mesh/Manny/Textures/Manny/T_Manny_02_BN.PNG"
   }
 }

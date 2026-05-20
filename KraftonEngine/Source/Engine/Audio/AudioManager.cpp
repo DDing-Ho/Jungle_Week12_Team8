@@ -101,12 +101,21 @@ void FAudioManager::PlayAudio(const FString& Key, float Volume)
 		return;
 	}
 
+	// 같은 키가 이미 재생 중이면 스킵 (효과음 중복 방지)
+	if (ActiveChannels.contains(Key))
+	{
+		bool isPlaying = false;
+		ActiveChannels[Key]->isPlaying(&isPlaying);
+		if (isPlaying) return; // 또는 쿨타임 로직
+	}
+
 	FMOD::Channel* Channel = nullptr;
 	System->playSound(Audios[Key], nullptr, false, &Channel);
 
 	if (Channel)
 	{
 		Channel->setVolume(Volume);
+		ActiveChannels[Key] = Channel;
 	}
 }
 
@@ -251,4 +260,5 @@ void FAudioManager::LoadDefaultAudios()
 	LoadAudio("MeteorBoom", "meteor_boom.mp3");
 	LoadAudio("MeteorFall", "meteor_fall.mp3");
 	LoadAudio("Whoosh", "whoosh.mp3");
+	LoadAudio("Walk", "walk.mp3");
 }

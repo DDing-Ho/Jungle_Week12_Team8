@@ -1121,13 +1121,13 @@ void FLuaScriptManager::RegisterActorBindings(sol::state& Lua)
 
 void FLuaScriptManager::RegisterAnimBindings(sol::state& Lua)
 {
-	Lua.new_usertype<UAnimInstance>("AnimInstance",
-		"GetFloat", &UAnimInstance::GetFloat,
-		"GetBool",  &UAnimInstance::GetBool,
-		"GetInt",   &UAnimInstance::GetInt,
-		"SetFloat", &UAnimInstance::SetFloat,
-		"SetBool",  &UAnimInstance::SetBool,
-		"SetInt",   &UAnimInstance::SetInt);
+	//Lua.new_usertype<UAnimInstance>("AnimInstance",
+	//	"GetFloat", &UAnimInstance::GetFloat,
+	//	"GetBool",  &UAnimInstance::GetBool,
+	//	"GetInt",   &UAnimInstance::GetInt,
+	//	"SetFloat", &UAnimInstance::SetFloat,
+	//	"SetBool",  &UAnimInstance::SetBool,
+	//	"SetInt",   &UAnimInstance::SetInt);
 
 	Lua.new_usertype<ULuaAnimStateMachine>("AnimStateMachine",
 		"transitionTo",    &ULuaAnimStateMachine::TransitionTo,

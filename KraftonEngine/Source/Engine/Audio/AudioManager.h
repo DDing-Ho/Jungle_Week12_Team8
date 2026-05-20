@@ -40,4 +40,5 @@ private:
 
 	TMap<FString, FMOD::Sound*> Audios;
 	TMap<FString, FMOD::Channel*> LoopChannels;
+	TMap<FString, FMOD::Channel*> ActiveChannels;
 };

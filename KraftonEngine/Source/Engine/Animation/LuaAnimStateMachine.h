@@ -14,6 +14,12 @@ public:
 	// Lua 스크립트 파일을 로드하고 onInit() 호출
 	void LoadScript(const FString& ScriptPath);
 
+	template<typename T>
+	void BindProperty(const std::string& Name, T* Ptr)
+	{
+		ScriptEnv[Name] = [Ptr]() -> T { return *Ptr; };
+	}
+
 	// 매 프레임 호출 — Lua의 onUpdate(dt) 로 위임
 	void ProcessState(float DeltaSeconds) override;
 

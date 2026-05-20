@@ -15,6 +15,7 @@
 #include "CameraShake/CameraShakeManager.h"
 #include "Platform/Paths.h"
 #include "Serialization/SceneSaveManager.h"
+#include "Materials/MaterialManager.h"
 #include "Mesh/StaticMesh.h"
 #include "Mesh/SkeletalMesh.h"
 #include "Mesh/MeshManager.h"
@@ -564,12 +565,18 @@ void AnimInstanceElement::OnDoubleLeftClicked(ContentBrowserContext& Context)
 	}
 }
 
-void MaterialElement::OnLeftClicked(ContentBrowserContext& Context)
+void MaterialElement::OnDoubleLeftClicked(ContentBrowserContext& Context)
 {
-	MaterialInspector = { ContentItem.Path };
-}
+	if (!Context.EditorEngine)
+	{
+		ShellExecuteW(nullptr, L"open", ContentItem.Path.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
+		return;
+	}
 
-void MaterialElement::RenderDetail()
-{
-	MaterialInspector.Render();
+	const FString MaterialPath = FPaths::MakeProjectRelative(
+		FPaths::ToUtf8(ContentItem.Path.generic_wstring()));
+	if (UMaterial* Material = FMaterialManager::Get().GetOrCreateMaterial(MaterialPath))
+	{
+		Context.EditorEngine->OpenAssetEditorForObject(Material);
+	}
 }
