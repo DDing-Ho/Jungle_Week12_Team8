@@ -1,6 +1,13 @@
 ﻿#pragma once
 #include "Object/FName.h"
 
+/*=============================================================================================================================
+FFieldClass is the lightweight, non-UObject equivalent of UClass. It describes what a property is.
+
+Purpose: It stores the static metadata for a specific field type.
+Contents: It contains the Bitmask ID (used for the O(1) type checking), the type name (e.g., "FloatProperty"), and class flags.
+/*=============================================================================================================================*/
+
 class FField;
 class FFieldVariant;
 
