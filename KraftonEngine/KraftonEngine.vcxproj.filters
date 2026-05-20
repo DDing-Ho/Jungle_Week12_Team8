@@ -494,6 +494,9 @@
     <ClCompile Include="Source\Editor\Subsystem\AssetFactory.cpp">
       <Filter>Source\Editor\Subsystem</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Editor\Subsystem\EditorAnimationAssetLibrary.cpp">
+      <Filter>Source\Editor\Subsystem</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Editor\Subsystem\OverlayStatSystem.cpp">
       <Filter>Source\Editor\Subsystem</Filter>
     </ClCompile>
@@ -551,6 +554,9 @@
     <ClCompile Include="Source\Editor\UI\NotificationToast.cpp">
       <Filter>Source\Editor\UI</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Editor\UI\Asset\AnimInstanceEditorWidget.cpp">
+      <Filter>Source\Editor\UI\Asset</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Editor\UI\Asset\AnimSequenceEditorWidget.cpp">
       <Filter>Source\Editor\UI\Asset</Filter>
     </ClCompile>
@@ -605,7 +611,16 @@
     <ClCompile Include="Source\Engine\Animation\AnimDataModel.cpp">
       <Filter>Source\Engine\Animation</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Animation\AnimGraphInstance.cpp">
+      <Filter>Source\Engine\Animation</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\Animation\AnimInstance.cpp">
+      <Filter>Source\Engine\Animation</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Animation\AnimInstanceAsset.cpp">
+      <Filter>Source\Engine\Animation</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Animation\AnimInstanceAssetManager.cpp">
       <Filter>Source\Engine\Animation</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Animation\AnimSequence.cpp">
@@ -1328,6 +1343,9 @@
     <ClInclude Include="Source\Editor\Subsystem\AssetFactory.h">
       <Filter>Source\Editor\Subsystem</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Editor\Subsystem\EditorAnimationAssetLibrary.h">
+      <Filter>Source\Editor\Subsystem</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Editor\Subsystem\OverlayStatSystem.h">
       <Filter>Source\Editor\Subsystem</Filter>
     </ClInclude>
@@ -1384,6 +1402,9 @@
     </ClInclude>
     <ClInclude Include="Source\Editor\UI\NotificationToast.h">
       <Filter>Source\Editor\UI</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\UI\Asset\AnimInstanceEditorWidget.h">
+      <Filter>Source\Editor\UI\Asset</Filter>
     </ClInclude>
     <ClInclude Include="Source\Editor\UI\Asset\AnimSequenceEditorWidget.h">
       <Filter>Source\Editor\UI\Asset</Filter>
@@ -1454,7 +1475,16 @@
     <ClInclude Include="Source\Engine\Animation\AnimDataModel.h">
       <Filter>Source\Engine\Animation</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Animation\AnimGraphInstance.h">
+      <Filter>Source\Engine\Animation</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Engine\Animation\AnimInstance.h">
+      <Filter>Source\Engine\Animation</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Animation\AnimInstanceAsset.h">
+      <Filter>Source\Engine\Animation</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Animation\AnimInstanceAssetManager.h">
       <Filter>Source\Engine\Animation</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Animation\AnimSequence.h">

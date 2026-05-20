@@ -123,6 +123,7 @@ protected:
 class AnimSequenceElement final : public ContentBrowserElement
 {
 public:
+	virtual const char* GetDragItemType() override { return "AnimSequenceContentItem"; }
 	void OnDoubleLeftClicked(ContentBrowserContext& Context) override;
 	void RenderContextMenu(ContentBrowserContext& Context) override;
 	void RenderDetail() override;
@@ -130,6 +131,16 @@ public:
 protected:
 	const char* GetTypeLabel() const override { return "Anim Sequence"; }
 	uint32 GetAccentColor() const override { return IM_COL32(235, 180, 80, 255); }
+};
+
+class AnimInstanceElement final : public ContentBrowserElement
+{
+public:
+	void OnDoubleLeftClicked(ContentBrowserContext& Context) override;
+
+protected:
+	const char* GetTypeLabel() const override { return "Anim Instance"; }
+	uint32 GetAccentColor() const override { return IM_COL32(120, 210, 180, 255); }
 };
 
 class PNGElement final : public ContentBrowserElement

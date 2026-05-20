@@ -1,5 +1,7 @@
 ﻿#include "ContentBrowser.h"
 
+#include "Animation/AnimInstanceAsset.h"
+#include "Animation/AnimInstanceAssetManager.h"
 #include "Animation/AnimSequenceManager.h"
 #include "Asset/AssetPackage.h"
 #include "CameraShake/CameraShakeAsset.h"
@@ -353,6 +355,16 @@ void FEditorContentBrowserWidget::RefreshContent()
 						Element = std::make_shared<ContentBrowserElement>();
 					}
 					break;
+				case EAssetPackageType::AnimInstance:
+					if (FAnimInstanceAssetManager::Get().IsAnimInstanceAssetPackage(PackagePath))
+					{
+						Element = std::make_shared<AnimInstanceElement>();
+					}
+					else
+					{
+						Element = std::make_shared<ContentBrowserElement>();
+					}
+					break;
 				case EAssetPackageType::FloatCurve:
 					Element = std::make_shared<FloatCurveElement>();
 					break;
@@ -493,6 +505,21 @@ void FEditorContentBrowserWidget::DrawContents()
 						if (UCameraShakeAsset* ShakeAsset = FCameraShakeManager::Get().Load(CreatedPath))
 						{
 							BrowserContext.EditorEngine->OpenAssetEditorForObject(ShakeAsset);
+						}
+					}
+				}
+			}
+			if (ImGui::MenuItem("Anim Instance"))
+			{
+				FString CreatedPath;
+				if (FAssetFactory::CreateAnimInstanceAsset(FPaths::ToUtf8(BrowserContext.CurrentPath), "NewAnimInstance", CreatedPath))
+				{
+					Refresh();
+					if (BrowserContext.EditorEngine)
+					{
+						if (UAnimInstanceAsset* AnimInstanceAsset = FAnimInstanceAssetManager::Get().Load(CreatedPath))
+						{
+							BrowserContext.EditorEngine->OpenAssetEditorForObject(AnimInstanceAsset);
 						}
 					}
 				}

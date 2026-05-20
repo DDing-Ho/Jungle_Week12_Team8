@@ -11,7 +11,7 @@ void UAnimationStateMachine::UpdateAnimationState(float DeltaTime)
 
 	if (BlendAlpha < 1.0f)
 	{
-		BeldingPrevStateTime += (DeltaTime * PlayRate);
+		BlendingPrevStateTime += (DeltaTime * PlayRate);
 		BlendAlpha = (BlendDuration > 0.0f)
 			? std::min(BlendAlpha + DeltaTime / BlendDuration, 1.0f)
 			: 1.0f;
@@ -36,7 +36,7 @@ void UAnimationStateMachine::GenerateFinalPose(FPoseContext& OutPose, TArray<FAn
 	else
 	{
 		FPoseContext PrevPose;
-		if (!PrevSequence->EvaluatePose(BeldingPrevStateTime, PrevPose) 
+		if (!PrevSequence->EvaluatePose(BlendingPrevStateTime, PrevPose) 
 			|| PrevPose.BoneLocalTransforms.size() != CurrentPose.BoneLocalTransforms.size())
 		{
 			OutPose = CurrentPose;
