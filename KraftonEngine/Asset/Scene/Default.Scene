@@ -14,7 +14,7 @@
           "Cast Shadow" : true,
           "Cast Shadow as Two-Sided" : false,
           "Center of Mass" : [0.000000, 0.000000, 0.000000],
-          "Collision Enabled" : 0,
+          "Collision Enabled" : 1,
           "Generate Overlap Events" : false,
           "Is Visible" : true,
           "Mass (Kg)" : 1.000000,
@@ -23,7 +23,7 @@
             }],
           "Object Type" : 0,
           "RelativeTransform" : {
-            "Location" : [0.000000, 0.000000, 0.000000],
+            "Location" : [0.000000, 0.000000, 0.042190],
             "Scale" : [50.000000, 50.000000, 1.000000]
           },
           "Response Container" : {
@@ -99,60 +99,6 @@
           "Shadow Sharpen" : 0.670000,
           "Shadow Slope Bias" : 0.000100,
           "Visible" : true,
-          "bEditorOnly" : false,
-          "bTickEnable" : true
-        }
-      }
-    }, {
-      "ClassName" : "AStaticMeshActor",
-      "Name" : "AStaticMeshActor_6",
-      "NonSceneComponents" : [{
-          "ClassName" : "UInterpToMovementComponent",
-          "Properties" : {
-            "Auto Activate" : true,
-            "Auto Register Updated" : true,
-            "Control Points" : [[0.000000, 0.000000, 0.000000], [0.400000, 0.800000, 0.400000], [-0.900000, 0.700000, 0.500000]],
-            "Interp Duration" : 5.000000,
-            "Interpolation Behaviour" : 3,
-            "Orient to Target Direction" : true,
-            "Updated Component" : "",
-            "bEditorOnly" : false,
-            "bTickEnable" : true
-          }
-        }],
-      "Properties" : {
-
-      },
-      "RootComponent" : {
-        "Children" : [],
-        "ClassName" : "UStaticMeshComponent",
-        "Properties" : {
-          "Auto Activate" : true,
-          "Cast Shadow" : true,
-          "Cast Shadow as Two-Sided" : false,
-          "Center of Mass" : [0.000000, 0.000000, 0.000000],
-          "Collision Enabled" : 0,
-          "Generate Overlap Events" : false,
-          "Is Visible" : true,
-          "Mass (Kg)" : 1.000000,
-          "Materials" : [{
-              "Path" : "Asset/Mesh/BasicShape/Cube_BasicShapeMaterial.mat"
-            }],
-          "Object Type" : 0,
-          "RelativeTransform" : {
-            "Location" : [-4.494799, 4.786318, 4.007234],
-            "Scale" : [1.000000, 1.000000, 1.000000]
-          },
-          "Response Container" : {
-            "Pawn" : 2,
-            "Projectile" : 2,
-            "Trigger" : 2,
-            "WorldDynamic" : 2,
-            "WorldStatic" : 2
-          },
-          "Rotation" : [12.015320, -30.556564, 13.652405],
-          "Simulate Physics" : false,
-          "Static Mesh" : "Asset/Mesh/BasicShape/Cube_StaticMesh.uasset",
           "bEditorOnly" : false,
           "bTickEnable" : true
         }
@@ -286,60 +232,6 @@
         }
       }
     }, {
-      "ClassName" : "AStaticMeshActor",
-      "Name" : "AStaticMeshActor_9",
-      "NonSceneComponents" : [{
-          "ClassName" : "UInterpToMovementComponent",
-          "Properties" : {
-            "Auto Activate" : true,
-            "Auto Register Updated" : true,
-            "Control Points" : [[0.000000, 0.000000, 0.000000], [-18.600000, 1.400000, 0.000000], [12.200000, 2.000000, 4.000000], [3.000000, 0.000000, 0.000000]],
-            "Interp Duration" : 5.000000,
-            "Interpolation Behaviour" : 3,
-            "Orient to Target Direction" : true,
-            "Updated Component" : "",
-            "bEditorOnly" : false,
-            "bTickEnable" : true
-          }
-        }],
-      "Properties" : {
-
-      },
-      "RootComponent" : {
-        "Children" : [],
-        "ClassName" : "UStaticMeshComponent",
-        "Properties" : {
-          "Auto Activate" : true,
-          "Cast Shadow" : true,
-          "Cast Shadow as Two-Sided" : false,
-          "Center of Mass" : [0.000000, 0.000000, 0.000000],
-          "Collision Enabled" : 0,
-          "Generate Overlap Events" : false,
-          "Is Visible" : true,
-          "Mass (Kg)" : 1.000000,
-          "Materials" : [{
-              "Path" : "Asset/Mesh/BasicShape/Sphere_BasicShapeMaterial.mat"
-            }],
-          "Object Type" : 0,
-          "RelativeTransform" : {
-            "Location" : [5.400000, -5.400000, 2.000000],
-            "Scale" : [1.000000, 1.000000, 1.000000]
-          },
-          "Response Container" : {
-            "Pawn" : 2,
-            "Projectile" : 2,
-            "Trigger" : 2,
-            "WorldDynamic" : 2,
-            "WorldStatic" : 2
-          },
-          "Rotation" : [0.000000, 0.000000, 0.000000],
-          "Simulate Physics" : false,
-          "Static Mesh" : "Asset/Mesh/BasicShape/Sphere_StaticMesh.uasset",
-          "bEditorOnly" : false,
-          "bTickEnable" : true
-        }
-      }
-    }, {
       "ClassName" : "ASpotLightActor",
       "Name" : "ASpotLightActor_0",
       "NonSceneComponents" : [],
@@ -402,53 +294,6 @@
           "Shadow Sharpen" : 0.670000,
           "Shadow Slope Bias" : 0.000100,
           "Visible" : true,
-          "bEditorOnly" : false,
-          "bTickEnable" : true
-        }
-      }
-    }, {
-      "ClassName" : "ASkeletalMeshActor",
-      "Name" : "ASkeletalMeshActor_0",
-      "NonSceneComponents" : [],
-      "Properties" : {
-
-      },
-      "RootComponent" : {
-        "Children" : [],
-        "ClassName" : "USkeletalMeshComponent",
-        "Properties" : {
-          "Auto Activate" : true,
-          "Cast Shadow" : true,
-          "Cast Shadow as Two-Sided" : false,
-          "Center of Mass" : [0.000000, 0.000000, 0.000000],
-          "Collision Enabled" : 0,
-          "Enable Two Bone IK" : true,
-          "Generate Overlap Events" : false,
-          "Is Visible" : true,
-          "Mass (Kg)" : 1.000000,
-          "Materials" : [{
-              "Path" : "Asset/Mesh/hirasawa-yui/yui_KON001_Hirasawa_Yui.003.mat"
-            }, {
-              "Path" : "Asset/Mesh/hirasawa-yui/yui_KON001_Hirasawa_Yui_eye.003.mat"
-            }, {
-              "Path" : "Asset/Mesh/hirasawa-yui/yui_KON001_Hirasawa_Yui_face.003.mat"
-            }],
-          "Object Type" : 0,
-          "RelativeTransform" : {
-            "Location" : [10.935703, -4.940681, 0.900000],
-            "Scale" : [3.000000, 3.000000, 3.000000]
-          },
-          "Response Container" : {
-            "Pawn" : 2,
-            "Projectile" : 2,
-            "Trigger" : 2,
-            "WorldDynamic" : 2,
-            "WorldStatic" : 2
-          },
-          "Rotation" : [0.000000, -24.313141, 0.000000],
-          "Simulate Physics" : false,
-          "Skeletal Mesh" : "Asset/Mesh/hirasawa-yui/yui_SkeletalMesh.uasset",
-          "Two Bone IK Chains" : [],
           "bEditorOnly" : false,
           "bTickEnable" : true
         }
@@ -644,186 +489,6 @@
         }
       }
     }, {
-      "ClassName" : "AStaticMeshActor",
-      "Name" : "AStaticMeshActor_8",
-      "NonSceneComponents" : [],
-      "Properties" : {
-
-      },
-      "RootComponent" : {
-        "Children" : [],
-        "ClassName" : "UStaticMeshComponent",
-        "Properties" : {
-          "Auto Activate" : true,
-          "Cast Shadow" : true,
-          "Cast Shadow as Two-Sided" : false,
-          "Center of Mass" : [0.000000, 0.000000, 0.000000],
-          "Collision Enabled" : 0,
-          "Generate Overlap Events" : false,
-          "Is Visible" : true,
-          "Mass (Kg)" : 1.000000,
-          "Materials" : [{
-              "Path" : "Asset/Mesh/BasicShape/Cube_BasicShapeMaterial.mat"
-            }],
-          "Object Type" : 0,
-          "RelativeTransform" : {
-            "Location" : [6.252362, 3.627299, 6.970701],
-            "Scale" : [1.000000, 1.000000, 1.000000]
-          },
-          "Response Container" : {
-            "Pawn" : 2,
-            "Projectile" : 2,
-            "Trigger" : 2,
-            "WorldDynamic" : 2,
-            "WorldStatic" : 2
-          },
-          "Rotation" : [-8.286392, 0.132538, -31.072220],
-          "Simulate Physics" : false,
-          "Static Mesh" : "Asset/Mesh/BasicShape/Cube_StaticMesh.uasset",
-          "bEditorOnly" : false,
-          "bTickEnable" : true
-        }
-      }
-    }, {
-      "ClassName" : "ASkeletalMeshActor",
-      "Name" : "ASkeletalMeshActor_2",
-      "NonSceneComponents" : [],
-      "Properties" : {
-
-      },
-      "RootComponent" : {
-        "Children" : [],
-        "ClassName" : "USkeletalMeshComponent",
-        "Properties" : {
-          "Auto Activate" : true,
-          "Cast Shadow" : true,
-          "Cast Shadow as Two-Sided" : false,
-          "Center of Mass" : [0.000000, 0.000000, 0.000000],
-          "Collision Enabled" : 0,
-          "Enable Two Bone IK" : true,
-          "Generate Overlap Events" : false,
-          "Is Visible" : true,
-          "Mass (Kg)" : 1.000000,
-          "Materials" : [{
-              "Path" : "Asset/Mesh/Samba Dancing/Samba Dancing (10)_acc.002.mat"
-            }, {
-              "Path" : "Asset/Mesh/Samba Dancing/Samba Dancing (10)_cloth.002.mat"
-            }, {
-              "Path" : "Asset/Mesh/Samba Dancing/Samba Dancing (10)_b0.002.mat"
-            }, {
-              "Path" : "Asset/Mesh/Samba Dancing/Samba Dancing (10)_m.002.mat"
-            }, {
-              "Path" : "Asset/Mesh/Samba Dancing/Samba Dancing (10)_e.002.mat"
-            }],
-          "Object Type" : 0,
-          "RelativeTransform" : {
-            "Location" : [11.621058, 2.047176, 1.100000],
-            "Scale" : [2.000000, 2.000000, 2.000000]
-          },
-          "Response Container" : {
-            "Pawn" : 2,
-            "Projectile" : 2,
-            "Trigger" : 2,
-            "WorldDynamic" : 2,
-            "WorldStatic" : 2
-          },
-          "Rotation" : [0.000000, -80.009224, 0.000000],
-          "Simulate Physics" : false,
-          "Skeletal Mesh" : "Asset/Mesh/Samba Dancing/Samba Dancing (10)_SkeletalMesh.uasset",
-          "Two Bone IK Chains" : [],
-          "bEditorOnly" : false,
-          "bTickEnable" : true
-        }
-      }
-    }, {
-      "ClassName" : "AStaticMeshActor",
-      "Name" : "AStaticMeshActor_125",
-      "NonSceneComponents" : [],
-      "Properties" : {
-
-      },
-      "RootComponent" : {
-        "Children" : [],
-        "ClassName" : "UStaticMeshComponent",
-        "Properties" : {
-          "Auto Activate" : true,
-          "Cast Shadow" : true,
-          "Cast Shadow as Two-Sided" : false,
-          "Center of Mass" : [0.000000, 0.000000, 0.000000],
-          "Collision Enabled" : 0,
-          "Generate Overlap Events" : false,
-          "Is Visible" : true,
-          "Mass (Kg)" : 1.000000,
-          "Materials" : [{
-              "Path" : "Asset/Mesh/BasicShape/Cube_BasicShapeMaterial.mat"
-            }],
-          "Object Type" : 0,
-          "RelativeTransform" : {
-            "Location" : [9.220843, -10.702366, 4.157585],
-            "Scale" : [1.000000, 1.000000, 1.000000]
-          },
-          "Response Container" : {
-            "Pawn" : 2,
-            "Projectile" : 2,
-            "Trigger" : 2,
-            "WorldDynamic" : 2,
-            "WorldStatic" : 2
-          },
-          "Rotation" : [-27.286530, 31.608643, -10.822815],
-          "Simulate Physics" : false,
-          "Static Mesh" : "Asset/Mesh/BasicShape/Cube_StaticMesh.uasset",
-          "bEditorOnly" : false,
-          "bTickEnable" : true
-        }
-      }
-    }, {
-      "ClassName" : "ASkeletalMeshActor",
-      "Name" : "ASkeletalMeshActor_57",
-      "NonSceneComponents" : [],
-      "Properties" : {
-
-      },
-      "RootComponent" : {
-        "Children" : [],
-        "ClassName" : "USkeletalMeshComponent",
-        "Properties" : {
-          "Auto Activate" : true,
-          "Cast Shadow" : true,
-          "Cast Shadow as Two-Sided" : false,
-          "Center of Mass" : [0.000000, 0.000000, 0.000000],
-          "Collision Enabled" : 0,
-          "Enable Two Bone IK" : true,
-          "Generate Overlap Events" : false,
-          "Is Visible" : true,
-          "Mass (Kg)" : 1.000000,
-          "Materials" : [{
-              "Path" : "Asset/Mesh/hirasawa-yui/yui_KON001_Hirasawa_Yui.003.mat"
-            }, {
-              "Path" : "Asset/Mesh/hirasawa-yui/yui_KON001_Hirasawa_Yui_eye.003.mat"
-            }, {
-              "Path" : "Asset/Mesh/hirasawa-yui/yui_KON001_Hirasawa_Yui_face.003.mat"
-            }],
-          "Object Type" : 0,
-          "RelativeTransform" : {
-            "Location" : [5.846572, 2.840355, 1.000001],
-            "Scale" : [3.000000, 3.000000, 3.000000]
-          },
-          "Response Container" : {
-            "Pawn" : 2,
-            "Projectile" : 2,
-            "Trigger" : 2,
-            "WorldDynamic" : 2,
-            "WorldStatic" : 2
-          },
-          "Rotation" : [0.000000, -64.088791, 0.000000],
-          "Simulate Physics" : false,
-          "Skeletal Mesh" : "Asset/Mesh/hirasawa-yui/yui_SkeletalMesh.uasset",
-          "Two Bone IK Chains" : [],
-          "bEditorOnly" : false,
-          "bTickEnable" : true
-        }
-      }
-    }, {
       "ClassName" : "ACharacter",
       "Name" : "ACharacter_1",
       "NonSceneComponents" : [{
@@ -864,6 +529,8 @@
             "Children" : [],
             "ClassName" : "USkeletalMeshComponent",
             "Properties" : {
+              "Anim Instance" : "Asset/Mesh/Manny/Anims/CharacterAnimInstance.uasset",
+              "Anim Script Path" : "",
               "Auto Activate" : true,
               "Cast Shadow" : true,
               "Cast Shadow as Two-Sided" : false,
@@ -893,7 +560,21 @@
               "Rotation" : [0.000000, -90.000000, 0.000000],
               "Simulate Physics" : false,
               "Skeletal Mesh" : "Asset/Mesh/Manny/Meshes/SKM_Manny_Simple_SkeletalMesh.uasset",
-              "Two Bone IK Chains" : [],
+              "Two Bone IK Chains" : [{
+                  "Enabled" : true,
+                  "End Bone Index" : 75,
+                  "Mid Bone Index" : 74,
+                  "Pole Position" : [1.000000, 0.000000, 0.000000],
+                  "Root Bone Index" : 73,
+                  "Target Position" : [0.000000, 0.000000, 0.000000]
+                }, {
+                  "Enabled" : true,
+                  "End Bone Index" : 67,
+                  "Mid Bone Index" : 66,
+                  "Pole Position" : [1.000000, 0.000000, 0.000000],
+                  "Root Bone Index" : 65,
+                  "Target Position" : [0.000000, 0.000000, 0.000000]
+                }],
               "bEditorOnly" : false,
               "bTickEnable" : true
             }
@@ -974,6 +655,47 @@
           "bTickEnable" : true
         }
       }
+    }, {
+      "ClassName" : "AStaticMeshActor",
+      "Name" : "AStaticMeshActor_20",
+      "NonSceneComponents" : [],
+      "Properties" : {
+
+      },
+      "RootComponent" : {
+        "Children" : [],
+        "ClassName" : "UStaticMeshComponent",
+        "Properties" : {
+          "Auto Activate" : true,
+          "Cast Shadow" : true,
+          "Cast Shadow as Two-Sided" : false,
+          "Center of Mass" : [0.000000, 0.000000, 0.000000],
+          "Collision Enabled" : 1,
+          "Generate Overlap Events" : true,
+          "Is Visible" : true,
+          "Mass (Kg)" : 1.000000,
+          "Materials" : [{
+              "Path" : "Asset/Mesh/BasicShape/Cube_BasicShapeMaterial.mat"
+            }],
+          "Object Type" : 0,
+          "RelativeTransform" : {
+            "Location" : [-4.560575, -1.130351, 0.642783],
+            "Scale" : [1.000000, 1.000000, 1.000000]
+          },
+          "Response Container" : {
+            "Pawn" : 2,
+            "Projectile" : 2,
+            "Trigger" : 2,
+            "WorldDynamic" : 2,
+            "WorldStatic" : 2
+          },
+          "Rotation" : [0.000000, 0.000000, 0.000000],
+          "Simulate Physics" : false,
+          "Static Mesh" : "Asset/Mesh/BasicShape/Cube_StaticMesh.uasset",
+          "bEditorOnly" : false,
+          "bTickEnable" : true
+        }
+      }
     }],
   "ClassName" : "UWorld",
   "ContextHandle" : "NewScene",
@@ -982,9 +704,9 @@
   "PerspectiveCamera" : {
     "FOV" : 1.047198,
     "FarClip" : 1000.000000,
-    "Location" : [-10.774485, -1.500979, 11.687088],
+    "Location" : [0.042617, -13.200090, 5.406310],
     "NearClip" : 0.100000,
-    "Rotation" : [0.000000, 26.622124, -2.698126]
+    "Rotation" : [0.000000, 19.872149, 69.752144]
   },
   "Version" : 2,
   "WorldSettings" : {
