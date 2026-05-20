@@ -150,14 +150,13 @@ public:
 	virtual const char* GetDragItemType() override { return "PNGElement"; }
 };
 
-#include "Editor/UI/EditorMaterialInspector.h"
 class MaterialElement final : public ContentBrowserElement
 {
 public:
-	virtual void OnLeftClicked(ContentBrowserContext& Context) override;
 	virtual const char* GetDragItemType() override { return "MaterialContentItem"; }
-	virtual void RenderDetail() override;
+	void OnDoubleLeftClicked(ContentBrowserContext& Context) override;
 
-private:
-	FEditorMaterialInspector MaterialInspector;
+protected:
+	const char* GetTypeLabel() const override { return "Material"; }
+	uint32 GetAccentColor() const override { return IM_COL32(210, 170, 70, 255); }
 };

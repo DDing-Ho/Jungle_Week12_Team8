@@ -3,12 +3,16 @@
   "DepthStencilState" : "",
   "Origin" : "FbxImport",
   "Parameters" : {
-    "HasNormalMap" : 0.000000,
+    "HasNormalMap" : 1.000000,
     "SectionColor" : [0.800000, 0.800000, 0.800000, 1.000000],
     "_pad" : [0.000000, 0.000000, 0.000000]
   },
   "PathFileName" : "Asset/Mesh/Manny/Meshes/SKM_Manny_Simple_MI_Manny_01_New.mat",
   "RasterizerState" : "",
   "RenderPass" : "Opaque",
-  "ShaderPath" : "Shaders/Geometry/UberLit.hlsl"
+  "ShaderPath" : "Shaders/Geometry/UberLit.hlsl",
+  "Textures" : {
+    "DiffuseTexture" : "Asset/Mesh/Manny/Textures/Manny/T_Manny_01_D.PNG",
+    "NormalTexture" : "Asset/Mesh/Manny/Textures/Manny/T_Manny_01_BN.PNG"
+  }
 }

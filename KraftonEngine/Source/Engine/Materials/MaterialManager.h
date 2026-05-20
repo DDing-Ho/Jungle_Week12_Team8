@@ -48,8 +48,9 @@ public:
 	// 지정된 디렉토리 내의 모든 머티리얼을 미리 로드
 	void LoadAllMaterials(ID3D11Device* Device);
 
-    // UMaterial 생성
+	// UMaterial 생성
 	UMaterial* GetOrCreateMaterial(const FString& MatFilePath);
+	bool SaveMaterial(UMaterial* Material);
 
 	void ScanMaterialAssets();
 	const TArray<FMaterialAssetListItem>& GetAvailableMaterialFiles() const { return AvailableMaterialFiles; }
@@ -71,7 +72,7 @@ private:
 	EDepthStencilState StringToDepthStencilState(const FString& Str, ERenderPass Pass) const;
 	ERasterizerState StringToRasterizerState(const FString& Str, ERenderPass Pass) const;
 
-	void SaveToJSON(json::JSON& JsonData, const FString& MatFilePath);
+	bool SaveToJSON(json::JSON& JsonData, const FString& MatFilePath);
 	
 	bool InjectDefaultParameters(json::JSON& JsonData, FMaterialTemplate* Template, UMaterial* Material);
 	bool PurgeStaleParameters(json::JSON& JsonData, FMaterialTemplate* Template);

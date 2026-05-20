@@ -4,6 +4,7 @@
 #include "Materials/Material.h"
 #include "Platform/Paths.h"
 #include "Render/Shader/ShaderManager.h"
+#include "Render/Shader/Shader.h"
 #include "Render/Resource/Buffer.h"
 #include "Texture/Texture2D.h"
 #include "Render/Pipeline/Renderer.h"
@@ -118,6 +119,122 @@ UMaterial* FMaterialManager::GetOrCreateMaterial(const FString& MatFilePath)
 	}
 
 	return Material;
+}
+
+bool FMaterialManager::SaveMaterial(UMaterial* Material)
+{
+	if (!Material)
+	{
+		return false;
+	}
+
+	FString MatFilePath = FPaths::MakeProjectRelative(Material->GetAssetPathFileName());
+	if (MatFilePath.empty() || MatFilePath == "None" || MatFilePath == "__transient__")
+	{
+		return false;
+	}
+
+	json::JSON JsonData = ReadJsonFile(MatFilePath);
+	if (JsonData.IsNull())
+	{
+		JsonData = json::JSON::Make(json::JSON::Class::Object);
+	}
+
+	JsonData[MatKeys::PathFileName] = MatFilePath.c_str();
+
+	json::JSON Parameters = json::JSON::Make(json::JSON::Class::Object);
+	const auto Layout = Material->GetParameterInfo();
+	for (const auto& Pair : Layout)
+	{
+		const FString& ParamName = Pair.first;
+		const FMaterialParameterInfo* Info = Pair.second;
+		if (!Info)
+		{
+			continue;
+		}
+
+		switch (Info->Size)
+		{
+		case sizeof(float):
+		{
+			float Value = 0.0f;
+			if (Material->GetScalarParameter(ParamName, Value))
+			{
+				Parameters[ParamName] = Value;
+			}
+			break;
+		}
+		case sizeof(float) * 3:
+		{
+			FVector Value;
+			if (Material->GetVector3Parameter(ParamName, Value))
+			{
+				Parameters[ParamName] = json::Array(Value.X, Value.Y, Value.Z);
+			}
+			break;
+		}
+		case sizeof(float) * 4:
+		{
+			FVector4 Value;
+			if (Material->GetVector4Parameter(ParamName, Value))
+			{
+				Parameters[ParamName] = json::Array(Value.X, Value.Y, Value.Z, Value.W);
+			}
+			break;
+		}
+		case sizeof(float) * 16:
+		{
+			FMatrix Value;
+			if (Material->GetMatrixParameter(ParamName, Value))
+			{
+				json::JSON MatrixArray = json::Array();
+				for (int32 Index = 0; Index < 16; ++Index)
+				{
+					MatrixArray.append(Value.Data[Index]);
+				}
+				Parameters[ParamName] = MatrixArray;
+			}
+			break;
+		}
+		default:
+			break;
+		}
+	}
+	JsonData[MatKeys::Parameters] = Parameters;
+
+	json::JSON Textures = json::JSON::Make(json::JSON::Class::Object);
+	if (TMap<FString, UTexture2D*>* TextureParameters = Material->GetTexture())
+	{
+		FShader* Shader = Material->GetShader();
+		const TArray<FMaterialTextureBindingInfo>* TextureBindings =
+			Shader ? &Shader->GetTextureBindings() : nullptr;
+
+		if (TextureBindings && !TextureBindings->empty())
+		{
+			for (const FMaterialTextureBindingInfo& Binding : *TextureBindings)
+			{
+				auto It = TextureParameters->find(Binding.Name);
+				if (It != TextureParameters->end() && It->second)
+				{
+					Textures[Binding.Name] = It->second->GetSourcePath().c_str();
+				}
+			}
+		}
+		else
+		{
+			for (const auto& Pair : *TextureParameters)
+			{
+				UTexture2D* Texture = Pair.second;
+				if (Texture)
+				{
+					Textures[Pair.first] = Texture->GetSourcePath().c_str();
+				}
+			}
+		}
+	}
+	JsonData[MatKeys::Textures] = Textures;
+
+	return SaveToJSON(JsonData, MatFilePath);
 }
 
 json::JSON FMaterialManager::ReadJsonFile(const FString& FilePath) const
@@ -284,10 +401,15 @@ ERasterizerState FMaterialManager::StringToRasterizerState(const FString& Str, E
 	}
 }
 
-void FMaterialManager::SaveToJSON(json::JSON& JsonData, const FString& MatFilePath)
+bool FMaterialManager::SaveToJSON(json::JSON& JsonData, const FString& MatFilePath)
 {
 	std::ofstream File(FPaths::ToWide(MatFilePath));
+	if (!File.is_open())
+	{
+		return false;
+	}
 	File << JsonData.dump();
+	return File.good();
 }
 
 bool FMaterialManager::InjectDefaultParameters(json::JSON& JsonData, FMaterialTemplate* Template, UMaterial* Material)

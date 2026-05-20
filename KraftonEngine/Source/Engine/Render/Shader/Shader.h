@@ -3,6 +3,12 @@
 
 struct FMaterialParameterInfo;
 
+struct FMaterialTextureBindingInfo
+{
+	FString Name;
+	uint32 SlotIndex = 0;
+};
+
 // 셰이더 컴파일 실패 시 에러 처리 방식
 enum class EShaderErrorMode
 {
@@ -74,6 +80,7 @@ public:
 	bool IsValid() const { return VertexShader != nullptr && PixelShader != nullptr; }
 
 	const TMap<FString, FMaterialParameterInfo*>& GetParameterLayout() const { return ShaderParameterLayout; }
+	const TArray<FMaterialTextureBindingInfo>& GetTextureBindings() const { return TextureBindings; }
 private:
 	ID3D11VertexShader* VertexShader = nullptr;
 	ID3D11PixelShader* PixelShader = nullptr;
@@ -84,5 +91,7 @@ private:
 
 	void CreateInputLayoutFromReflection(ID3D11Device* InDevice, ID3DBlob* VSBlob);
 	void ExtractCBufferInfo(ID3DBlob* ShaderBlob, TMap<FString, FMaterialParameterInfo*>& OutLayout);
+	void ExtractTextureBindings(ID3DBlob* ShaderBlob);
 	TMap<FString, FMaterialParameterInfo*> ShaderParameterLayout;
+	TArray<FMaterialTextureBindingInfo> TextureBindings;
 };

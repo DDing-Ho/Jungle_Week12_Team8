@@ -350,6 +350,82 @@ void UMaterial::Serialize(FArchive& Ar)
 	}
 }
 
+UMaterial* UMaterial::CreateEditableCopy(ID3D11Device* Device) const
+{
+	if (!Device)
+	{
+		return nullptr;
+	}
+
+	TMap<FString, std::unique_ptr<FMaterialConstantBuffer>> CopiedBuffers;
+	for (const auto& Pair : ConstantBufferMap)
+	{
+		const FMaterialConstantBuffer* SourceBuffer = Pair.second.get();
+		if (!SourceBuffer)
+		{
+			continue;
+		}
+
+		auto CopiedBuffer = std::make_unique<FMaterialConstantBuffer>();
+		CopiedBuffer->Init(Device, SourceBuffer->Size, SourceBuffer->SlotIndex);
+		if (SourceBuffer->CPUData && SourceBuffer->Size > 0)
+		{
+			CopiedBuffer->SetData(SourceBuffer->CPUData, SourceBuffer->Size);
+			if (GEngine)
+			{
+				CopiedBuffer->Upload(GEngine->GetRenderer().GetFD3DDevice().GetDeviceContext());
+			}
+		}
+		CopiedBuffers.emplace(Pair.first, std::move(CopiedBuffer));
+	}
+
+	UMaterial* Copy = GUObjectArray.CreateObject<UMaterial>();
+	Copy->Create(PathFileName, Template, RenderPass, BlendState, DepthStencilState, RasterizerState, std::move(CopiedBuffers));
+	Copy->TransientShader = TransientShader;
+	Copy->TextureParameters = TextureParameters;
+	Copy->RebuildCachedSRVs();
+	return Copy;
+}
+
+bool UMaterial::CopyEditableStateFrom(const UMaterial* SourceMaterial)
+{
+	if (!SourceMaterial)
+	{
+		return false;
+	}
+
+	if (Template != SourceMaterial->Template)
+	{
+		return false;
+	}
+
+	for (auto& Pair : ConstantBufferMap)
+	{
+		FMaterialConstantBuffer* TargetBuffer = Pair.second.get();
+		auto SourceIt = SourceMaterial->ConstantBufferMap.find(Pair.first);
+		if (!TargetBuffer || SourceIt == SourceMaterial->ConstantBufferMap.end() || !SourceIt->second)
+		{
+			continue;
+		}
+
+		const FMaterialConstantBuffer* SourceBuffer = SourceIt->second.get();
+		if (!SourceBuffer->CPUData || !TargetBuffer->CPUData || SourceBuffer->Size != TargetBuffer->Size)
+		{
+			continue;
+		}
+
+		TargetBuffer->SetData(SourceBuffer->CPUData, SourceBuffer->Size);
+		if (GEngine)
+		{
+			TargetBuffer->Upload(GEngine->GetRenderer().GetFD3DDevice().GetDeviceContext());
+		}
+	}
+
+	TextureParameters = SourceMaterial->TextureParameters;
+	RebuildCachedSRVs();
+	return true;
+}
+
 UMaterial* UMaterial::CreateTransient(ERenderPass InPass, EBlendState InBlend,
 	EDepthStencilState InDepth, ERasterizerState InRaster, FShader* InShader)
 {

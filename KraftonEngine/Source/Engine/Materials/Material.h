@@ -111,7 +111,10 @@ public:
 
 	const uint8* GetRawPtr(const FString& BufferName, uint32 Offset) const;
 
-	const TMap<FString, FMaterialParameterInfo*> GetParameterInfo() const { return Template->GetParameterInfo(); }
+	const TMap<FString, FMaterialParameterInfo*> GetParameterInfo() const
+	{
+		return Template ? Template->GetParameterInfo() : TMap<FString, FMaterialParameterInfo*>();
+	}
 
 	bool SetScalarParameter(const FString& ParamName, float Value);
 	bool SetVector3Parameter(const FString& ParamName, const FVector& Value);
@@ -153,6 +156,8 @@ public:
 	const FString& GetAssetPathFileName() const override { return PathFileName; }
 	void SetAssetPathFileName(const FString& InPath) { PathFileName = InPath; }
 	void Serialize(FArchive& Ar);//>>>>>Manager가 위임
+	UMaterial* CreateEditableCopy(ID3D11Device* Device) const;
+	bool CopyEditableStateFrom(const UMaterial* SourceMaterial);
 
 	FConstantBuffer* GetGPUBufferBySlot(uint32 InSlot) const
 	{
