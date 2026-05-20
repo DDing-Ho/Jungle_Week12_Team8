@@ -18,6 +18,7 @@
 #include "Component/Light/LightComponentBase.h"
 #include "Core/ProjectSettings.h"
 #include "Math/MathUtils.h"
+#include <Profiling/SkinningStats.h>
 
 namespace
 {
@@ -81,6 +82,7 @@ void FEditorRenderPipeline::Execute(float DeltaTime, FRenderer& Renderer)
 	FStatManager::Get().TakeSnapshot();
 	FGPUProfiler::Get().TakeSnapshot();
 	FGPUProfiler::Get().BeginFrame();
+	SkinningStats::Reset();
 #endif
 
 	// 이전 프레임 시각화 데이터 readback + 디버그 라인 제출
