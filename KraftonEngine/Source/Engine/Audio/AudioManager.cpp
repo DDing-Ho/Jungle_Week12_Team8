@@ -32,12 +32,14 @@ void FAudioManager::Shutdown()
 		MasterGroup = nullptr;
 		BGMChannel = nullptr;
 		LoopChannels.clear();
+		ActiveChannels.clear();
 		Audios.clear();
 		return;
 	}
 
 	StopBGM();
 	StopAllLoops();
+	ActiveChannels.clear();
 	if (MasterGroup)
 	{
 		MasterGroup->stop();
@@ -65,6 +67,31 @@ void FAudioManager::Tick()
 	if (System)
 	{
 		System->update();
+		PruneFinishedActiveChannels();
+	}
+}
+
+void FAudioManager::PruneFinishedActiveChannels()
+{
+	for (auto It = ActiveChannels.begin(); It != ActiveChannels.end();)
+	{
+		FMOD::Channel* Channel = It->second;
+		bool bIsPlaying = false;
+		if (!Channel || Channel->isPlaying(&bIsPlaying) != FMOD_OK || !bIsPlaying)
+		{
+			It = ActiveChannels.erase(It);
+			continue;
+		}
+
+		FMOD::Sound* CurrentSound = nullptr;
+		const auto AudioIt = Audios.find(It->first);
+		if (AudioIt == Audios.end() || Channel->getCurrentSound(&CurrentSound) != FMOD_OK || CurrentSound != AudioIt->second)
+		{
+			It = ActiveChannels.erase(It);
+			continue;
+		}
+
+		++It;
 	}
 }
 
@@ -85,6 +112,16 @@ bool FAudioManager::LoadAudio(const FString& Key, const FString& Path, bool bLoo
 		return false;
 	}
 
+	PruneFinishedActiveChannels();
+	if (auto ActiveIt = ActiveChannels.find(Key); ActiveIt != ActiveChannels.end())
+	{
+		if (ActiveIt->second)
+		{
+			ActiveIt->second->stop();
+		}
+		ActiveChannels.erase(ActiveIt);
+	}
+
 	if (Audios.contains(Key) && Audios[Key])
 	{
 		Audios[Key]->release();
@@ -101,12 +138,18 @@ void FAudioManager::PlayAudio(const FString& Key, float Volume)
 		return;
 	}
 
+	PruneFinishedActiveChannels();
+
 	// 같은 키가 이미 재생 중이면 스킵 (효과음 중복 방지)
-	if (ActiveChannels.contains(Key))
+	if (auto ActiveIt = ActiveChannels.find(Key); ActiveIt != ActiveChannels.end())
 	{
-		bool isPlaying = false;
-		ActiveChannels[Key]->isPlaying(&isPlaying);
-		if (isPlaying) return; // 또는 쿨타임 로직
+		bool bIsPlaying = false;
+		FMOD::Channel* ActiveChannel = ActiveIt->second;
+		if (ActiveChannel && ActiveChannel->isPlaying(&bIsPlaying) == FMOD_OK && bIsPlaying)
+		{
+			return; // 또는 쿨타임 로직
+		}
+		ActiveChannels.erase(ActiveIt);
 	}
 
 	FMOD::Channel* Channel = nullptr;

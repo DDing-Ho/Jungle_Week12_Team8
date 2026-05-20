@@ -27,6 +27,7 @@
 #include "Materials/MaterialManager.h"
 #include "Engine/Platform/Paths.h"
 #include "Lua/LuaScriptManager.h"
+#include "Audio/AudioManager.h"
 #include <filesystem>
 
 #include "Mesh/SkeletalMesh.h"
@@ -147,6 +148,7 @@ void UEditorEngine::Tick(float DeltaTime)
 	FDirectoryWatcher::Get().ProcessChanges();
 	FNotificationManager::Get().Tick(DeltaTime);
 	InputSystem::Get().Tick();
+	FAudioManager::Get().Tick();
 	MainPanel.Update();
 	InputSystem::Get().RefreshSnapshot();
 

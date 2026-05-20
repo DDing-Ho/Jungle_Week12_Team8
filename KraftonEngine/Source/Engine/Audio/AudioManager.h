@@ -28,6 +28,7 @@ public:
 
 private:
 	void LoadDefaultAudios();
+	void PruneFinishedActiveChannels();
 	FMOD::Channel* FindPlayingLoopChannel(const FString& LoopName);
 
 private:
