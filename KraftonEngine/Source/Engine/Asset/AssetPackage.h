@@ -17,6 +17,7 @@ enum class EAssetPackageType : uint32
 	CameraShake,
 	Material,
 	AnimSequence,
+	AnimInstance,
 };
 
 struct FAssetPackageHeader

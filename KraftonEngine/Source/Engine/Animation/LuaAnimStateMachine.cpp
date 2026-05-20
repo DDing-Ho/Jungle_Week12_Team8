@@ -80,7 +80,7 @@ void ULuaAnimStateMachine::TransitionTo(const std::string& StateName)
 		return;
 
 	PrevSequence   = CurrentSequence;
-	BeldingPrevStateTime = StateLocalTime;
+	BlendingPrevStateTime = StateLocalTime;
 	StateLocalTime = 0.0f;
 	BlendAlpha     = 0.0f;
 

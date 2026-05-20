@@ -24,6 +24,7 @@
 #include "Editor/UI/Asset/MeshEditorWidget.h"
 #include "Editor/UI/Asset/StaticMeshEditorWidget.h"
 #include "Editor/UI/Asset/AnimSequenceEditorWidget.h"
+#include "Editor/UI/Asset/AnimInstanceEditorWidget.h"
 
 #include <algorithm>
 #include <cstdio>
@@ -93,6 +94,7 @@ void FEditorMainPanel::Create(FWindowsWindow* InWindow, FRenderer& InRenderer, U
 	AssetEditorManager.RegisterEditor<FMeshEditorWidget>();
 	AssetEditorManager.RegisterEditor<FStaticMeshEditorWidget>();
 	AssetEditorManager.RegisterEditor<FAnimSequenceEditorWidget>();
+	AssetEditorManager.RegisterEditor<FAnimInstanceEditorWidget>();
 }
 
 void FEditorMainPanel::Release()
