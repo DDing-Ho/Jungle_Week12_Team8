@@ -118,6 +118,7 @@ private:
 	void ReturnToStateMachine();
 	void DeleteSelectedNode(FAnimGraphData& Graph);
 	void DeleteSelectedLink(FAnimGraphData& Graph);
+	int32 CountBrokenLinks(const FAnimGraphData& Graph) const;
 	void RemoveInvalidLinks(FAnimGraphData& Graph);
 	void CreateStateMachineFromRootGraph(UAnimInstanceAsset* Asset);
 	void RenameParameterReferences(FAnimGraphData& Graph, const FString& OldName, const FString& NewName);

@@ -546,14 +546,6 @@ void FAnimInstanceEditorWidget::RenderToolbar(UAnimInstanceAsset* Asset)
 	}
 	ImGui::EndDisabled();
 	ImGui::SameLine();
-	if (ImGui::Button("Remove Invalid Links"))
-	{
-		if (FAnimGraphData* Graph = GetEditableGraph())
-		{
-			RemoveInvalidLinks(*Graph);
-		}
-	}
-	ImGui::SameLine();
 	ImGui::TextDisabled("%s", Asset->GetAssetPathFileName().empty() ? "Unsaved asset" : Asset->GetAssetPathFileName().c_str());
 	if (!bCanSave && !SaveReason.empty())
 	{
@@ -1345,12 +1337,20 @@ void FAnimInstanceEditorWidget::RenderValidationSummary(UAnimInstanceAsset* Asse
 	ImGui::TextColored(ImVec4(1.0f, 0.42f, 0.32f, 1.0f), "%s", SaveReason.empty() ? "Cannot save this asset." : SaveReason.c_str());
 	if (FAnimGraphData* Graph = GetEditableGraph())
 	{
-		ImGui::BeginDisabled(Graph->Links.empty());
-		if (ImGui::Button("Remove Invalid Links", ImVec2(-1.0f, 0.0f)))
+		const int32 BrokenLinkCount = CountBrokenLinks(*Graph);
+		if (BrokenLinkCount > 0)
 		{
-			RemoveInvalidLinks(*Graph);
+			ImGui::TextDisabled("The current State Graph has broken or duplicate connections.");
+			const FString ButtonLabel = "Clean Broken Links (" + std::to_string(BrokenLinkCount) + ")";
+			if (ImGui::Button(ButtonLabel.c_str(), ImVec2(-1.0f, 0.0f)))
+			{
+				RemoveInvalidLinks(*Graph);
+			}
+			if (ImGui::IsItemHovered())
+			{
+				ImGui::SetTooltip("Deletes only broken Pose Graph links: missing nodes, invalid pins, cycles, and duplicate input connections.");
+			}
 		}
-		ImGui::EndDisabled();
 	}
 }
 
@@ -2640,6 +2640,29 @@ void FAnimInstanceEditorWidget::DeleteSelectedLink(FAnimGraphData& Graph)
 	MarkDirty();
 }
 
+int32 FAnimInstanceEditorWidget::CountBrokenLinks(const FAnimGraphData& Graph) const
+{
+	int32 BrokenCount = 0;
+	TSet<FString> LinkedInputs;
+	for (const FAnimGraphPinLink& Link : Graph.Links)
+	{
+		if (!IsValidLink(Graph, Link))
+		{
+			++BrokenCount;
+			continue;
+		}
+
+		const FString InputKey = Link.ToNodeId + "." + Link.ToPinName;
+		if (LinkedInputs.find(InputKey) != LinkedInputs.end())
+		{
+			++BrokenCount;
+			continue;
+		}
+		LinkedInputs.insert(InputKey);
+	}
+	return BrokenCount;
+}
+
 void FAnimInstanceEditorWidget::RemoveInvalidLinks(FAnimGraphData& Graph)
 {
 	const size_t OldCount = Graph.Links.size();
@@ -2663,8 +2686,10 @@ void FAnimInstanceEditorWidget::RemoveInvalidLinks(FAnimGraphData& Graph)
 		Graph.Links.end());
 	if (Graph.Links.size() != OldCount)
 	{
+		const int32 RemovedCount = static_cast<int32>(OldCount - Graph.Links.size());
 		SelectedLinkIndex = -1;
 		MarkDirty();
+		SetStatusMessage("Cleaned " + std::to_string(RemovedCount) + " broken graph link(s).");
 	}
 }
 
