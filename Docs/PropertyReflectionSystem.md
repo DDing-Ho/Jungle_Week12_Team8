@@ -1,340 +1,610 @@
 # Property Reflection System
 
-KraftonEngine에 구현된 **Unreal 스타일 프로퍼티 리플렉션(Reflection) 시스템**에 대한 문서이다. 본 문서는 시스템이 무엇이고, 무엇을 하며, 왜 필요하고, 어떻게 구현되어 있는지를 설명한다.
+KraftonEngine의 프로퍼티 리플렉션 시스템은 C++ 멤버 변수에 대한 메타데이터를 빌드 타임에 생성하고, 런타임에서 에디터 UI, JSON 저장/로드, 타입 검사, 클래스 목록, 구조체/enum 메타 객체가 같은 정보 위에서 동작하게 만드는 기반이다.
 
-> 본 문서는 현재 안정화된 부분(UClass / UStruct / FProperty 계층 / Codegen)을 중심으로 작성한다. `UScriptStruct`는 WIP이므로 다루지 않는다.
+핵심 아이디어는 단순하다.
+
+> C++ 멤버 변수는 값일 뿐이고, 그 값을 어떻게 찾고 편집하고 저장할지는 `FProperty` 디스크립터가 안다.
+
+이 문서는 현재 코드 기준의 구조를 설명한다. `UClass`, `UStruct`, `UScriptStruct`, `UEnum`, `FProperty`, codegen은 실제로 동작하는 축이고, `FField`, CDO, hard object property, 자동 `FArchive` property serialization은 아직 다음 단계로 남아 있다.
 
 ---
 
-## 1. 시스템이란?
+## 1. 전체 흐름
 
-**프로퍼티 리플렉션 시스템**은 C++ 클래스의 멤버 변수에 대한 **메타데이터(타입, 이름, 카테고리, 오프셋, 편집 가능 여부 등)** 를 런타임에 질의할 수 있게 해주는 메커니즘이다. C++는 표준적으로 리플렉션을 지원하지 않기 때문에, 이 엔진은 Unreal Engine과 동일한 접근을 채택한다.
+개발자는 헤더에 빈 매크로 마커를 쓴다.
 
-- 헤더에 `UCLASS()`, `USTRUCT()`, `UENUM()`, `UPROPERTY()`, `UFUNCTION()` 등의 **빈 매크로 마커**를 작성한다.
-- 빌드 직전 Python 기반 헤더 툴([`Scripts/GenerateCode.py`](../Scripts/GenerateCode.py))이 헤더를 스캔하여 클래스/프로퍼티 정보를 추출한다.
-- 추출 결과를 바탕으로 `.generated.h` / `.gen.cpp` 파일을 [`KraftonEngine/Intermediate/Generated/`](../KraftonEngine/Intermediate/Generated/) 아래에 자동 생성한다.
-- 생성된 `.gen.cpp`는 정적 초기화 시점에 [`UClass`](../KraftonEngine/Source/Engine/Object/UClass.h)에 [`FProperty`](../KraftonEngine/Source/Engine/Core/Property/PropertyTypes.h) 디스크립터를 등록한다.
+```cpp
+#include "ProjectileMovementComponent.generated.h"
 
-결과적으로 런타임에는 임의의 `UObject*`에 대해 다음과 같이 그 객체가 갖는 모든 프로퍼티의 목록과 값에 접근할 수 있다.
+UCLASS(Component)
+class UProjectileMovementComponent : public UMovementComponent
+{
+    GENERATED_BODY(UProjectileMovementComponent)
+
+    UPROPERTY(Edit, Category="Projectile")
+    FVector Velocity;
+
+    UPROPERTY(Edit, Category="Projectile", Min=0, Speed=1.0f)
+    float InitialSpeed = 1000.0f;
+};
+```
+
+`Scripts/GenerateCode.py` 는 `UCLASS`, `USTRUCT`, `UENUM`, `UPROPERTY`, `UFUNCTION`, `UPROPERTY_HIDE` 를 찾고 다음 두 종류의 파일을 만든다.
+
+- `Intermediate/Generated/Inc/<Header>.generated.h`
+- `Intermediate/Generated/Source/<Header>.gen.cpp`
+
+생성된 코드는 정적 초기화 시점에 클래스, enum, struct, property 메타데이터를 등록한다. 이후 런타임 코드는 `UObject*` 하나만 있어도 그 객체가 가진 편집 가능 프로퍼티 목록을 얻을 수 있다.
 
 ```cpp
 TArray<const FProperty*> Props;
 SomeObject->GetEditableProperties(Props);
-for (const FProperty* P : Props)
+
+for (const FProperty* Prop : Props)
 {
-    json::JSON V = P->Serialize(SomeObject); // 이름·타입에 맞춰 값을 직렬화
+    json::JSON Value = Prop->Serialize(SomeObject);
+}
+```
+
+이 흐름에서 실제 값은 `SomeObject` 안에 있고, `FProperty` 는 이름, category, flags, offset, type-specific metadata만 가진다.
+
+---
+
+## 2. 왜 필요한가
+
+리플렉션이 없으면 새 멤버 하나를 추가할 때마다 여러 시스템을 수동으로 고쳐야 한다.
+
+- 에디터 property panel에 새 widget 추가
+- scene save/load에 새 field 추가
+- duplicate/archive 경로에 새 field 추가
+- enum/struct/array처럼 중첩 타입이면 별도 순회 코드 추가
+- 클래스 이름으로 object를 만들거나 필터링하기 위한 registry 코드 추가
+
+이 시스템은 그 반복을 codegen과 공통 메타데이터로 옮긴다.
+
+현재 가장 직접적으로 이득을 보는 곳은 다음이다.
+
+### 에디터 UI
+
+`EditorPropertyWidget` 은 선택된 actor/component의 `GetEditableProperties()` 결과를 순회한다. 각 `FProperty` 의 `EPropertyType` 에 따라 체크박스, slider, vector editor, combo, asset picker, array editor, struct tree를 그린다.
+
+즉, `UPROPERTY(Edit)` 가 붙으면 별도 UI 코드를 쓰지 않아도 property panel에 나타난다.
+
+### JSON scene 저장/로드
+
+`SceneSaveManager` 는 `GetNonTransientProperties()` 로 저장 대상 property를 모으고 `FProperty::Serialize()` / `Deserialize()` 를 호출한다. `CPF_Transient` 로 표시된 property는 제외된다.
+
+로드 후에는 `PostEditProperty(PropertyName)` 를 호출해 mesh 변경 후 material slot 재구성 같은 후처리를 수행한다. 일부 객체는 property 목록이 후처리 과정에서 바뀔 수 있어 2-pass 로드 흐름을 가진다.
+
+### 클래스 카탈로그와 factory
+
+`UClass::GetAllClasses()` 는 정적 초기화로 등록된 모든 class metadata를 가진다. 에디터의 component 추가 메뉴, class picker, scene load 시 class name으로 object 생성하는 경로가 이 registry를 사용한다.
+
+`REGISTER_FACTORY(Type)` 는 `FObjectFactory` 에 class name -> object 생성 lambda를 등록한다.
+
+### enum/struct metadata
+
+`UEnum` 과 `UScriptStruct` 가 정식 metadata object로 들어오면서, enum 이름/값 테이블과 struct child property 목록이 `UObject -> UField` 계층 안에 모인다.
+
+---
+
+## 3. 마커 매크로
+
+`ObjectMacros.h` 의 매크로들은 C++ 컴파일러 입장에서는 대부분 비어 있다.
+
+```cpp
+#define UCLASS(...)
+#define USTRUCT(...)
+#define UENUM(...)
+#define UPROPERTY(...)
+#define UFUNCTION(...)
+#define UPROPERTY_HIDE(...)
+#define GENERATED_BODY(ClassName) KE_GENERATED_BODY_##ClassName()
+```
+
+이 매크로들은 Python header tool이 읽기 위한 표식이다. 실제 C++ 코드는 `.generated.h` 에 생성되는 `KE_GENERATED_BODY_<Name>()` 매크로가 보강한다.
+
+클래스용 generated body는 대략 다음을 선언한다.
+
+```cpp
+#define KE_GENERATED_BODY_UFoo() \
+    using Super = UBar; \
+    static UClass StaticClassInstance; \
+    static UClass* StaticClass() { return &StaticClassInstance; } \
+    UClass* GetClass() const override { return StaticClass(); } \
+    friend struct UFoo_PropertyRegistrar;
+```
+
+구조체용 generated body는 `StaticStruct()` 를 제공한다.
+
+```cpp
+#define KE_GENERATED_BODY_FTransform() \
+    static class UScriptStruct StaticStructInstance; \
+    static class UScriptStruct* StaticStruct() { return &StaticStructInstance; }
+```
+
+enum은 generated header에 `StaticEnum_*()` forward declaration을 낸다.
+
+---
+
+## 4. Codegen 파이프라인
+
+`Scripts/GenerateCode.py` 는 네 단계로 움직인다.
+
+### 4-1. 헤더 발견
+
+`SOURCE_ROOTS` 아래의 `.h` 파일을 훑고, 다음 marker 중 하나가 있는 파일만 대상으로 삼는다.
+
+- `UCLASS(`
+- `USTRUCT(`
+- `UENUM(`
+
+### 4-2. 파싱과 registry 구축
+
+정규식 기반 parser가 다음 모델을 만든다.
+
+- `ClassInfo`: class name, parent, flags, properties, functions, hidden properties, factory 여부
+- `StructInfo`: struct name, properties
+- `EnumInfo`: enum name, entries, underlying type, enum class 여부
+- `PropertyInfo`: member name, C++ type, `EPropertyType`, category, display name, flags, metadata
+- `FunctionInfo`: function name, Lua binding 여부
+
+enum과 struct는 먼저 registry를 만든 뒤 property type 분류에 사용한다. 그래서 `FTransform` 처럼 `USTRUCT()` 로 알려진 타입은 `EPropertyType::Struct` 로 분류된다.
+
+### 4-3. 타입 분류
+
+기본 타입은 `TYPE_MAP` 으로 분류된다.
+
+```python
+"bool"    -> EPropertyType::Bool
+"int32"   -> EPropertyType::Int
+"float"   -> EPropertyType::Float
+"FVector" -> EPropertyType::Vec3
+"FName"   -> EPropertyType::Name
+```
+
+특수 타입은 별도 규칙을 탄다.
+
+- `TArray<T>` -> `EPropertyType::Array`, inner type은 `T`
+- 알려진 `UENUM` -> `EPropertyType::Enum`
+- 알려진 `USTRUCT` -> `EPropertyType::Struct`
+- `USceneComponent*` -> 현재는 `EPropertyType::SceneComponentRef`
+- `TSoftObjectPtr<T>` 계열은 `Class=` metadata와 함께 `FSoftObjectProperty` 로 처리
+
+아직 일반 `UObject*`, `AActor*`, `UClass*` hard reference는 정식 구현 전이다.
+
+### 4-4. generated header emit
+
+`.generated.h` 는 C++ class/struct 안에서 확장될 macro만 제공한다.
+
+이 방식은 Unreal처럼 `GENERATED_BODY()` 를 소스 안에 남겨두되, 실제 내용은 빌드 전 codegen 결과로 채우는 구조다.
+
+### 4-5. gen.cpp emit
+
+`.gen.cpp` 는 실제 metadata object와 registrar를 만든다.
+
+클래스는 정적 `UClass` 인스턴스를 가진다.
+
+```cpp
+UClass UProjectileMovementComponent::StaticClassInstance(
+    "UProjectileMovementComponent",
+    &UMovementComponent::StaticClassInstance,
+    sizeof(UProjectileMovementComponent),
+    CF_Component);
+```
+
+기본적으로 factory에도 등록된다.
+
+```cpp
+REGISTER_FACTORY(UProjectileMovementComponent)
+```
+
+`UPROPERTY` 들은 registrar struct의 정적 인스턴스를 통해 등록된다.
+
+```cpp
+struct UProjectileMovementComponent_PropertyRegistrar
+{
+    UProjectileMovementComponent_PropertyRegistrar()
+    {
+        using ThisClass = UProjectileMovementComponent;
+        UClass* Cls = UProjectileMovementComponent::StaticClass();
+
+        Cls->AddProperty(new FVec3Property(
+            "Velocity", "Projectile", CPF_Edit,
+            static_cast<uint32>(offsetof(ThisClass, Velocity)),
+            static_cast<uint32>(sizeof(((ThisClass*)0)->Velocity))));
+    }
+};
+
+static UProjectileMovementComponent_PropertyRegistrar
+    s_UProjectileMovementComponent_PropertyReg;
+```
+
+구조체는 `TCppStructOps<T>` 와 `UScriptStruct` 를 생성하고, struct child property도 같은 방식으로 등록한다.
+
+```cpp
+static const TCppStructOps<FTransform> GFTransformCppStructOps;
+
+UScriptStruct FTransform::StaticStructInstance(
+    "FTransform", nullptr,
+    sizeof(FTransform), alignof(FTransform),
+    &GFTransformCppStructOps);
+```
+
+enum은 `UEnum` 정적 인스턴스와 entry table을 생성한다.
+
+```cpp
+UEnum* StaticEnum_EInterpBehaviour()
+{
+    static UEnum Enum("EInterpBehaviour",
+                      sizeof(EInterpBehaviour),
+                      ECppForm::EnumClass);
+    static const bool bRegistered = []()
+    {
+        Enum.AddEnumerator("OneShot",
+            static_cast<int64>(EInterpBehaviour::OneShot));
+        return true;
+    }();
+    (void)bRegistered;
+    return &Enum;
 }
 ```
 
 ---
 
-## 2. 무엇을 하는가?
+## 5. 런타임 메타 객체
 
-리플렉션 시스템은 엔진 내 여러 서브시스템의 **공통 기반**을 이루며, 다음 기능을 가능하게 한다.
+### `UObject`
 
-### 2-1. 에디터의 디테일(Property) 패널 자동 생성
-[`EditorPropertyWidget`](../KraftonEngine/Source/Editor/UI/EditorPropertyWidget.cpp)은 선택된 액터·컴포넌트에 대해 `GetEditableProperties()`를 호출하여 얻은 `FProperty*` 목록을 순회한다. 각 프로퍼티의 `EPropertyType`(예: `Bool`, `Float`, `Vec3`, `Enum`, `Struct`, `Array`, `SoftObject` 등)에 따라 알맞은 ImGui 위젯(체크박스, 슬라이더, 컬러 피커, 콤보 박스 등)을 자동으로 그린다. **클래스에 멤버를 하나 추가하고 `UPROPERTY(Edit)`만 붙이면 별도의 UI 코드 없이도 에디터에 노출된다.**
-
-### 2-2. JSON 기반 씬 직렬화
-[`FSceneSaveManager`](../KraftonEngine/Source/Engine/Serialization/SceneSaveManager.cpp)는 액터/컴포넌트의 상태를 저장할 때, 각 객체에 대해 `GetNonTransientProperties()`로 직렬화 대상 프로퍼티만 모은 뒤, `FProperty::Serialize(Instance)`를 호출하여 JSON 값을 얻는다. 로딩 시에도 같은 방식으로 `Deserialize(Instance, Value)`를 호출하여 값을 복원한다. **새로운 멤버를 추가해도 별도의 save/load 코드를 작성할 필요가 없다.**
-
-### 2-3. 객체 복제 (Duplicate)
-[`UObject::Duplicate()`](../KraftonEngine/Source/Engine/Object/Object.cpp)는 같은 클래스의 인스턴스를 생성한 뒤, 리플렉션 정보를 활용한 메모리 아카이브 왕복으로 멤버 상태를 그대로 복사한다.
-
-### 2-4. RTTI / IsA / Cast
-프로퍼티 리플렉션은 클래스 리플렉션과 한 몸이다. `UCLASS()` 마커는 `UClass` 정적 인스턴스와 부모 클래스 포인터를 함께 emit하므로, [`UObject::IsA<T>()`](../KraftonEngine/Source/Engine/Object/Object.h) / `Cast<T>` 가 정상 동작한다.
-
-### 2-5. 디테일 패널에서의 카테고리·범위·표시 이름 제어
-`UPROPERTY(Edit, Category="Movement", Min=0, Max=200, Speed=0.5, DisplayName="Max Speed")` 처럼 어노테이션 인자만으로 에디터 노출 정책을 제어한다. 자식 클래스에서 부모의 프로퍼티를 숨기고 싶을 때는 `UPROPERTY_HIDE("MemberName")` 마커를 사용한다 (예: `USubUVComponent` 가 `UBillboardComponent` 의 `Material` 을 숨김).
-
-### 2-6. 에디터에서의 클래스 카탈로그
-[`UClass::GetAllClasses()`](../KraftonEngine/Source/Engine/Object/UClass.h)는 정적 초기화 시 등록된 모든 클래스를 보관한다. 컴포넌트 추가 메뉴, 액터 스폰 다이얼로그 등은 이 레지스트리를 순회하여 사용 가능한 타입을 노출한다. 또한 이름 문자열로 클래스를 찾을 수 있어 (`UClass::FindByName`), 직렬화된 씬 파일의 `"Class": "UPointLightComponent"` 같은 필드를 다시 객체 타입으로 해석할 수 있다.
-
----
-
-## 3. 왜 필요한가?
-
-리플렉션이 없으면 위에서 열거한 기능을 위해 **각 클래스마다 손으로 직렬화 함수, UI 빌더, 복제 함수, 클래스 등록 코드를 반복 작성**해야 한다. 클래스가 수십 개이고 멤버가 수백 개인 엔진 코드베이스에서 이는:
-
-- **유지보수 폭증**: 멤버 하나를 추가/이름변경할 때마다 직렬화·UI·복제 코드를 일관되게 수정해야 한다.
-- **버그의 온상**: 손으로 작성한 직렬화 코드와 UI 코드는 쉽게 서로 어긋난다.
-- **확장 비용**: 새 컴포넌트를 만들 때마다 “전부 다 똑같이 다시” 적어야 한다.
-
-리플렉션은 이 문제를 다음 한 줄의 격언으로 해결한다.
-
-> **“데이터는 단순하다. 메타데이터는 똑똑하다.”**  
-> (Data is dumb. Metadata is smart.)
-
-즉, 멤버 변수 본체는 그저 메모리 블록이며, 그 블록을 어떻게 해석하고 편집하고 직렬화할지는 모두 **`FProperty` 디스크립터**가 안다. 그러므로 데이터 위에서 동작하는 모든 일반 코드(에디터, 직렬화, 복제, 디핑, 네트워킹 등)는 디스크립터만 보고 동작할 수 있다.
-
----
-
-## 4. 어떻게 구현되어 있는가?
-
-### 4-1. 전체 흐름
-
-```
-헤더 (UCLASS/UPROPERTY 마커)
-      │
-      ▼
-Scripts/GenerateCode.py  ── 스캔/파싱
-      │
-      ├──► Intermediate/Generated/Inc/<File>.generated.h
-      │       └─ KE_GENERATED_BODY_<ClassName>() 매크로
-      │
-      └──► Intermediate/Generated/Source/<File>.gen.cpp
-              ├─ UClass 정적 인스턴스 정의
-              ├─ FClassRegistrar (전역 클래스 레지스트리 등록)
-              ├─ REGISTER_FACTORY (이름 → 인스턴스 생성)
-              ├─ <ClassName>_PropertyRegistrar (FProperty 디스크립터 등록)
-              └─ (옵션) Lua usertype 바인딩
-      │
-      ▼
-런타임:
-  - UClass::GetAllClasses() / FindByName()
-  - UStruct::GetProperties() / GetEditableProperties() / GetNonTransientProperties()
-  - FProperty::Serialize / Deserialize
-```
-
-### 4-2. 마커 매크로
-
-[`ObjectMacros.h`](../KraftonEngine/Source/Engine/Object/ObjectMacros.h)에 정의된 매크로들은 **컴파일 시 빈 매크로**이다. 단지 Python 파서가 위치를 식별할 수 있도록 존재한다.
+모든 reflected runtime object의 base다. `UObject` 는 UUID, object name, outer, internal index를 갖고 `GetClass()` 를 통해 `UClass` metadata에 접근한다.
 
 ```cpp
-#define UCLASS(...)
-#define UPROPERTY(...)
-#define UFUNCTION(...)
-#define UENUM(...)
-#define USTRUCT(...)
-#define UPROPERTY_HIDE(...)
-#define GENERATED_BODY(ClassName) KE_GENERATED_BODY_##ClassName()
+virtual UClass* GetClass() const { return StaticClass(); }
+virtual void GetEditableProperties(TArray<const FProperty*>& OutProps);
+virtual void GetNonTransientProperties(TArray<const FProperty*>& OutProps);
 ```
 
-저자 사용 예:
+`Cast<T>` / `IsA<T>` 는 `UClass::IsChildOf()` 를 사용한다.
+
+### `UField`
+
+`UField` 는 이름 있는 metadata object의 base다. 현재 `UClass`, `UStruct`, `UScriptStruct`, `UEnum` 이 이 계층에 있다.
+
+정적 metadata object들은 C++ static initialization 시점에 생성되므로, `GUObjectArray` 가 준비되기 전에 생길 수 있다. 그래서 `UField` 계열은 생성 시 즉시 등록하지 않고 `FUObjectArray::DeferStaticObject()` 로 미뤘다가 engine loop에서 flush한다.
+
+### `UStruct`
+
+`UStruct` 는 property container다. `UClass` 와 `UScriptStruct` 가 모두 상속한다.
 
 ```cpp
-#include "Foo.generated.h"
-
-UCLASS()
-class UFoo : public UBar
+class UStruct : public UField
 {
-    GENERATED_BODY(UFoo)
+public:
+    const TArray<FProperty*>& GetProperties() const;
+    void AddProperty(FProperty* InProperty);
 
-    UPROPERTY(Edit, Category="Movement", Min=0, Max=200, Speed=0.5)
-    float MaxSpeed = 50.f;
-
-    UFUNCTION(Lua)
-    void Possess(AActor* Target);
+    void GetAllProperties(TArray<const FProperty*>& OutProps) const;
+    void GetEditableProperties(TArray<const FProperty*>& OutProps) const;
+    void GetNonTransientProperties(TArray<const FProperty*>& OutProps) const;
+    const FProperty* FindPropertyByName(const char* InName) const;
 };
 ```
 
-`GENERATED_BODY(UFoo)` 는 매칭되는 `.generated.h` 의 `KE_GENERATED_BODY_UFoo()` 로 토큰 페이스트 된다. Unreal과 달리 `__LINE__` 추적을 쓰지 않아, **한 헤더에 여러 UCLASS가 공존**할 수 있다.
+`GetAllProperties()` 는 base-to-derived 순서로 부모의 property를 먼저 모은 뒤 자기 property를 붙인다. `FindPropertyByName()` 은 반대로 자기 class에서 먼저 찾고 없으면 parent로 올라간다.
 
-### 4-3. 헤더 툴 ([`Scripts/GenerateCode.py`](../Scripts/GenerateCode.py))
+`UPROPERTY_HIDE("Name")` 은 inherited property를 editor와 serialization 대상에서 숨기기 위해 `HiddenProperties` 에 이름을 기록한다.
 
-핵심 동작:
+### `UClass`
 
-1. **`SOURCE_ROOTS`** 아래의 모든 `.h` 를 스캔하고, `UCLASS(` / `USTRUCT(` / `UENUM(` 마커가 있는 것만 추린다.
-2. 정규식과 중괄호 매칭으로 클래스 본문을 잘라, **`ClassInfo`** / **`StructInfo`** / **`EnumInfo`** / **`PropertyInfo`** / **`FunctionInfo`** 로 모델링한다.
-3. C++ 타입을 `EPropertyType` 으로 분류한다 (`TYPE_MAP`, `POINTER_TYPE_MAP`, 그리고 알려진 enum/struct/`TArray<T>` 추론).
-4. 두 파일을 emit한다:
-   - **`<File>.generated.h`**: `KE_GENERATED_BODY_<Class>()` 매크로와, UENUM 의 이름 테이블(`GFooNames[]`) 정의.
-   - **`<File>.gen.cpp`**: `UClass` 정적 인스턴스 정의 + 프로퍼티 등록 구조체.
-
-생성된 `.gen.cpp` 예시 ([`StaticMeshComponent.gen.cpp`](../KraftonEngine/Intermediate/Generated/Source/StaticMeshComponent.gen.cpp)):
+`UClass` 는 `UStruct` 에 class flags와 cast flags를 더한다.
 
 ```cpp
-UClass UStaticMeshComponent::StaticClassInstance(
-    "UStaticMeshComponent", &UMeshComponent::StaticClassInstance,
-    sizeof(UStaticMeshComponent), CF_None, CASTCLASS_UStaticMeshComponent);
-FClassRegistrar UStaticMeshComponent::s_Registrar(&UStaticMeshComponent::StaticClassInstance);
-REGISTER_FACTORY(UStaticMeshComponent)
-
-struct UStaticMeshComponent_PropertyRegistrar {
-    UStaticMeshComponent_PropertyRegistrar() {
-        using ThisClass = UStaticMeshComponent;
-        UClass* Cls = UStaticMeshComponent::StaticClass();
-        {
-            Cls->AddProperty(new FSoftObjectProperty(
-                "Static Mesh", "Mesh", CPF_Edit,
-                offsetof(ThisClass, StaticMesh),
-                sizeof(((ThisClass*)0)->StaticMesh),
-                UStaticMesh::StaticClass()));
-        }
-        {
-            Cls->AddProperty(new FArrayProperty(
-                "Materials", "Materials", CPF_Edit | CPF_FixedSize,
-                offsetof(ThisClass, MaterialSlots),
-                sizeof(((ThisClass*)0)->MaterialSlots),
-                std::unique_ptr<FProperty>(new FMaterialSlotProperty(...)),
-                GetTArrayAccessor<FMaterialSlot>()));
-        }
-    }
+enum EClassFlags
+{
+    CF_None,
+    CF_Actor,
+    CF_Component,
+    CF_Camera,
+    CF_HiddenInComponentList,
 };
-static UStaticMeshComponent_PropertyRegistrar s_UStaticMeshComponent_PropertyReg;
 ```
 
-`static` 인스턴스 두 개가 **정적 초기화 시점**에 동작하면서:
+`UClass::GetAllClasses()` 는 모든 class metadata registry다. `FindByName()` 은 scene load나 settings load에서 class string을 다시 `UClass*` 로 바꿀 때 사용한다.
 
-- `FClassRegistrar` 가 `UClass` 를 전역 레지스트리에 push.
-- `<Class>_PropertyRegistrar` 가 모든 `FProperty` 디스크립터를 `UClass::Properties` 에 추가.
+`EClassCastFlags` 는 빠른 `IsA` 경로를 위한 bitmask다. root class에 고유 bit를 부여하고, `UClass::Bind()` 가 parent bits를 OR 해서 descendant에도 inherited cast bits가 적용되게 한다.
 
-이로써 `main()` 진입 전에 모든 리플렉션 메타데이터가 갖춰진다.
+### `UEnum`
 
-### 4-4. 런타임 데이터 구조
-
-#### `UClass` / `UStruct`
-[`UStruct`](../KraftonEngine/Source/Engine/Object/UStruct.h) 는 “필드(=프로퍼티)의 컨테이너”라는 개념을 표현한다. `UClass`는 `UStruct`를 상속해 **이름, 부모 포인터, 크기(sizeof), `ClassFlags`, `ClassCastFlags`** 와 함께 `TArray<FProperty*> Properties` 를 보관한다.
-
-핵심 API:
-
-| 메서드 | 의미 |
-|---|---|
-| `GetAllProperties(Out)` | 베이스→파생 순서로 전체 프로퍼티 수집 |
-| `GetEditableProperties(Out)` | `CPF_Edit` 플래그만 + 숨김 처리 적용 |
-| `GetNonTransientProperties(Out)` | `CPF_Transient` 가 아닌 것만 (직렬화 대상) |
-| `FindPropertyByName(Name)` | 이름으로 검색, 자기 → 부모 순 |
-| `HideInheritedProperty(Name)` | 자식 클래스에서 부모 프로퍼티 숨김 |
-
-캐스팅 빠른 경로는 비트마스크 기반이다. `UClass::IsChildOf(Other)` 는 `Other` 가 고유 cast 비트(`CASTCLASS_*`)를 가진 “fast-path 루트”인 경우 단일 비트 체크로 끝나며, 그 외에는 `SuperStruct` 체인을 포인터 비교로 순회한다. 이 비트는 codegen의 `CAST_FLAG_MAP` 에 등록된 루트 클래스에만 emit되고, 파생 클래스는 `UClass` 생성자에서 부모의 비트를 OR하여 상속한다.
-
-#### `FProperty` 계층
-[`FProperty`](../KraftonEngine/Source/Engine/Core/Property/PropertyTypes.h) 는 **순수 스키마**이다. 인스턴스 메모리를 보유하지 않으며, 컨테이너 포인터(=객체)와 `Offset_Internal` 을 합쳐 값 주소를 계산한다.
+`UEnum` 은 enum entry 이름과 실제 값을 보관한다.
 
 ```cpp
-class FProperty {
+void AddEnumerator(const char* InName, int64 InValue);
+FString GetNameByValue(int64 Value) const;
+int64 GetValueByName(FString Name) const;
+uint32 GetUnderlyingSize() const;
+```
+
+이 구조 덕분에 sparse enum value와 custom underlying type을 다룰 수 있다.
+
+### `UScriptStruct`
+
+`UScriptStruct` 는 `UStruct` 에 C++ struct lifecycle 정보를 더한다.
+
+```cpp
+class ICppStructOps
+{
+public:
+    virtual void Construct(void* Dest) const = 0;
+    virtual void Destruct(void* Dest) const = 0;
+    virtual void Copy(void* Dest, const void* Src) const = 0;
+};
+```
+
+codegen은 `TCppStructOps<T>` 정적 인스턴스를 만들고 `UScriptStruct` 에 넘긴다. 따라서 타입을 모르는 코드도 `UScriptStruct` 만 가지고 구조체 값을 생성/파괴/복사할 수 있다.
+
+자세한 내용은 [`SpecialPropertyTypes.md`](SpecialPropertyTypes.md)의 `FStructProperty` 섹션에 있다.
+
+---
+
+## 6. `FProperty` 계층
+
+`FProperty` 는 순수 schema다. 인스턴스 값을 들고 있지 않고, container pointer와 offset을 합쳐 값 주소를 계산한다.
+
+```cpp
+class FProperty
+{
 public:
     FString Name;
     FString Category;
-    uint32  PropertyFlag;        // CPF_Edit, CPF_Transient, CPF_FixedSize, ...
-    uint32  ElementSize;
-    uint32  Offset_Internal;
+    uint32 PropertyFlag = CPF_None;
+    uint32 ElementSize = 0;
+    uint32 Offset_Internal = 0;
 
     virtual EPropertyType GetType() const = 0;
     virtual json::JSON Serialize(const void* Instance) const = 0;
     virtual void Deserialize(void* Instance, const json::JSON& Value) const = 0;
 
-    void* ContainerPtrToValuePtr(void* Container) const {
+    void* ContainerPtrToValuePtr(void* Container) const
+    {
         return static_cast<char*>(Container) + Offset_Internal;
     }
 };
 ```
 
-서브클래스는 각각 별도 헤더에 위치한다 (이 레이아웃은 의도된 컨벤션이다).
+`Instance` 는 property를 소유한 object일 수도 있고, struct property 내부를 순회할 때는 struct instance pointer일 수도 있으며, array inner property를 처리할 때는 element pointer일 수도 있다.
 
-| 타입 | 서브클래스 | 특징 |
+현재 주요 property type은 다음과 같다.
+
+| 타입 | 클래스 | 역할 |
 |---|---|---|
-| Bool / ByteBool | `FBoolProperty`, `FByteBoolProperty` | `bool` vs `uint8` 저장 차이 |
-| 수치 | `FIntProperty`, `FFloatProperty` (`FNumericProperty` 상속) | `Min/Max/Speed` 메타데이터 |
-| 벡터 | `FVec3Property`, `FVec4Property`, `FRotatorProperty`, `FColor4Property` | float 배열로 직렬화 |
-| 문자열 | `FStringProperty`, `FNameProperty`, `FScriptProperty`, `FSceneComponentRefProperty` | 각각 `FString` / `FName` / 컴포넌트 경로 |
-| 머티리얼 | `FMaterialSlotProperty` | `{ "Path": "..." }` JSON |
-| 열거형 | [`FEnumProperty`](../KraftonEngine/Source/Engine/Core/Property/FEnumProperty.h) | `EnumNames` / `EnumCount` / `EnumSize` 보유, `memcpy` 로 폭 맞춤 |
-| 구조체 | [`FStructProperty`](../KraftonEngine/Source/Engine/Core/Property/FStructProperty.h) | `FStructPropertySchemaFn`(= `GetSchema()`) 으로 자식 필드 재귀 |
-| 배열 | [`FArrayProperty`](../KraftonEngine/Source/Engine/Core/Property/FArrayProperty.h) | `Inner` (요소 디스크립터) + `FArrayAccessor` (Num/GetAt/AddDefault/...) |
-| 객체 참조 | [`FObjectPropertyBase`](../KraftonEngine/Source/Engine/Core/Property/FObjectPropertyBase/FObjectPropertyBase.h) 계열 | `GetObjectPropertyValue` / `SetObjectPropertyValue` 가상화 |
-| 소프트 참조 | [`FSoftObjectProperty`](../KraftonEngine/Source/Engine/Core/Property/FObjectPropertyBase/FSoftObjectProperty.h) | 경로 문자열만 직렬화, 미로드 시 `nullptr` 반환 |
+| bool | `FBoolProperty`, `FByteBoolProperty` | `bool` 과 byte bool 분리 |
+| number | `FIntProperty`, `FFloatProperty` | `Min`, `Max`, `Speed` metadata |
+| vector/color | `FVec3Property`, `FVec4Property`, `FRotatorProperty`, `FColor4Property` | float 배열 형태 JSON |
+| string/name | `FStringProperty`, `FNameProperty`, `FScriptProperty` | 문자열 계열 |
+| scene component ref | `FSceneComponentRefProperty` | 같은 actor 안 component path |
+| material slot | `FMaterialSlotProperty` | material path object |
+| enum | `FEnumProperty` | `UEnum*` 으로 이름/값/크기 해석 |
+| struct | `FStructProperty` | `UScriptStruct*` child properties 재귀 |
+| array | `FArrayProperty` | `Inner` property + `FArrayAccessor` |
+| soft object | `FSoftObjectProperty` | asset path + `PropertyClass` |
+| hard object/class | `FObjectProperty`, `FClassProperty` | 아직 빈 스텁에 가까움 |
 
-특히 두 가지 합성 타입의 작동 방식이 시스템 전체의 일반성을 보여준다.
+복합 타입은 모두 재귀 구조다.
 
-**(a) `FArrayProperty` — 타입 소거된 배열 접근**
-
-```cpp
-struct FArrayAccessor {
-    uint32 (*Num)(const void*);
-    void*  (*GetAt)(void*, uint32);
-    void   (*AddDefault)(void*);
-    void   (*RemoveAt)(void*, uint32);
-    void   (*Clear)(void*);
-    void   (*Assign)(void* Dst, const void* Src);
-};
-
-template <typename T>
-inline FArrayAccessor* GetTArrayAccessor();  // T별 static 인스턴스 반환
-```
-
-`FArrayProperty::Serialize` 는 `Accessor->Num` / `GetAt` 만 호출하므로, `TArray<T>` 의 T 가 무엇이든 동일한 코드로 동작한다. 요소 타입의 직렬화는 `Inner` (또 다른 `FProperty`) 가 책임진다.
-
-**(b) `FStructProperty` — 함수 포인터로 받는 자식 스키마**
-
-```cpp
-using FStructPropertySchemaFn = const std::vector<FProperty*>& (*)();
-
-class FStructProperty {
-    FStructPropertySchemaFn SchemaFn = nullptr;
-    // Serialize: SchemaFn() 으로 자식 FProperty 목록을 얻어 각각 Serialize 재호출
-};
-```
-
-`USTRUCT` 가 붙은 타입은 codegen이 `static const std::vector<FProperty*>& GetSchema()` 를 정의하고, 이를 함수 포인터로 등록한다. 덕분에 **임의 깊이의 중첩 구조체**가 자연스럽게 직렬화/UI 렌더링된다.
-
-### 4-5. 플래그
-
-```cpp
-enum EPropertyFlags : uint32 {
-    CPF_None      = 0,
-    CPF_Edit      = 1 << 1,  // 에디터에 노출 + 편집 가능
-    CPF_FixedSize = 1 << 2,  // 배열 길이 고정 (예: 머티리얼 슬롯)
-    CPF_Transient = 1 << 3,  // 직렬화 제외
-    CPF_Config    = 1 << 4,
-};
-```
-
-`GetEditableProperties()` 는 `CPF_Edit` 만, `GetNonTransientProperties()` 는 `CPF_Transient` 가 **아닌** 것만 반환한다. 동일한 `UPROPERTY` 가 “에디터에는 보이지만 저장은 되지 않는” 식의 정책을 깔끔히 표현한다.
-
-### 4-6. PostEditProperty 훅
-
-[`UObject::PostEditProperty(const char* PropertyName)`](../KraftonEngine/Source/Engine/Object/Object.h) 는 에디터에서 값이 바뀐 직후, 그리고 직렬화 로드 후 호출된다. 예를 들어 `StaticMesh` 가 바뀌면 `UStaticMeshComponent::PostEditProperty("Static Mesh")` 가 새로운 메시의 슬롯 개수에 맞춰 `MaterialSlots` 배열을 재구성한다. 직렬화 측은 이 점을 고려해 **2-패스**로 동작한다: 1패스에서 알려진 디스크립터를 로드 → `PostEditProperty` 가 새 디스크립터를 만들 수 있음 → 2패스에서 추가된 디스크립터를 마저 로드.
+- `FStructProperty` 는 `UScriptStruct::GetProperties()` 를 순회한다.
+- `FArrayProperty` 는 `Accessor->Num()` / `GetAt()` 로 element를 얻고 `Inner` 에 처리를 위임한다.
+- `FEnumProperty` 는 raw value를 읽되 enum metadata는 `UEnum` 에서 얻는다.
 
 ---
 
-## 5. 새 프로퍼티를 추가할 때 저자가 하는 일
+## 7. Property flags
 
-전체 시스템의 가치는 다음 한 줄의 사용자 경험으로 요약된다.
+현재 flag는 다음처럼 정의되어 있다.
 
 ```cpp
-UPROPERTY(Edit, Category="Lighting", Min=0, Max=10, Speed=0.05)
-float Intensity = 1.0f;
+enum EPropertyFlags : uint32
+{
+    CPF_None                     = 0,
+    CPF_Edit                     = 1 << 1,
+    CPF_FixedSize                = 1 << 2,
+    CPF_Transient                = 1 << 3,
+    CPF_DuplicateTransient       = 1 << 4,
+    CPF_NonPIEDuplicateTransient = 1 << 5,
+    CPF_Config                   = 1 << 6,
+};
 ```
 
-이 한 줄을 헤더에 추가하고 `python Scripts/GenerateCode.py` 를 실행(또는 빌드 사전 단계로 자동 실행)하면:
+현재 확실히 적용되는 대표 경로는 다음이다.
 
-- 에디터 디테일 패널에 `Lighting > Intensity` 슬라이더가 0–10 범위로 생긴다.
-- 씬 저장 시 `Intensity` 값이 JSON에 포함된다.
-- 객체 복제(`Duplicate`) 시 값이 그대로 복사된다.
+- `CPF_Edit`: editor property panel 노출 대상
+- `CPF_FixedSize`: array editor와 array deserialize에서 길이 변경 제한
+- `CPF_Transient`: `GetNonTransientProperties()` 기반 JSON save/load 제외
+- `CPF_DuplicateTransient`, `CPF_NonPIEDuplicateTransient`: flag vocabulary는 있지만 현재 manual `Serialize(FArchive&)` duplicate 경로에서는 아직 정책 적용 전
+- `CPF_Config`: flag는 있지만 config serialization 정책은 별도 확장 지점
 
-직렬화 코드, UI 코드, 복제 코드를 **단 한 줄도** 작성하지 않는다.
-
----
-
-## 6. 한계와 향후 계획
-
-- **`UScriptStruct` 도입 진행 중** (`feature/UScriptStruct` 브랜치). 현재는 `USTRUCT`가 단순히 `GetSchema()` 자유 함수를 생성하지만, 향후 `UScriptStruct`를 정식 메타 객체로 둘 예정이다.
-- `EPropertyType` 열거형은 디스패치용 태그로 남아있다. 서브클래스가 명확해진 현재 시점에서 점진적으로 제거될 예정 (별도 커밋).
-- 함수 리플렉션(`UFUNCTION`)은 현재 Lua 바인딩에만 활용되며, `CallInEditor`/`Exec` 등은 미구현이다.
-- 정규식 기반 파서이므로 `sizeof(decltype(...))` 같은 중첩 괄호 표현은 지원되지 않는다(현 v1 제약).
+`DuplicateTransient` 류를 제대로 적용하려면 generated/reflected `FArchive` serialization 또는 property-aware duplicate archive가 필요하다.
 
 ---
 
-## 7. 핵심 파일 한눈에 보기
+## 8. Serialization 경로
+
+이 엔진에는 현재 두 serialization 축이 공존한다.
+
+### JSON property serialization
+
+`FProperty::Serialize(const void*)` / `Deserialize(void*, const json::JSON&)` 경로다. Scene save/load와 editor-facing data에 쓰인다.
+
+이 경로는 property flags, struct recursion, array recursion, enum metadata, soft object path를 비교적 잘 활용한다.
+
+### `FArchive` binary serialization
+
+`UObject::Serialize(FArchive& Ar)` virtual 함수와 `Ar << Value` operator 기반 경로다. `Duplicate()` 는 현재 `FMemoryArchive` 로 이 경로를 왕복한다.
+
+```cpp
+UObject* UObject::Duplicate(UObject* NewOuter) const
+{
+    UObject* Dup = FObjectFactory::Get().Create(GetClass()->GetName(), EffectiveOuter);
+
+    FMemoryArchive Writer(true);
+    const_cast<UObject*>(this)->Serialize(Writer);
+
+    FMemoryArchive Reader(Writer.GetBuffer(), false);
+    Dup->Serialize(Reader);
+
+    Dup->PostDuplicate();
+    return Dup;
+}
+```
+
+중요한 점은 현재 대부분의 `Serialize(FArchive&)` 가 수동 구현이라는 것이다.
+
+```cpp
+void UProjectileMovementComponent::Serialize(FArchive& Ar)
+{
+    UMovementComponent::Serialize(Ar);
+    Ar << Velocity;
+    Ar << InitialSpeed;
+    Ar << MaxSpeed;
+}
+```
+
+따라서 `FArchive` duplicate는 아직 `FProperty` flags를 자동으로 보지 않는다. `CPF_DuplicateTransient` 같은 정책은 generated archive serialization을 도입한 뒤에야 자연스럽게 적용할 수 있다.
+
+권장되는 다음 단계는 `SerializeGeneratedProperties(FArchive& Ar)` 를 codegen으로 만들고, 수동 `Serialize` 는 필요한 custom payload만 남기는 방식이다.
+
+---
+
+## 9. PostEditProperty
+
+`PostEditProperty(const char* PropertyName)` 는 editor에서 값이 바뀐 직후, 그리고 scene load 후 호출된다.
+
+현재 이벤트 객체가 아니라 property display/name 문자열만 전달한다. 단순하지만 대부분의 component 후처리에는 충분하다.
+
+예를 들어 static mesh가 바뀌면 mesh section 개수에 맞춰 material slot 배열을 재구성하고, primitive collision property가 바뀌면 physics body를 다시 만든다.
+
+향후 structured event가 필요해지면 다음 정보가 들어갈 수 있다.
+
+- `const FProperty*`
+- property path
+- array index
+- edit source: editor, load, duplicate, script
+- interactive change 여부
+
+다만 지금은 string 기반 API가 이미 넓게 쓰이고 있으므로, 큰 migration보다 compatibility wrapper가 안전하다.
+
+---
+
+## 10. 생성 결과 예시
+
+사용자 코드:
+
+```cpp
+UCLASS(Component)
+class UHeightFogComponent : public USceneComponent
+{
+    GENERATED_BODY(UHeightFogComponent)
+
+    UPROPERTY(Edit, Category="Fog", Min=0, Speed=0.01f)
+    float Density = 0.02f;
+};
+```
+
+생성되는 class metadata:
+
+```cpp
+UClass UHeightFogComponent::StaticClassInstance(
+    "UHeightFogComponent",
+    &USceneComponent::StaticClassInstance,
+    sizeof(UHeightFogComponent),
+    CF_Component);
+
+REGISTER_FACTORY(UHeightFogComponent)
+```
+
+생성되는 property registration:
+
+```cpp
+struct UHeightFogComponent_PropertyRegistrar
+{
+    UHeightFogComponent_PropertyRegistrar()
+    {
+        using ThisClass = UHeightFogComponent;
+        UClass* Cls = UHeightFogComponent::StaticClass();
+
+        Cls->AddProperty(new FFloatProperty(
+            "Density", "Fog", CPF_Edit,
+            static_cast<uint32>(offsetof(ThisClass, Density)),
+            static_cast<uint32>(sizeof(((ThisClass*)0)->Density)),
+            0.0f, 0.0f, 0.01f));
+    }
+};
+```
+
+런타임에서 editor는 `CPF_Edit` 를 보고 노출하고, scene save는 `CPF_Transient` 가 없으므로 저장하고, JSON deserialize는 offset으로 `Density` 주소를 찾아 값을 쓴다.
+
+---
+
+## 11. 현재 한계와 다음 단계
+
+### 이미 있는 기반
+
+- `UClass` / `UStruct` / `UField` metadata hierarchy
+- `UEnum` metadata object
+- `UScriptStruct` + `ICppStructOps`
+- `FProperty` subclass hierarchy
+- `TArray<T>` type-erased accessor
+- JSON save/load property recursion
+- editor property panel
+- class registry와 factory
+- Lua용 `UFUNCTION(Lua)` binding generation
+
+### 아직 없는 것
+
+- `FField` / `FFieldVariant` 기반 lightweight field ownership
+- `UClass::ClassDefaultObject` / CDO
+- `FObjectProperty` / `FClassProperty` hard reference 구현
+- GC mark/sweep 본체와 recursive reference collector
+- generated `FArchive` property serialization
+- property path 기반 structured `PostEditProperty`
+- tagged binary property archive
+- nested template parser의 완전한 C++ parsing
+
+### 추천 작업 순서
+
+1. generated `SerializeGeneratedProperties(FArchive& Ar)` helper 도입
+2. `FObjectProperty` / `FClassProperty` 구현
+3. recursive reference collection과 basic GC
+4. CDO 또는 structured property event
+5. `FField` linked list / `TFieldIterator` 스타일 migration
+
+순서는 프로젝트 목표에 따라 바뀔 수 있지만, hard reference와 GC는 object lifetime correctness와 직접 연결되므로 가장 높은 우선순위다.
+
+---
+
+## 12. 주요 파일
 
 | 파일 | 역할 |
 |---|---|
-| [`Scripts/GenerateCode.py`](../Scripts/GenerateCode.py) | 헤더 스캔 → `.generated.h` / `.gen.cpp` emit |
-| [`Source/Engine/Object/ObjectMacros.h`](../KraftonEngine/Source/Engine/Object/ObjectMacros.h) | 빈 매크로 마커 정의 |
-| [`Source/Engine/Object/Object.h`](../KraftonEngine/Source/Engine/Object/Object.h) | `UObject` + RTTI 매크로 + 수동 등록 헬퍼 |
-| [`Source/Engine/Object/UStruct.h`](../KraftonEngine/Source/Engine/Object/UStruct.h) | 프로퍼티 컨테이너 / 룩업 / 가시성 |
-| [`Source/Engine/Object/UClass.h`](../KraftonEngine/Source/Engine/Object/UClass.h) | 클래스 메타 / 캐스트 플래그 / 전역 레지스트리 |
-| [`Source/Engine/Core/Property/PropertyTypes.h`](../KraftonEngine/Source/Engine/Core/Property/PropertyTypes.h) | `FProperty` 베이스 + 단순 타입 서브클래스 |
-| [`Source/Engine/Core/Property/FArrayProperty.h`](../KraftonEngine/Source/Engine/Core/Property/FArrayProperty.h) | 타입 소거 배열 디스크립터 |
-| [`Source/Engine/Core/Property/FStructProperty.h`](../KraftonEngine/Source/Engine/Core/Property/FStructProperty.h) | 구조체 디스크립터(스키마 함수 포인터) |
-| [`Source/Engine/Core/Property/FEnumProperty.h`](../KraftonEngine/Source/Engine/Core/Property/FEnumProperty.h) | enum 디스크립터(이름 테이블/저장 폭) |
-| [`Source/Engine/Core/Property/FObjectPropertyBase/`](../KraftonEngine/Source/Engine/Core/Property/FObjectPropertyBase/) | UObject 참조 디스크립터(하드/소프트) |
-| [`Source/Editor/UI/EditorPropertyWidget.cpp`](../KraftonEngine/Source/Editor/UI/EditorPropertyWidget.cpp) | 리플렉션 기반 디테일 패널 |
-| [`Source/Engine/Serialization/SceneSaveManager.cpp`](../KraftonEngine/Source/Engine/Serialization/SceneSaveManager.cpp) | 리플렉션 기반 씬 저장/로드 |
+| [`Scripts/GenerateCode.py`](../Scripts/GenerateCode.py) | header scan, parse, generated output |
+| [`ObjectMacros.h`](../KraftonEngine/Source/Engine/Object/ObjectMacros.h) | 빈 marker macro와 `GENERATED_BODY` |
+| [`Object.h`](../KraftonEngine/Source/Engine/Object/Object.h) | `UObject`, RTTI helpers, duplicate entry |
+| [`FUObjectArray.h`](../KraftonEngine/Source/Engine/Object/FUObjectArray.h) | object creation, static metadata defer/flush |
+| [`UField.h`](../KraftonEngine/Source/Engine/Object/UField.h) | named metadata object base |
+| [`UStruct.h`](../KraftonEngine/Source/Engine/Object/UStruct.h) | property container, inherited property traversal |
+| [`UClass.h`](../KraftonEngine/Source/Engine/Object/UClass.h) | class metadata, flags, cast flags, registry |
+| [`UEnum.h`](../KraftonEngine/Source/Engine/Object/UEnum.h) | enum metadata |
+| [`ScriptStruct.h`](../KraftonEngine/Source/Engine/Object/ScriptStruct.h) | `UScriptStruct`, `ICppStructOps` |
+| [`PropertyTypes.h`](../KraftonEngine/Source/Engine/Core/Property/PropertyTypes.h) | `FProperty` base and simple property types |
+| [`FArrayProperty.h`](../KraftonEngine/Source/Engine/Core/Property/FArrayProperty.h) | array descriptor |
+| [`FStructProperty.h`](../KraftonEngine/Source/Engine/Core/Property/FStructProperty.h) | struct descriptor |
+| [`FEnumProperty.h`](../KraftonEngine/Source/Engine/Core/Property/FEnumProperty.h) | enum descriptor |
+| [`FObjectPropertyBase/`](../KraftonEngine/Source/Engine/Core/Property/FObjectPropertyBase/) | soft/hard object property family |
+| [`EditorPropertyWidget.cpp`](../KraftonEngine/Source/Editor/UI/EditorPropertyWidget.cpp) | reflected editor property UI |
+| [`SceneSaveManager.cpp`](../KraftonEngine/Source/Engine/Serialization/SceneSaveManager.cpp) | reflected scene save/load |
 
 ---
 
-## 8. 한 문장 요약
+## 13. 한 문장 요약
 
-> **헤더의 `UPROPERTY` 한 줄이, 코드 한 줄도 더 쓰지 않고 에디터·직렬화·복제 시스템 전체에서 동작하는 데이터 필드를 만들어낸다.** 이 마법을 가능하게 하는 것이 빈 매크로 마커, Python 헤더 툴, 그리고 `UClass` 안에 살아 있는 `FProperty` 디스크립터 트리이다.
+`UPROPERTY` 한 줄은 codegen을 거쳐 `UClass` / `UScriptStruct` 안의 `FProperty` 디스크립터가 되고, 그 디스크립터가 editor, JSON serialization, type metadata, class registry가 같은 방식으로 값을 찾고 해석하게 만든다.
