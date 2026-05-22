@@ -618,15 +618,21 @@ TArray<FContentItem> FEditorContentBrowserWidget::ReadDirectory(std::wstring Pat
 	if (!std::filesystem::exists(Path) || !std::filesystem::is_directory(Path))
 		return Items;
 
+	const std::filesystem::path CurrentPath = std::filesystem::path(Path).lexically_normal();
+	const std::filesystem::path RootPath = std::filesystem::path(FPaths::RootDir()).lexically_normal();
+	const bool bIsRootDir = CurrentPath == RootPath;
+
 	for (const auto& Entry : std::filesystem::directory_iterator(Path))
 	{
 		std::wstring Name = Entry.path().filename().wstring();
-		if (Entry.is_directory())
+
+		// Root Directory에서 "Asset" 폴더만 Content browser에 표시
+		if (bIsRootDir && Name != L"Asset")
 		{
-			if (Name == L"Bin" || Name == L"Build" || Name == L".git" || Name == L".vs")
-				continue;
+			continue;
 		}
-		else if (!BrowserContext.bShowSourceFiles && IsEditorSourceFile(Entry.path()))
+
+		if (!BrowserContext.bShowSourceFiles && IsEditorSourceFile(Entry.path()))
 		{
 			continue;
 		}
@@ -658,14 +664,22 @@ FEditorContentBrowserWidget::FDirNode FEditorContentBrowserWidget::BuildDirector
 	Node.Self.Name = DirPath.filename().wstring();
 	Node.Self.bIsDirectory = true;
 
+	const std::filesystem::path CurrentPath = DirPath.lexically_normal();
+	const std::filesystem::path RootPath = std::filesystem::path(FPaths::RootDir()).lexically_normal();
+	const bool bIsRootDir = CurrentPath == RootPath;
+
 	for (const auto& Entry : std::filesystem::directory_iterator(DirPath))
 	{
 		if (!Entry.is_directory())
 			continue;
 
 		std::wstring DirName = Entry.path().filename().wstring();
-		if (DirName == L"Bin" || DirName == L"Build" || DirName == L".git" || DirName == L".vs")
+		
+		// Root Directory에서 "Asset" 폴더만 Content browser에 표시
+		if (bIsRootDir && DirName != L"Asset")
+		{
 			continue;
+		}
 
 		Node.Children.push_back(BuildDirectoryTree(Entry.path()));
 	}
