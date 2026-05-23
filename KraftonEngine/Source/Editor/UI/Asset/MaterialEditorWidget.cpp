@@ -82,7 +82,7 @@ namespace
 		}
 
 		bool bChanged = false;
-		if (const ImGuiPayload* Payload = ImGui::AcceptDragDropPayload("PNGElement"))
+		if (const ImGuiPayload* Payload = ImGui::AcceptDragDropPayload("ImageContentItem"))
 		{
 			const FContentItem* Item = static_cast<const FContentItem*>(Payload->Data);
 			if (Item)
@@ -342,7 +342,7 @@ void FMaterialEditorWidget::RenderPreviewViewport(float DetailsWidth)
 		if (VP && Size.x > 0.0f && Size.y > 0.0f)
 		{
 			VP->RequestResize(static_cast<uint32>(Size.x), static_cast<uint32>(Size.y));
-			MaterialViewportWindow.SetRect(FRect(ViewportPos.x, ViewportPos.y, Size.x, Size.y));
+			MaterialViewportWindow.SetRect({ViewportPos.x, ViewportPos.y, Size.x, Size.y});
 
 			if (VP->GetSRV())
 			{

@@ -144,10 +144,10 @@ protected:
 	uint32 GetAccentColor() const override { return IM_COL32(120, 210, 180, 255); }
 };
 
-class PNGElement final : public ContentBrowserElement
+class ImageElement final : public ContentBrowserElement
 {
 public:
-	virtual const char* GetDragItemType() override { return "PNGElement"; }
+	virtual const char* GetDragItemType() override { return "ImageContentItem"; }
 };
 
 class MaterialElement final : public ContentBrowserElement

@@ -118,7 +118,7 @@ void FEditorMaterialInspector::RenderTextureSection()
 		ImGui::Image(Texture->GetSRV(), ImVec2(100, 100));
 		if (ImGui::BeginDragDropTarget())
 		{
-			if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("PNGElement"))
+			if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("ImageContentItem"))
 			{
 				FContentItem ContentItem = *reinterpret_cast<const FContentItem*>(payload->Data);
 				FString NewTexturePath = FPaths::ToUtf8(
