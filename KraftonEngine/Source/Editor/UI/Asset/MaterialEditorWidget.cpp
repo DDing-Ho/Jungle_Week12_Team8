@@ -74,7 +74,7 @@ namespace
 		return Bindings;
 	}
 
-	bool AcceptPNGTextureDrop(const FString& SlotName, UMaterial* Material, UStaticMeshComponent* PreviewMeshComponent)
+	bool AcceptTextureImageDrop(const FString& SlotName, UMaterial* Material, UStaticMeshComponent* PreviewMeshComponent)
 	{
 		if (!Material || !ImGui::BeginDragDropTarget())
 		{
@@ -82,7 +82,7 @@ namespace
 		}
 
 		bool bChanged = false;
-		if (const ImGuiPayload* Payload = ImGui::AcceptDragDropPayload("PNGElement"))
+		if (const ImGuiPayload* Payload = ImGui::AcceptDragDropPayload("ImageContentItem"))
 		{
 			const FContentItem* Item = static_cast<const FContentItem*>(Payload->Data);
 			if (Item)
@@ -342,7 +342,7 @@ void FMaterialEditorWidget::RenderPreviewViewport(float DetailsWidth)
 		if (VP && Size.x > 0.0f && Size.y > 0.0f)
 		{
 			VP->RequestResize(static_cast<uint32>(Size.x), static_cast<uint32>(Size.y));
-			MaterialViewportWindow.SetRect(FRect(ViewportPos.x, ViewportPos.y, Size.x, Size.y));
+			MaterialViewportWindow.SetRect({ViewportPos.x, ViewportPos.y, Size.x, Size.y});
 
 			if (VP->GetSRV())
 			{
@@ -509,12 +509,12 @@ bool FMaterialEditorWidget::RenderTextureSlots(UMaterial* Material)
 		if (Texture && Texture->GetSRV())
 		{
 			ImGui::Image((ImTextureID)Texture->GetSRV(), ThumbnailSize);
-			bChanged |= AcceptPNGTextureDrop(SlotName, Material, PreviewMeshComponent);
+			bChanged |= AcceptTextureImageDrop(SlotName, Material, PreviewMeshComponent);
 		}
 		else
 		{
-			ImGui::Button("Drop PNG", ThumbnailSize);
-			bChanged |= AcceptPNGTextureDrop(SlotName, Material, PreviewMeshComponent);
+			ImGui::Button("Drop Image", ThumbnailSize);
+			bChanged |= AcceptTextureImageDrop(SlotName, Material, PreviewMeshComponent);
 		}
 
 		ImGui::SameLine();
@@ -522,7 +522,7 @@ bool FMaterialEditorWidget::RenderTextureSlots(UMaterial* Material)
 		ImGui::TextDisabled("t%u", Binding.SlotIndex);
 		const FString TexturePath = Texture ? Texture->GetSourcePath() : FString("None");
 		ImGui::TextWrapped("%s", TexturePath.c_str());
-		ImGui::TextDisabled("PNG drag/drop target");
+		ImGui::TextDisabled("Image drag/drop target");
 		ImGui::EndGroup();
 
 		ImGui::Spacing();
