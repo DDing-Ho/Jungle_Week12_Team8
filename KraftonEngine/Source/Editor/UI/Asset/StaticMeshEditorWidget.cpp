@@ -168,7 +168,7 @@ void FStaticMeshEditorWidget::Render(float DeltaTime)
 	ImGuiWindowFlags WindowFlags = ImGuiWindowFlags_None;
 	if (ViewportClient.IsMouseOverViewport())
 	{
-		WindowFlags |= ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse;
+		WindowFlags |= ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse;
 	}
 
 	FString WindowTitle = VisibleTitle + WindowIdSuffix;
