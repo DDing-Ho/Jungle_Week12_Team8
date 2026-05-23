@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file ParticleTypeData.h
  * @brief Emitter 렌더링 타입을 결정하는 TypeData 정의.
  *
@@ -25,14 +25,14 @@ class UParticleModuleTypeDataBase : public UParticleModule
 class UParticleModuleTypeDataSprite : public UParticleModuleTypeDataBase
 {
   public:
-    virtual EParticleEmitterType GetEmitterType() const override { return EParticleEmitterType::Sprite; }
+    virtual EParticleEmitterType GetEmitterType() const override { return EParticleEmitterType::PET_Sprite; }
 };
 
 /** Mesh Particle Emitter TypeData */
 class UParticleModuleTypeDataMesh : public UParticleModuleTypeDataBase
 {
   public:
-    virtual EParticleEmitterType GetEmitterType() const override { return EParticleEmitterType::Mesh; }
+    virtual EParticleEmitterType GetEmitterType() const override { return EParticleEmitterType::PET_Mesh; }
 
     UStaticMesh *GetMesh() const { return Mesh; }
     void         SetMesh(UStaticMesh *InMesh) { Mesh = InMesh; }
@@ -45,7 +45,7 @@ class UParticleModuleTypeDataMesh : public UParticleModuleTypeDataBase
 class UParticleModuleTypeDataBeam : public UParticleModuleTypeDataBase
 {
   public:
-    virtual EParticleEmitterType GetEmitterType() const override { return EParticleEmitterType::Beam; }
+    virtual EParticleEmitterType GetEmitterType() const override { return EParticleEmitterType::PET_Beam; }
 
   private:
     FVector Source = FVector::ZeroVector; // Beam 시작점
@@ -58,7 +58,7 @@ class UParticleModuleTypeDataBeam : public UParticleModuleTypeDataBase
 class UParticleModuleTypeDataRibbon : public UParticleModuleTypeDataBase
 {
   public:
-    virtual EParticleEmitterType GetEmitterType() const override { return EParticleEmitterType::Ribbon; }
+    virtual EParticleEmitterType GetEmitterType() const override { return EParticleEmitterType::PET_Ribbon; }
 
   private:
     float Width = 1.0f;         // Ribbon 폭

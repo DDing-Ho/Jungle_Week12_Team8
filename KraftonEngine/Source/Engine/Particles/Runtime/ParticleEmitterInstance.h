@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file ParticleEmitterInstance.h
  * @brief Emitter 하나의 Runtime 실행 객체 정의.
  *
@@ -9,12 +9,14 @@
 #pragma once
 
 #include "../Rendering/ParticleRenderData.h"
+#include "Core/CoreTypes.h"
+#include "Math/Vector.h"
 
 /** Runtime에서 Particle 생성, 갱신, 제거, Event 처리를 담당하는 Emitter Instance */
 struct FParticleEmitterInstance
 {
     UParticleEmitter         *EmitterTemplate = nullptr; // 원본 Emitter Asset
-    UParticleSystemComponent *Component = nullptr;       // 소유 Component
+    UParticleSystemComponent *OwnerComponent = nullptr;       // 소유 Component
     int32                     CurrentLODLevelIndex = 0;  // 현재 LOD 인덱스
     UParticleLODLevel        *CurrentLODLevel = nullptr; // 현재 LOD
 
@@ -38,14 +40,21 @@ struct FParticleEmitterInstance
     void SpawnParticles(int32 Count, float StartTime, float Increment, const FVector &InitialLocation, const FVector &InitialVelocity); // Particle 생성
     void KillParticle(int32 Index);                                                                                                     // 단일 Particle 제거
     void KillAllParticles();                                                                                                            // 전체 Particle 제거
+	void Reset();
 
     int32 GetActiveParticleCount() const { return ActiveParticles; }
 
-    FDynamicEmitterDataBase *CreateDynamicEmitterData(); // 렌더링 데이터 생성
+    FDynamicEmitterDataBase *CreateDynamicEmitterData(FDynamicEmitterReplayDataBase& Data); // 렌더링 데이터 생성
 
   private:
     void PreSpawn(FBaseParticle &Particle, const FVector &InitialLocation, const FVector &InitialVelocity); // Spawn 기본값 설정
     void PostSpawn(FBaseParticle &Particle, float SpawnTime);                                               // Spawn 이후 보정
     void KillExpiredParticles();                                                                            // 수명 종료 Particle 제거
     void ProcessEvents();                                                                                   // Pending Event 처리
+
+	bool bFirstTime;		//처음 스폰 여부
+	bool Loop; 
+
+	float EmitterTime;		//이미터 시간
+	float LastDeltaTime;	//마지막으로 스폰한 시간
 };

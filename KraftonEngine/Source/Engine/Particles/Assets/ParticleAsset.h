@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file ParticleAsset.h
  * @brief ParticleSystem Asset 계층 정의.
  *
@@ -10,7 +10,8 @@
 
 #pragma once
 
-#include "ParticleTypeData.h"
+#include "Object/Object.h"
+#include "Particles/Assets/ParticleTypeData.h"
 
 /** LOD별 Module, TypeData, 실행 캐시를 보관하는 클래스 */
 class UParticleLODLevel : public UObject
@@ -71,9 +72,9 @@ class UParticleEmitter : public UObject
 
     const TArray<UParticleLODLevel *> &GetLODLevels() const { return LODLevels; }
 
-    UParticleLODLevel *GetLODLevel(int32 Index) const { return LODLevels.IsValidIndex(Index) ? LODLevels[Index] : nullptr; }
+    UParticleLODLevel *GetLODLevel(int32 Index) const { return Index >= LODLevels.size() ? LODLevels[Index] : nullptr; }
 
-    void AddLODLevel(UParticleLODLevel *InLODLevel) { LODLevels.Add(InLODLevel); }
+    void AddLODLevel(UParticleLODLevel *InLODLevel) { LODLevels.push_back(InLODLevel); }
 
     void CacheEmitterModuleInfo(); // Emitter Module 정보 캐싱
 
@@ -87,7 +88,7 @@ class UParticleEmitter : public UObject
 
     EParticleEmitterRenderMode EmitterRenderMode = EParticleEmitterRenderMode::ERM_Normal; // Emitter 렌더 표시 모드
 
-    FColor EmitterEditorColor = FColor::White; // 에디터 / 디버그 표시 색상
+    FColor EmitterEditorColor = FColor::White(); // 에디터 / 디버그 표시 색상
 
     int32 InitialAllocationCount = 0; // 초기화 시 미리 할당할 Particle 수
 
@@ -108,12 +109,14 @@ class UParticleSystem : public UObject
   public:
     const TArray<UParticleEmitter *> &GetEmitters() const { return Emitters; }
 
-    UParticleEmitter *GetEmitter(int32 Index) const { return Emitters.IsValidIndex(Index) ? Emitters[Index] : nullptr; }
+    UParticleEmitter *GetEmitter(int32 Index) const { return Index >= Emitters.size() ? Emitters[Index] : nullptr; }
 
-    void AddEmitter(UParticleEmitter *InEmitter) { Emitters.Add(InEmitter); }
+    void AddEmitter(UParticleEmitter *InEmitter) { Emitters.push_back(InEmitter); }
 
     void CacheSystemModuleInfo(); // 전체 Emitter Module 정보 캐싱
 
+	//UPROPERTY()
+	TArray<float> LODDistances; // ParticleSystem 구성 Emitter 목록
   private:
     TArray<UParticleEmitter *> Emitters; // ParticleSystem 구성 Emitter 목록
 };

@@ -26,7 +26,7 @@ struct FDynamicEmitterReplayDataBase
     int32 ActiveParticleCount = 0;                                      // 활성 Particle 수
     int32 ParticleStride = 0;                                           // Particle 메모리 간격
     FParticleDataContainer DataContainer;                               // 렌더링용 Particle 데이터
-    FVector3f Scale = FVector3f(1.0f);                                  // Emitter 스케일
+    FVector Scale = FVector(1.0f, 1.0f, 1.0f);                           // Emitter 스케일
     EParticleSortMode SortMode = EParticleSortMode::PSM_None;           // 정렬 방식
 
     UMaterialInterface *MaterialInterface = nullptr;   // Emitter 렌더링 Material

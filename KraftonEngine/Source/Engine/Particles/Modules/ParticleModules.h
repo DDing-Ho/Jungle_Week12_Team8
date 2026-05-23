@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file ParticleModules.h
  * @brief Particle Module 공통 기반 클래스 정의.
  *
@@ -8,14 +8,15 @@
 
 #pragma once
 
+#include "Object/Object.h"
 #include "../Common/ParticleRandomTypes.h"
 
 /** 모든 Particle Module의 공통 기반 클래스 */
 class UParticleModule : public UObject
 {
   public:
-    virtual EParticleModuleType        GetModuleType() const { return EParticleModuleType::Custom; }
-    virtual EParticleModuleUpdatePhase GetUpdatePhase() const { return EParticleModuleUpdatePhase::Update; }
+    virtual EParticleModuleType        GetModuleType() const { return EParticleModuleType::PMT_Custom; }
+    virtual EParticleModuleUpdatePhase GetUpdatePhase() const { return EParticleModuleUpdatePhase::PMUP_Update; }
 
     virtual void InitializeModule(UParticleEmitter *InEmitter) {}
     virtual void PreSpawn(FParticleEmitterInstance *Owner, FBaseParticle &Particle) {}

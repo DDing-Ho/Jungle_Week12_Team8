@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file ParticleCoreModules.h
  * @brief 기본 Particle Module 정의.
  *
@@ -20,8 +20,8 @@
 class UParticleModuleRequired : public UParticleModule
 {
   public:
-    virtual EParticleModuleType        GetModuleType() const override { return EParticleModuleType::Required; }
-    virtual EParticleModuleUpdatePhase GetUpdatePhase() const override { return EParticleModuleUpdatePhase::Spawn; }
+    virtual EParticleModuleType        GetModuleType() const override { return EParticleModuleType::PMT_Required; }
+    virtual EParticleModuleUpdatePhase GetUpdatePhase() const override { return EParticleModuleUpdatePhase::PMUP_Spawn; }
 
     EParticleEmitterType GetEmitterType() const { return EmitterType; }
     void                 SetEmitterType(EParticleEmitterType InType) { EmitterType = InType; }
@@ -33,9 +33,9 @@ class UParticleModuleRequired : public UParticleModule
     void              SetSortMode(EParticleSortMode InSortMode) { SortMode = InSortMode; }
 
   private:
-    EParticleEmitterType EmitterType = EParticleEmitterType::Sprite; // 기본 Emitter 타입
+    EParticleEmitterType EmitterType = EParticleEmitterType::PET_Sprite; // 기본 Emitter 타입
     UMaterialInterface  *Material = nullptr;                         // Particle 렌더링 Material
-    EParticleSortMode    SortMode = EParticleSortMode::None;         // Particle 정렬 방식
+    EParticleSortMode    SortMode = EParticleSortMode::PSM_None;         // Particle 정렬 방식
     int32                TranslucencySortPriority = 0;               // Translucent Pass 정렬 우선순위
 };
 
@@ -43,8 +43,8 @@ class UParticleModuleRequired : public UParticleModule
 class UParticleModuleSpawn : public UParticleModule
 {
   public:
-    virtual EParticleModuleType        GetModuleType() const override { return EParticleModuleType::Spawn; }
-    virtual EParticleModuleUpdatePhase GetUpdatePhase() const override { return EParticleModuleUpdatePhase::Spawn; }
+    virtual EParticleModuleType        GetModuleType() const override { return EParticleModuleType::PMT_Spawn; }
+    virtual EParticleModuleUpdatePhase GetUpdatePhase() const override { return EParticleModuleUpdatePhase::PMUP_Spawn; }
 
     float GetSpawnRate() const { return SpawnRate; }
     void  SetSpawnRate(float InSpawnRate) { SpawnRate = InSpawnRate; }
@@ -58,8 +58,8 @@ class UParticleModuleSpawn : public UParticleModule
 class UParticleModuleLifetime : public UParticleModule
 {
   public:
-    virtual EParticleModuleType        GetModuleType() const override { return EParticleModuleType::Lifetime; }
-    virtual EParticleModuleUpdatePhase GetUpdatePhase() const override { return EParticleModuleUpdatePhase::Spawn; }
+    virtual EParticleModuleType        GetModuleType() const override { return EParticleModuleType::PMT_Lifetime; }
+    virtual EParticleModuleUpdatePhase GetUpdatePhase() const override { return EParticleModuleUpdatePhase::PMUP_Spawn; }
 
     float GetLifetime() const { return Lifetime; }
     void  SetLifetime(float InLifetime) { Lifetime = InLifetime; }
@@ -72,8 +72,8 @@ class UParticleModuleLifetime : public UParticleModule
 class UParticleModuleLocation : public UParticleModule
 {
   public:
-    virtual EParticleModuleType        GetModuleType() const override { return EParticleModuleType::Location; }
-    virtual EParticleModuleUpdatePhase GetUpdatePhase() const override { return EParticleModuleUpdatePhase::Spawn; }
+    virtual EParticleModuleType        GetModuleType() const override { return EParticleModuleType::PMT_Location; }
+    virtual EParticleModuleUpdatePhase GetUpdatePhase() const override { return EParticleModuleUpdatePhase::PMUP_Spawn; }
 
     FVector GetInitialLocation() const { return InitialLocation; }
     void    SetInitialLocation(const FVector &InLocation) { InitialLocation = InLocation; }
@@ -90,8 +90,8 @@ class UParticleModuleLocation : public UParticleModule
 class UParticleModuleVelocity : public UParticleModule
 {
   public:
-    virtual EParticleModuleType        GetModuleType() const override { return EParticleModuleType::Velocity; }
-    virtual EParticleModuleUpdatePhase GetUpdatePhase() const override { return EParticleModuleUpdatePhase::Spawn; }
+    virtual EParticleModuleType        GetModuleType() const override { return EParticleModuleType::PMT_Velocity; }
+    virtual EParticleModuleUpdatePhase GetUpdatePhase() const override { return EParticleModuleUpdatePhase::PMUP_Spawn; }
 
     FVector GetInitialVelocity() const { return InitialVelocity; }
     void    SetInitialVelocity(const FVector &InVelocity) { InitialVelocity = InVelocity; }
@@ -105,15 +105,15 @@ class UParticleModuleVelocity : public UParticleModule
 class UParticleModuleColor : public UParticleModule
 {
   public:
-    virtual EParticleModuleType        GetModuleType() const override { return EParticleModuleType::Color; }
-    virtual EParticleModuleUpdatePhase GetUpdatePhase() const override { return EParticleModuleUpdatePhase::SpawnAndUpdate; }
+    virtual EParticleModuleType        GetModuleType() const override { return EParticleModuleType::PMT_Color; }
+    virtual EParticleModuleUpdatePhase GetUpdatePhase() const override { return EParticleModuleUpdatePhase::PMUP_SpawnAndUpdate; }
 
     FColor GetInitialColor() const { return InitialColor; }
     void   SetInitialColor(const FColor &InColor) { InitialColor = InColor; }
 
   private:
-    FColor InitialColor = FColor::White; // Spawn 시 초기 색상
-    FColor FinalColor = FColor::White;   // 수명 종료 시 목표 색상
+    FColor InitialColor = FColor::White(); // Spawn 시 초기 색상
+    FColor FinalColor = FColor::White();   // 수명 종료 시 목표 색상
     bool   bUseColorOverLife = false;    // 수명 기반 색상 변화 사용 여부
 };
 
@@ -121,8 +121,8 @@ class UParticleModuleColor : public UParticleModule
 class UParticleModuleSize : public UParticleModule
 {
   public:
-    virtual EParticleModuleType        GetModuleType() const override { return EParticleModuleType::Size; }
-    virtual EParticleModuleUpdatePhase GetUpdatePhase() const override { return EParticleModuleUpdatePhase::SpawnAndUpdate; }
+    virtual EParticleModuleType        GetModuleType() const override { return EParticleModuleType::PMT_Size; }
+    virtual EParticleModuleUpdatePhase GetUpdatePhase() const override { return EParticleModuleUpdatePhase::PMUP_SpawnAndUpdate; }
 
     FVector GetInitialSize() const { return InitialSize; }
     void    SetInitialSize(const FVector &InSize) { InitialSize = InSize; }

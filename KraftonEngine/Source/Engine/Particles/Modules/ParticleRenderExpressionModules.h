@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file ParticleRenderExpressionModules.h
  * @brief Particle 렌더링 표현 확장 Module 정의.
  *
@@ -18,8 +18,8 @@
 class UParticleModuleSubUV : public UParticleModule
 {
   public:
-    virtual EParticleModuleType        GetModuleType() const override { return EParticleModuleType::SubUV; }
-    virtual EParticleModuleUpdatePhase GetUpdatePhase() const override { return EParticleModuleUpdatePhase::SpawnAndUpdate; }
+    virtual EParticleModuleType        GetModuleType() const override { return EParticleModuleType::PMT_SubUV; }
+    virtual EParticleModuleUpdatePhase GetUpdatePhase() const override { return EParticleModuleUpdatePhase::PMUP_SpawnAndUpdate; }
 
   private:
     int32 HorizontalCount = 1;       // Texture Atlas 가로 프레임 수
@@ -33,11 +33,11 @@ class UParticleModuleSubUV : public UParticleModule
 class UParticleModuleLight : public UParticleModule
 {
   public:
-    virtual EParticleModuleType        GetModuleType() const override { return EParticleModuleType::Light; }
-    virtual EParticleModuleUpdatePhase GetUpdatePhase() const override { return EParticleModuleUpdatePhase::Update; }
+    virtual EParticleModuleType        GetModuleType() const override { return EParticleModuleType::PMT_Light; }
+    virtual EParticleModuleUpdatePhase GetUpdatePhase() const override { return EParticleModuleUpdatePhase::PMUP_Update; }
 
   private:
-    FColor LightColor = FColor::White; // Particle Light 색상
+    FColor LightColor = FColor::White(); // Particle Light 색상
     float  Intensity = 1.0f;           // Particle Light 밝기
     float  Radius = 100.0f;            // Particle Light 영향 반경
 };
@@ -46,8 +46,8 @@ class UParticleModuleLight : public UParticleModule
 class UParticleModuleVectorField : public UParticleModule
 {
   public:
-    virtual EParticleModuleType        GetModuleType() const override { return EParticleModuleType::VectorField; }
-    virtual EParticleModuleUpdatePhase GetUpdatePhase() const override { return EParticleModuleUpdatePhase::Update; }
+    virtual EParticleModuleType        GetModuleType() const override { return EParticleModuleType::PMT_VectorField; }
+    virtual EParticleModuleUpdatePhase GetUpdatePhase() const override { return EParticleModuleUpdatePhase::PMUP_Update; }
 
   private:
     UObject *VectorFieldAsset = nullptr; // Vector Field Asset 참조
@@ -58,8 +58,8 @@ class UParticleModuleVectorField : public UParticleModule
 class UParticleModuleCamera : public UParticleModule
 {
   public:
-    virtual EParticleModuleType        GetModuleType() const override { return EParticleModuleType::Camera; }
-    virtual EParticleModuleUpdatePhase GetUpdatePhase() const override { return EParticleModuleUpdatePhase::Update; }
+    virtual EParticleModuleType        GetModuleType() const override { return EParticleModuleType::PMT_Camera; }
+    virtual EParticleModuleUpdatePhase GetUpdatePhase() const override { return EParticleModuleUpdatePhase::PMUP_Update; }
 
   private:
     float CameraOffset = 0.0f; // 카메라 방향 기준 위치 보정값
@@ -69,8 +69,8 @@ class UParticleModuleCamera : public UParticleModule
 class UParticleModuleParameter : public UParticleModule
 {
   public:
-    virtual EParticleModuleType        GetModuleType() const override { return EParticleModuleType::Parameter; }
-    virtual EParticleModuleUpdatePhase GetUpdatePhase() const override { return EParticleModuleUpdatePhase::Update; }
+    virtual EParticleModuleType        GetModuleType() const override { return EParticleModuleType::PMT_Parameter; }
+    virtual EParticleModuleUpdatePhase GetUpdatePhase() const override { return EParticleModuleUpdatePhase::PMUP_Update; }
 
   private:
     FName    ParameterName;  // 외부로 전달할 Parameter 이름

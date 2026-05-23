@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file ParticleCollisionKillModules.h
  * @brief Particle Collision / Kill Module 정의.
  *
@@ -11,12 +11,13 @@
 
 #include "ParticleMotionModules.h"
 
+struct FBoundingBox;
 /** Particle과 World 또는 Actor의 충돌을 처리하는 모듈 */
 class UParticleModuleCollision : public UParticleModule
 {
   public:
-    virtual EParticleModuleType        GetModuleType() const override { return EParticleModuleType::Collision; }
-    virtual EParticleModuleUpdatePhase GetUpdatePhase() const override { return EParticleModuleUpdatePhase::Update; }
+    virtual EParticleModuleType        GetModuleType() const override { return EParticleModuleType::PMT_Collision; }
+    virtual EParticleModuleUpdatePhase GetUpdatePhase() const override { return EParticleModuleUpdatePhase::PMUP_SpawnAndUpdate; }
 
   private:
     bool  bEnableCollision = true;  // Collision 사용 여부
@@ -29,12 +30,12 @@ class UParticleModuleCollision : public UParticleModule
 class UParticleModuleKill : public UParticleModule
 {
   public:
-    virtual EParticleModuleType        GetModuleType() const override { return EParticleModuleType::Kill; }
-    virtual EParticleModuleUpdatePhase GetUpdatePhase() const override { return EParticleModuleUpdatePhase::Update; }
+    virtual EParticleModuleType        GetModuleType() const override { return EParticleModuleType::PMT_Kill; }
+    virtual EParticleModuleUpdatePhase GetUpdatePhase() const override { return EParticleModuleUpdatePhase::PMUP_SpawnAndUpdate; }
 
   private:
     bool  bUseKillBox = false;    // Box 기준 제거 사용 여부
     bool  bUseKillHeight = false; // Height 기준 제거 사용 여부
-    FBox  KillBox;                // Particle 제거 기준 Box
+    FBoundingBox  KillBox;                // Particle 제거 기준 Box
     float KillHeight = 0.0f;      // Particle 제거 기준 높이
 };

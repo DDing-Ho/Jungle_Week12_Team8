@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file ParticleRuntimeTypes.h
  * @brief Runtime Particle 데이터 구조 정의.
  *
@@ -22,8 +22,8 @@ struct FBaseParticle
     FVector BaseVelocity;          // 기준 속도
     float   Rotation = 0.0f;       // 현재 회전
     float   RotationRate = 0.0f;   // 회전 속도
-    FVector Size = FVector(1.0f);  // 현재 크기
-    FColor  Color = FColor::White; // 현재 색상
+    FVector Size = FVector(1.0f, 1.0f, 1.0f);  // 현재 크기
+    FColor  Color = FColor::White(); // 현재 색상
     int32   SubImageIndex = 0;     // SubUV 프레임 인덱스
 };
 

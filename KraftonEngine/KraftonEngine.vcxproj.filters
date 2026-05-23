@@ -133,6 +133,24 @@
     <Filter Include="Source\Engine\Object">
       <UniqueIdentifier>{f6219ff0-0046-2f35-71f3-ad6383da3d2c}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\Engine\Particles">
+      <UniqueIdentifier>{3d2b49e3-c373-08f7-b06b-addbb798f11a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Engine\Particles\Assets">
+      <UniqueIdentifier>{ca38190e-d051-49ab-31e5-827873924b14}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Engine\Particles\Common">
+      <UniqueIdentifier>{520dab7c-3244-6696-3314-fe855143ac2d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Engine\Particles\Modules">
+      <UniqueIdentifier>{f9352c87-662f-6834-ae0c-1370a03a4122}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Engine\Particles\Rendering">
+      <UniqueIdentifier>{c18b85e2-2192-2dc8-b514-7bc4dad8e366}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Engine\Particles\Runtime">
+      <UniqueIdentifier>{a6fd8b55-c786-051b-c272-a120a4f17b47}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Source\Engine\Physics">
       <UniqueIdentifier>{c1985821-1144-9a46-639a-f7de31f4a1fa}</UniqueIdentifier>
     </Filter>
@@ -743,6 +761,9 @@
     <ClCompile Include="Source\Engine\Component\MeshComponent.cpp">
       <Filter>Source\Engine\Component</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Component\ParticleSystemComponent.cpp">
+      <Filter>Source\Engine\Component</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\Component\PrimitiveComponent.cpp">
       <Filter>Source\Engine\Component</Filter>
     </ClCompile>
@@ -826,6 +847,15 @@
     </ClCompile>
     <ClCompile Include="Source\Engine\Core\TickFunction.cpp">
       <Filter>Source\Engine\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Core\Property\FField.cpp">
+      <Filter>Source\Engine\Core\Property</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Core\Property\FFieldClass.cpp">
+      <Filter>Source\Engine\Core\Property</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Core\Property\FFieldVariant.cpp">
+      <Filter>Source\Engine\Core\Property</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Core\Property\PropertyTypes.cpp">
       <Filter>Source\Engine\Core\Property</Filter>
@@ -1022,6 +1052,9 @@
     <ClCompile Include="Source\Engine\Object\UUIDGenerator.cpp">
       <Filter>Source\Engine\Object</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Particles\Runtime\ParticleEmitterInstance.cpp">
+      <Filter>Source\Engine\Particles\Runtime</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\Physics\NativePhysicsScene.cpp">
       <Filter>Source\Engine\Physics</Filter>
     </ClCompile>
@@ -1044,6 +1077,9 @@
       <Filter>Source\Engine\Profiling</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Profiling\ShadowStats.cpp">
+      <Filter>Source\Engine\Profiling</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Profiling\SkinningStats.cpp">
       <Filter>Source\Engine\Profiling</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Profiling\StartupProfiler.cpp">
@@ -1619,6 +1655,9 @@
     <ClInclude Include="Source\Engine\Component\MeshComponent.h">
       <Filter>Source\Engine\Component</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Component\ParticleSystemComponent.h">
+      <Filter>Source\Engine\Component</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Engine\Component\PrimitiveComponent.h">
       <Filter>Source\Engine\Component</Filter>
     </ClInclude>
@@ -1731,6 +1770,15 @@
       <Filter>Source\Engine\Core\Property</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Core\Property\FEnumProperty.h">
+      <Filter>Source\Engine\Core\Property</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Core\Property\FField.h">
+      <Filter>Source\Engine\Core\Property</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Core\Property\FFieldClass.h">
+      <Filter>Source\Engine\Core\Property</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Core\Property\FFieldVariant.h">
       <Filter>Source\Engine\Core\Property</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Core\Property\FStructProperty.h">
@@ -1988,6 +2036,51 @@
     <ClInclude Include="Source\Engine\Object\UUIDGenerator.h">
       <Filter>Source\Engine\Object</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Particles\Assets\ParticleAsset.h">
+      <Filter>Source\Engine\Particles\Assets</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Particles\Assets\ParticleTypeData.h">
+      <Filter>Source\Engine\Particles\Assets</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Particles\Common\ParticleHelper.h">
+      <Filter>Source\Engine\Particles\Common</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Particles\Common\ParticleRandomTypes.h">
+      <Filter>Source\Engine\Particles\Common</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Particles\Common\ParticleTypes.h">
+      <Filter>Source\Engine\Particles\Common</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Particles\Modules\ParticleCollisionKillModules.h">
+      <Filter>Source\Engine\Particles\Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Particles\Modules\ParticleCoreModules.h">
+      <Filter>Source\Engine\Particles\Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Particles\Modules\ParticleEventModules.h">
+      <Filter>Source\Engine\Particles\Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Particles\Modules\ParticleModules.h">
+      <Filter>Source\Engine\Particles\Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Particles\Modules\ParticleMotionModules.h">
+      <Filter>Source\Engine\Particles\Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Particles\Modules\ParticleRenderExpressionModules.h">
+      <Filter>Source\Engine\Particles\Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Particles\Rendering\ParticleRenderData.h">
+      <Filter>Source\Engine\Particles\Rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Particles\Rendering\ParticleVertexTypes.h">
+      <Filter>Source\Engine\Particles\Rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Particles\Runtime\ParticleEmitterInstance.h">
+      <Filter>Source\Engine\Particles\Runtime</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Particles\Runtime\ParticleRuntimeTypes.h">
+      <Filter>Source\Engine\Particles\Runtime</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Engine\Physics\IPhysicsScene.h">
       <Filter>Source\Engine\Physics</Filter>
     </ClInclude>
@@ -2019,6 +2112,9 @@
       <Filter>Source\Engine\Profiling</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Profiling\ShadowStats.h">
+      <Filter>Source\Engine\Profiling</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Profiling\SkinningStats.h">
       <Filter>Source\Engine\Profiling</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Profiling\StartupProfiler.h">

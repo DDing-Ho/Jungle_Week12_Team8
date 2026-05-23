@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file ParticleEventModules.h
  * @brief Particle Event 생성 / 수신 Module 정의.
  *
@@ -12,13 +12,13 @@
  */
 
 #pragma once
-
 #include "ParticleCollisionKillModules.h"
 
+constexpr int32 INDEX_NONE = -1;
 /** Particle Event Payload 데이터 */
 struct FParticleEventData
 {
-    EParticleEventType Type = EParticleEventType::Custom; // Event 종류
+    EParticleEventType Type = EParticleEventType::PEET_Custom; // Event 종류
     FVector            Location = FVector::ZeroVector;    // Event 발생 위치
     FVector            Velocity = FVector::ZeroVector;    // Event 발생 시 속도
     int32              SourceEmitterIndex = INDEX_NONE;   // Event를 발생시킨 Emitter 인덱스
@@ -29,8 +29,8 @@ struct FParticleEventData
 class UParticleModuleEventGenerator : public UParticleModule
 {
   public:
-    virtual EParticleModuleType        GetModuleType() const override { return EParticleModuleType::Event; }
-    virtual EParticleModuleUpdatePhase GetUpdatePhase() const override { return EParticleModuleUpdatePhase::SpawnAndUpdate; }
+    virtual EParticleModuleType        GetModuleType() const override { return EParticleModuleType::PMT_Event; }
+    virtual EParticleModuleUpdatePhase GetUpdatePhase() const override { return EParticleModuleUpdatePhase::PMUP_Spawn; }
 
   private:
     TArray<EParticleEventType> GeneratedEvents; // 생성할 Event 종류 목록
@@ -40,11 +40,11 @@ class UParticleModuleEventGenerator : public UParticleModule
 class UParticleModuleEventReceiverSpawn : public UParticleModule
 {
   public:
-    virtual EParticleModuleType        GetModuleType() const override { return EParticleModuleType::Event; }
-    virtual EParticleModuleUpdatePhase GetUpdatePhase() const override { return EParticleModuleUpdatePhase::Update; }
+    virtual EParticleModuleType        GetModuleType() const override { return EParticleModuleType::PMT_Event; }
+    virtual EParticleModuleUpdatePhase GetUpdatePhase() const override { return EParticleModuleUpdatePhase::PMUP_Update; }
 
   private:
-    EParticleEventType ListenEventType = EParticleEventType::Collision; // 수신할 Event 종류
+    EParticleEventType ListenEventType = EParticleEventType::PEET_Collision; // 수신할 Event 종류
     int32              SpawnCount = 1;                                  // Event 수신 시 생성할 Particle 수
 };
 
@@ -52,9 +52,9 @@ class UParticleModuleEventReceiverSpawn : public UParticleModule
 class UParticleModuleEventReceiverKillAll : public UParticleModule
 {
   public:
-    virtual EParticleModuleType        GetModuleType() const override { return EParticleModuleType::Event; }
-    virtual EParticleModuleUpdatePhase GetUpdatePhase() const override { return EParticleModuleUpdatePhase::Update; }
+    virtual EParticleModuleType        GetModuleType() const override { return EParticleModuleType::PMT_Event; }
+    virtual EParticleModuleUpdatePhase GetUpdatePhase() const override { return EParticleModuleUpdatePhase::PMUP_Update; }
 
   private:
-    EParticleEventType ListenEventType = EParticleEventType::Collision; // 수신할 Event 종류
+    EParticleEventType ListenEventType = EParticleEventType::PEET_Collision; // 수신할 Event 종류
 };

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file ParticleHelper.h
  * @brief ParticleData 접근 / 순회 보조 매크로 정의.
  *
@@ -28,8 +28,8 @@
 class UParticleModuleSizeScaleBySpeed : public UParticleModule
 {
   public:
-    virtual EParticleModuleType        GetModuleType() const override { return EParticleModuleType::Size; }
-    virtual EParticleModuleUpdatePhase GetUpdatePhase() const override { return EParticleModuleUpdatePhase::Update; }
+    virtual EParticleModuleType        GetModuleType() const override { return EParticleModuleType::PMT_Size; }
+    virtual EParticleModuleUpdatePhase GetUpdatePhase() const override { return EParticleModuleUpdatePhase::PMUP_Update; }
 
     virtual void Update(FParticleEmitterInstance *Owner, float DeltaTime) override;
 

@@ -10,19 +10,20 @@
 #pragma once
 
 #include "../Runtime/ParticleRuntimeTypes.h"
+#include "Math/Matrix.h"
 
 /** Sprite Particle 렌더링용 동적 Vertex */
 struct FParticleSpriteVertex
 {
-    FVector3f Position; // Vertex 위치
-    FVector2f UV;       // Texture 좌표
+    FVector   Position; // Vertex 위치
+    FVector2  UV;       // Texture 좌표
     FColor    Color;    // Vertex 색상
 };
 
 /** Mesh Particle 렌더링용 Instance Vertex */
 struct FMeshParticleInstanceVertex
 {
-    FMatrix44f Transform; // Mesh Instance Transform
+    FMatrix    Transform; // Mesh Instance Transform
     FColor     Color;     // Instance 색상
-    FVector3f  Size;      // Instance 크기
+    FVector    Size;      // Instance 크기
 };

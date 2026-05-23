@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file ParticleTypes.h
  * @brief Particle System 공용 enum / forward declaration 정의.
  *
@@ -13,8 +13,10 @@
  */
 
 #pragma once
-
-#include "CoreMinimal.h"
+#include "Core/CoreTypes.h"
+#include "Core/EngineTypes.h"
+#include "Math/Rotator.h"
+#include "Math/Vector.h"
 
 class UObject;
 class UMaterialInterface;

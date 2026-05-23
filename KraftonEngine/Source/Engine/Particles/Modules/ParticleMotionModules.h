@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file ParticleMotionModules.h
  * @brief Particle 운동 / 회전 / 힘 관련 Module 정의.
  *
@@ -18,8 +18,8 @@
 class UParticleModuleRotation : public UParticleModule
 {
   public:
-    virtual EParticleModuleType        GetModuleType() const override { return EParticleModuleType::Rotation; }
-    virtual EParticleModuleUpdatePhase GetUpdatePhase() const override { return EParticleModuleUpdatePhase::Spawn; }
+    virtual EParticleModuleType        GetModuleType() const override { return EParticleModuleType::PMT_Rotation; }
+    virtual EParticleModuleUpdatePhase GetUpdatePhase() const override { return EParticleModuleUpdatePhase::PMUP_Spawn; }
 
   private:
     float                   InitialRotation = 0.0f; // Spawn 시 초기 회전값
@@ -31,8 +31,8 @@ class UParticleModuleRotation : public UParticleModule
 class UParticleModuleRotationRate : public UParticleModule
 {
   public:
-    virtual EParticleModuleType        GetModuleType() const override { return EParticleModuleType::RotationRate; }
-    virtual EParticleModuleUpdatePhase GetUpdatePhase() const override { return EParticleModuleUpdatePhase::SpawnAndUpdate; }
+    virtual EParticleModuleType        GetModuleType() const override { return EParticleModuleType::PMT_RotationRate; }
+    virtual EParticleModuleUpdatePhase GetUpdatePhase() const override { return EParticleModuleUpdatePhase::PMUP_SpawnAndUpdate; }
 
   private:
     float                   InitialRotationRate = 0.0f;  // Spawn 시 초기 회전 속도
@@ -45,8 +45,8 @@ class UParticleModuleRotationRate : public UParticleModule
 class UParticleModuleAcceleration : public UParticleModule
 {
   public:
-    virtual EParticleModuleType        GetModuleType() const override { return EParticleModuleType::Acceleration; }
-    virtual EParticleModuleUpdatePhase GetUpdatePhase() const override { return EParticleModuleUpdatePhase::Update; }
+    virtual EParticleModuleType        GetModuleType() const override { return EParticleModuleType::PMT_Acceleration; }
+    virtual EParticleModuleUpdatePhase GetUpdatePhase() const override { return EParticleModuleUpdatePhase::PMUP_SpawnAndUpdate; }
 
   private:
     FVector Acceleration = FVector::ZeroVector;      // 매 프레임 적용할 가속도
@@ -59,8 +59,8 @@ class UParticleModuleAcceleration : public UParticleModule
 class UParticleModuleAttractor : public UParticleModule
 {
   public:
-    virtual EParticleModuleType        GetModuleType() const override { return EParticleModuleType::Attractor; }
-    virtual EParticleModuleUpdatePhase GetUpdatePhase() const override { return EParticleModuleUpdatePhase::Update; }
+    virtual EParticleModuleType        GetModuleType() const override { return EParticleModuleType::PMT_Attractor; }
+    virtual EParticleModuleUpdatePhase GetUpdatePhase() const override { return EParticleModuleUpdatePhase::PMUP_Update; }
 
   private:
     FVector TargetLocation = FVector::ZeroVector; // 흡인 목표 위치
@@ -72,8 +72,8 @@ class UParticleModuleAttractor : public UParticleModule
 class UParticleModuleOrbit : public UParticleModule
 {
   public:
-    virtual EParticleModuleType        GetModuleType() const override { return EParticleModuleType::Orbit; }
-    virtual EParticleModuleUpdatePhase GetUpdatePhase() const override { return EParticleModuleUpdatePhase::Update; }
+    virtual EParticleModuleType        GetModuleType() const override { return EParticleModuleType::PMT_Orbit; }
+    virtual EParticleModuleUpdatePhase GetUpdatePhase() const override { return EParticleModuleUpdatePhase::PMUP_Update; }
 
   private:
     FVector Offset = FVector::ZeroVector;       // 렌더링 위치 오프셋
