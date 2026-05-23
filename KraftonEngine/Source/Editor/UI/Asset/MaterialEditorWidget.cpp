@@ -74,7 +74,7 @@ namespace
 		return Bindings;
 	}
 
-	bool AcceptPNGTextureDrop(const FString& SlotName, UMaterial* Material, UStaticMeshComponent* PreviewMeshComponent)
+	bool AcceptTextureImageDrop(const FString& SlotName, UMaterial* Material, UStaticMeshComponent* PreviewMeshComponent)
 	{
 		if (!Material || !ImGui::BeginDragDropTarget())
 		{
@@ -509,12 +509,12 @@ bool FMaterialEditorWidget::RenderTextureSlots(UMaterial* Material)
 		if (Texture && Texture->GetSRV())
 		{
 			ImGui::Image((ImTextureID)Texture->GetSRV(), ThumbnailSize);
-			bChanged |= AcceptPNGTextureDrop(SlotName, Material, PreviewMeshComponent);
+			bChanged |= AcceptTextureImageDrop(SlotName, Material, PreviewMeshComponent);
 		}
 		else
 		{
-			ImGui::Button("Drop PNG", ThumbnailSize);
-			bChanged |= AcceptPNGTextureDrop(SlotName, Material, PreviewMeshComponent);
+			ImGui::Button("Drop Image", ThumbnailSize);
+			bChanged |= AcceptTextureImageDrop(SlotName, Material, PreviewMeshComponent);
 		}
 
 		ImGui::SameLine();
@@ -522,7 +522,7 @@ bool FMaterialEditorWidget::RenderTextureSlots(UMaterial* Material)
 		ImGui::TextDisabled("t%u", Binding.SlotIndex);
 		const FString TexturePath = Texture ? Texture->GetSourcePath() : FString("None");
 		ImGui::TextWrapped("%s", TexturePath.c_str());
-		ImGui::TextDisabled("PNG drag/drop target");
+		ImGui::TextDisabled("Image drag/drop target");
 		ImGui::EndGroup();
 
 		ImGui::Spacing();
