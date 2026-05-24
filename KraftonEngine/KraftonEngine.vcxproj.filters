@@ -1052,6 +1052,12 @@
     <ClCompile Include="Source\Engine\Object\UUIDGenerator.cpp">
       <Filter>Source\Engine\Object</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Particles\Assets\ParticleAsset.cpp">
+      <Filter>Source\Engine\Particles\Assets</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Particles\Modules\ParticleModules.cpp">
+      <Filter>Source\Engine\Particles\Modules</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\Particles\Runtime\ParticleEmitterInstance.cpp">
       <Filter>Source\Engine\Particles\Runtime</Filter>
     </ClCompile>

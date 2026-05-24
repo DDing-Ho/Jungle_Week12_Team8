@@ -3,6 +3,7 @@
 #include "Animation/AnimTypes.h"
 #include "Math/Transform.h"
 #include "Object/Object.h"
+#include "AnimDataModel.generated.h"
 
 #include <utility>
 
@@ -10,10 +11,11 @@
  * FBX에서 import된 source/raw animation data model입니다.
  * 특정 track을 시간 기준으로 sampling하는 책임을 가집니다.
  */
+UCLASS()
 class UAnimDataModel : public UObject
 {
 public:
-	DECLARE_CLASS(UAnimDataModel, UObject)
+	GENERATED_BODY(UAnimDataModel)
 
 	UAnimDataModel() = default;
 	~UAnimDataModel() override = default;

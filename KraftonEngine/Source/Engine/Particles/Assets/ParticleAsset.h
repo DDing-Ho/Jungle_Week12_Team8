@@ -12,11 +12,15 @@
 
 #include "Object/Object.h"
 #include "Particles/Assets/ParticleTypeData.h"
+#include "ParticleAsset.generated.h"
 
 /** LOD별 Module, TypeData, 실행 캐시를 보관하는 클래스 */
+UCLASS()
 class UParticleLODLevel : public UObject
 {
   public:
+    GENERATED_BODY(UParticleLODLevel)
+
     int32 GetLevel() const { return Level; }
     void  SetLevel(int32 InLevel) { Level = InLevel; }
 
@@ -35,6 +39,7 @@ class UParticleLODLevel : public UObject
 
     void AddModule(UParticleModule *InModule); // 일반 Module 추가
     void CacheModules();                       // Spawn / Update 실행 캐시 구성
+    virtual void Serialize(FArchive& Ar) override;
 
   private:
     int32 Level = 0;       // LOD 단계
@@ -49,9 +54,12 @@ class UParticleLODLevel : public UObject
 };
 
 /** 단일 Particle Emitter Asset */
+UCLASS()
 class UParticleEmitter : public UObject
 {
   public:
+    GENERATED_BODY(UParticleEmitter)
+
     FName GetEmitterName() const { return EmitterName; }
     void  SetEmitterName(const FName &InName) { EmitterName = InName; }
 
@@ -72,11 +80,12 @@ class UParticleEmitter : public UObject
 
     const TArray<UParticleLODLevel *> &GetLODLevels() const { return LODLevels; }
 
-    UParticleLODLevel *GetLODLevel(int32 Index) const { return (Index >= 0 && Index < LODLevels.size()) ? LODLevels[Index] : nullptr; }
+    UParticleLODLevel *GetLODLevel(int32 Index) const { return Index < (int32)LODLevels.size() ? LODLevels[Index] : nullptr; }
 
     void AddLODLevel(UParticleLODLevel *InLODLevel) { LODLevels.push_back(InLODLevel); }
 
     void CacheEmitterModuleInfo(); // Emitter Module 정보 캐싱
+    virtual void Serialize(FArchive& Ar) override;
 
     int32 GetParticleSize() const { return ParticleSize; }
 
@@ -104,19 +113,31 @@ class UParticleEmitter : public UObject
 };
 
 /** 여러 Emitter를 묶는 Particle System Asset */
+UCLASS()
 class UParticleSystem : public UObject
 {
   public:
+    GENERATED_BODY(UParticleSystem)
+
     const TArray<UParticleEmitter *> &GetEmitters() const { return Emitters; }
 
-    UParticleEmitter *GetEmitter(int32 Index) const { return (Index >= 0 && Index < Emitters.size()) ? Emitters[Index] : nullptr; }
+    UParticleEmitter *GetEmitter(int32 Index) const { return Index < (int32)Emitters.size() ? Emitters[Index] : nullptr; }
 
     void AddEmitter(UParticleEmitter *InEmitter) { Emitters.push_back(InEmitter); }
 
     void CacheSystemModuleInfo(); // 전체 Emitter Module 정보 캐싱
+    virtual void Serialize(FArchive& Ar) override;
 
-	//UPROPERTY()
-	TArray<float> LODDistances; // ParticleSystem 구성 Emitter 목록
+    static UParticleSystem* Load(const FString& Path);
+    bool Save(const FString& Path);
+
+    const FString& GetAssetPath() const { return AssetPath; }
+    void           SetAssetPath(const FString& InPath) { AssetPath = InPath; }
+
+    //UPROPERTY()
+    TArray<float> LODDistances; // LOD 전환 거리 목록
+
   private:
     TArray<UParticleEmitter *> Emitters; // ParticleSystem 구성 Emitter 목록
+    FString AssetPath;                   // 이 Asset의 파일 경로
 };

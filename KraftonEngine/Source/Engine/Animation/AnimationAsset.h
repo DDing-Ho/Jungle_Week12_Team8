@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "Object/Object.h"
+#include "AnimationAsset.generated.h"
 
 class USkeleton;
 struct FSkeletonAsset;
@@ -9,10 +10,11 @@ struct FSkeletonAsset;
  * 애니메이션 에셋 공통 기반입니다.
  * 애니메이션이 어떤 Skeleton을 기준으로 평가되는지 관리합니다.
  */
+UCLASS()
 class UAnimationAsset : public UObject
 {
 public:
-	DECLARE_CLASS(UAnimationAsset, UObject)
+	GENERATED_BODY(UAnimationAsset)
 
 	UAnimationAsset() = default;
 	~UAnimationAsset() override = default;

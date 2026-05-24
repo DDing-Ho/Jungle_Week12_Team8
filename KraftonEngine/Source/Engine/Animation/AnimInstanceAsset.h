@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Object/Object.h"
+#include "AnimInstanceAsset.generated.h"
 
 class UAnimGraphInstance;
 
@@ -125,10 +126,11 @@ struct FAnimStateMachineData
 	friend FArchive& operator<<(FArchive& Ar, FAnimStateMachineData& StateMachine);
 };
 
+UCLASS()
 class UAnimInstanceAsset : public UObject
 {
 public:
-	DECLARE_CLASS(UAnimInstanceAsset, UObject)
+	GENERATED_BODY(UAnimInstanceAsset)
 
 	void Serialize(FArchive& Ar) override;
 

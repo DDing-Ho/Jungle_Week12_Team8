@@ -19,7 +19,7 @@
 #include "Math/Vector.h"
 
 class UObject;
-class UMaterialInterface;
+class UMaterial;
 class UTexture;
 class UStaticMesh;
 class UParticleSystem;
@@ -106,6 +106,18 @@ enum class EParticleSortMode : uint8
     PSM_None,           // 정렬 없음
     PSM_DistanceToView, // 카메라 거리 기준 정렬
     PSM_Age             // Particle 나이 기준 정렬
+};
+
+/** 다형 직렬화 시 모듈 구체 클래스를 식별하는 태그 */
+enum class EParticleModuleClass : uint8
+{
+    Required = 0, Spawn, Lifetime, Location, Velocity, Color, Size,
+    Rotation, RotationRate, Acceleration, Attractor, Orbit,
+    Collision, Kill,
+    EventGenerator, EventReceiverSpawn, EventReceiverKillAll,
+    SubUV, Light, VectorField, Camera, Parameter,
+    TypeDataSprite, TypeDataMesh, TypeDataBeam, TypeDataRibbon,
+    Unknown = 0xFF
 };
 
 /** Rendering 계층으로 전달되는 Dynamic Emitter 타입 */

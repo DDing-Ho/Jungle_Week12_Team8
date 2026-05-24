@@ -55,7 +55,7 @@ private:
     TArray<FDynamicEmitterDataBase *>	EmitterRenderData;       // 렌더 패스 전달용 데이터
     TArray<FParticleEventCollideData>	CollisionEvents;         // 이번 프레임 Collision Event 목록
 
-	TArray<UMaterialInterface* >		EmitterMaterials;
+	TArray<UMaterial*>					EmitterMaterials;
 
     bool								bIsActive = false;       // 재생 상태
     bool								bParticleVisible = true; // ShowFlag 표시 여부

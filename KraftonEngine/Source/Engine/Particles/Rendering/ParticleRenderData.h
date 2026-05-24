@@ -29,7 +29,7 @@ struct FDynamicEmitterReplayDataBase
     FVector Scale = FVector(1.0f, 1.0f, 1.0f);                           // Emitter 스케일
     EParticleSortMode SortMode = EParticleSortMode::PSM_None;           // 정렬 방식
 
-    UMaterialInterface *MaterialInterface = nullptr;   // Emitter 렌더링 Material
+    UMaterial *Material = nullptr;                     // Emitter 렌더링 Material
     UParticleModuleRequired *RequiredModule = nullptr; // Required Module 참조
 
     bool IsValid() const

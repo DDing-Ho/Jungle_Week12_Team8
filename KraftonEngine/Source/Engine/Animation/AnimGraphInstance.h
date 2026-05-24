@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Animation/AnimInstance.h"
+#include "AnimGraphInstance.generated.h"
 
 class UAnimInstanceAsset;
 class UAnimSequence;
@@ -12,10 +13,11 @@ struct FAnimStateData;
 struct FAnimStateTransitionData;
 struct FAnimTransitionCondition;
 
+UCLASS()
 class UAnimGraphInstance : public UAnimInstance
 {
 public:
-	DECLARE_CLASS(UAnimGraphInstance, UAnimInstance)
+	GENERATED_BODY(UAnimGraphInstance)
 
 	void SetAsset(UAnimInstanceAsset* InAsset);
 	UAnimInstanceAsset* GetAsset() const { return Asset; }
