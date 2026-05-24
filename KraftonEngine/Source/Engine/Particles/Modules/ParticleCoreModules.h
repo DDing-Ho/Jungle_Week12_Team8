@@ -15,11 +15,15 @@
 #pragma once
 
 #include "ParticleModules.h"
+#include "ParticleCoreModules.generated.h"
 
 /** Emitter 필수 렌더링 설정 모듈 */
+UCLASS()
 class UParticleModuleRequired : public UParticleModule
 {
   public:
+    GENERATED_BODY(UParticleModuleRequired)
+
     virtual EParticleModuleType        GetModuleType() const override { return EParticleModuleType::PMT_Required; }
     virtual EParticleModuleUpdatePhase GetUpdatePhase() const override { return EParticleModuleUpdatePhase::PMUP_Spawn; }
     virtual EParticleModuleClass       GetModuleClass() const override { return EParticleModuleClass::Required; }
@@ -42,9 +46,12 @@ class UParticleModuleRequired : public UParticleModule
 };
 
 /** Particle 생성량과 Burst를 제어하는 모듈 */
+UCLASS()
 class UParticleModuleSpawn : public UParticleModule
 {
   public:
+    GENERATED_BODY(UParticleModuleSpawn)
+
     virtual EParticleModuleType        GetModuleType() const override { return EParticleModuleType::PMT_Spawn; }
     virtual EParticleModuleUpdatePhase GetUpdatePhase() const override { return EParticleModuleUpdatePhase::PMUP_Spawn; }
     virtual EParticleModuleClass       GetModuleClass() const override { return EParticleModuleClass::Spawn; }
@@ -59,9 +66,12 @@ class UParticleModuleSpawn : public UParticleModule
 };
 
 /** Particle 수명을 설정하는 모듈 */
+UCLASS()
 class UParticleModuleLifetime : public UParticleModule
 {
   public:
+    GENERATED_BODY(UParticleModuleLifetime)
+
     virtual EParticleModuleType        GetModuleType() const override { return EParticleModuleType::PMT_Lifetime; }
     virtual EParticleModuleUpdatePhase GetUpdatePhase() const override { return EParticleModuleUpdatePhase::PMUP_Spawn; }
     virtual EParticleModuleClass       GetModuleClass() const override { return EParticleModuleClass::Lifetime; }
@@ -75,9 +85,12 @@ class UParticleModuleLifetime : public UParticleModule
 };
 
 /** Particle 초기 위치와 Spawn 영역을 설정하는 모듈 */
+UCLASS()
 class UParticleModuleLocation : public UParticleModule
 {
   public:
+    GENERATED_BODY(UParticleModuleLocation)
+
     virtual EParticleModuleType        GetModuleType() const override { return EParticleModuleType::PMT_Location; }
     virtual EParticleModuleUpdatePhase GetUpdatePhase() const override { return EParticleModuleUpdatePhase::PMUP_Spawn; }
     virtual EParticleModuleClass       GetModuleClass() const override { return EParticleModuleClass::Location; }
@@ -95,9 +108,12 @@ class UParticleModuleLocation : public UParticleModule
 };
 
 /** Particle 초기 속도를 설정하는 모듈 */
+UCLASS()
 class UParticleModuleVelocity : public UParticleModule
 {
   public:
+    GENERATED_BODY(UParticleModuleVelocity)
+
     virtual EParticleModuleType        GetModuleType() const override { return EParticleModuleType::PMT_Velocity; }
     virtual EParticleModuleUpdatePhase GetUpdatePhase() const override { return EParticleModuleUpdatePhase::PMUP_Spawn; }
     virtual EParticleModuleClass       GetModuleClass() const override { return EParticleModuleClass::Velocity; }
@@ -112,9 +128,12 @@ class UParticleModuleVelocity : public UParticleModule
 };
 
 /** Particle 색상과 Alpha 변화를 설정하는 모듈 */
+UCLASS()
 class UParticleModuleColor : public UParticleModule
 {
   public:
+    GENERATED_BODY(UParticleModuleColor)
+
     virtual EParticleModuleType        GetModuleType() const override { return EParticleModuleType::PMT_Color; }
     virtual EParticleModuleUpdatePhase GetUpdatePhase() const override { return EParticleModuleUpdatePhase::PMUP_SpawnAndUpdate; }
     virtual EParticleModuleClass       GetModuleClass() const override { return EParticleModuleClass::Color; }
@@ -130,9 +149,12 @@ class UParticleModuleColor : public UParticleModule
 };
 
 /** Particle 크기와 수명 기반 크기 변화를 설정하는 모듈 */
+UCLASS()
 class UParticleModuleSize : public UParticleModule
 {
   public:
+    GENERATED_BODY(UParticleModuleSize)
+
     virtual EParticleModuleType        GetModuleType() const override { return EParticleModuleType::PMT_Size; }
     virtual EParticleModuleUpdatePhase GetUpdatePhase() const override { return EParticleModuleUpdatePhase::PMUP_SpawnAndUpdate; }
     virtual EParticleModuleClass       GetModuleClass() const override { return EParticleModuleClass::Size; }

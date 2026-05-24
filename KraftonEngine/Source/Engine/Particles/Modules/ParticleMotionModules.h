@@ -13,11 +13,15 @@
 #pragma once
 
 #include "ParticleCoreModules.h"
+#include "ParticleMotionModules.generated.h"
 
 /** Particle 초기 회전을 설정하는 모듈 */
+UCLASS()
 class UParticleModuleRotation : public UParticleModule
 {
   public:
+    GENERATED_BODY(UParticleModuleRotation)
+
     virtual EParticleModuleType        GetModuleType() const override { return EParticleModuleType::PMT_Rotation; }
     virtual EParticleModuleUpdatePhase GetUpdatePhase() const override { return EParticleModuleUpdatePhase::PMUP_Spawn; }
     virtual EParticleModuleClass       GetModuleClass() const override { return EParticleModuleClass::Rotation; }
@@ -30,9 +34,12 @@ class UParticleModuleRotation : public UParticleModule
 };
 
 /** Particle 회전 속도를 설정하는 모듈 */
+UCLASS()
 class UParticleModuleRotationRate : public UParticleModule
 {
   public:
+    GENERATED_BODY(UParticleModuleRotationRate)
+
     virtual EParticleModuleType        GetModuleType() const override { return EParticleModuleType::PMT_RotationRate; }
     virtual EParticleModuleUpdatePhase GetUpdatePhase() const override { return EParticleModuleUpdatePhase::PMUP_SpawnAndUpdate; }
     virtual EParticleModuleClass       GetModuleClass() const override { return EParticleModuleClass::RotationRate; }
@@ -46,9 +53,12 @@ class UParticleModuleRotationRate : public UParticleModule
 };
 
 /** Particle 속도 변화와 Drag를 적용하는 모듈 */
+UCLASS()
 class UParticleModuleAcceleration : public UParticleModule
 {
   public:
+    GENERATED_BODY(UParticleModuleAcceleration)
+
     virtual EParticleModuleType        GetModuleType() const override { return EParticleModuleType::PMT_Acceleration; }
     virtual EParticleModuleUpdatePhase GetUpdatePhase() const override { return EParticleModuleUpdatePhase::PMUP_SpawnAndUpdate; }
     virtual EParticleModuleClass       GetModuleClass() const override { return EParticleModuleClass::Acceleration; }
@@ -62,9 +72,12 @@ class UParticleModuleAcceleration : public UParticleModule
 };
 
 /** 특정 위치나 Actor 방향으로 Particle을 끌어당기는 모듈 */
+UCLASS()
 class UParticleModuleAttractor : public UParticleModule
 {
   public:
+    GENERATED_BODY(UParticleModuleAttractor)
+
     virtual EParticleModuleType        GetModuleType() const override { return EParticleModuleType::PMT_Attractor; }
     virtual EParticleModuleUpdatePhase GetUpdatePhase() const override { return EParticleModuleUpdatePhase::PMUP_Update; }
     virtual EParticleModuleClass       GetModuleClass() const override { return EParticleModuleClass::Attractor; }
@@ -77,9 +90,12 @@ class UParticleModuleAttractor : public UParticleModule
 };
 
 /** Particle 렌더링 위치에 궤도 오프셋을 적용하는 모듈 */
+UCLASS()
 class UParticleModuleOrbit : public UParticleModule
 {
   public:
+    GENERATED_BODY(UParticleModuleOrbit)
+
     virtual EParticleModuleType        GetModuleType() const override { return EParticleModuleType::PMT_Orbit; }
     virtual EParticleModuleUpdatePhase GetUpdatePhase() const override { return EParticleModuleUpdatePhase::PMUP_Update; }
     virtual EParticleModuleClass       GetModuleClass() const override { return EParticleModuleClass::Orbit; }

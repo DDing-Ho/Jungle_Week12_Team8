@@ -10,12 +10,16 @@
 #pragma once
 
 #include "ParticleMotionModules.h"
+#include "ParticleCollisionKillModules.generated.h"
 
 struct FBoundingBox;
 /** Particle과 World 또는 Actor의 충돌을 처리하는 모듈 */
+UCLASS()
 class UParticleModuleCollision : public UParticleModule
 {
   public:
+    GENERATED_BODY(UParticleModuleCollision)
+
     virtual EParticleModuleType        GetModuleType() const override { return EParticleModuleType::PMT_Collision; }
     virtual EParticleModuleUpdatePhase GetUpdatePhase() const override { return EParticleModuleUpdatePhase::PMUP_SpawnAndUpdate; }
     virtual EParticleModuleClass       GetModuleClass() const override { return EParticleModuleClass::Collision; }
@@ -29,9 +33,12 @@ class UParticleModuleCollision : public UParticleModule
 };
 
 /** 조건 기반 Particle 제거를 처리하는 모듈 */
+UCLASS()
 class UParticleModuleKill : public UParticleModule
 {
   public:
+    GENERATED_BODY(UParticleModuleKill)
+
     virtual EParticleModuleType        GetModuleType() const override { return EParticleModuleType::PMT_Kill; }
     virtual EParticleModuleUpdatePhase GetUpdatePhase() const override { return EParticleModuleUpdatePhase::PMUP_SpawnAndUpdate; }
     virtual EParticleModuleClass       GetModuleClass() const override { return EParticleModuleClass::Kill; }

@@ -12,11 +12,15 @@
 
 #include "Object/Object.h"
 #include "Particles/Assets/ParticleTypeData.h"
+#include "ParticleAsset.generated.h"
 
 /** LOD별 Module, TypeData, 실행 캐시를 보관하는 클래스 */
+UCLASS()
 class UParticleLODLevel : public UObject
 {
   public:
+    GENERATED_BODY(UParticleLODLevel)
+
     int32 GetLevel() const { return Level; }
     void  SetLevel(int32 InLevel) { Level = InLevel; }
 
@@ -50,9 +54,12 @@ class UParticleLODLevel : public UObject
 };
 
 /** 단일 Particle Emitter Asset */
+UCLASS()
 class UParticleEmitter : public UObject
 {
   public:
+    GENERATED_BODY(UParticleEmitter)
+
     FName GetEmitterName() const { return EmitterName; }
     void  SetEmitterName(const FName &InName) { EmitterName = InName; }
 
@@ -106,9 +113,12 @@ class UParticleEmitter : public UObject
 };
 
 /** 여러 Emitter를 묶는 Particle System Asset */
+UCLASS()
 class UParticleSystem : public UObject
 {
   public:
+    GENERATED_BODY(UParticleSystem)
+
     const TArray<UParticleEmitter *> &GetEmitters() const { return Emitters; }
 
     UParticleEmitter *GetEmitter(int32 Index) const { return Index < (int32)Emitters.size() ? Emitters[Index] : nullptr; }

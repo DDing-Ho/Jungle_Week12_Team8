@@ -13,11 +13,15 @@
 #pragma once
 
 #include "ParticleEventModules.h"
+#include "ParticleRenderExpressionModules.generated.h"
 
 /** Texture Atlas 기반 Flipbook 애니메이션 모듈 */
+UCLASS()
 class UParticleModuleSubUV : public UParticleModule
 {
   public:
+    GENERATED_BODY(UParticleModuleSubUV)
+
     virtual EParticleModuleType        GetModuleType() const override { return EParticleModuleType::PMT_SubUV; }
     virtual EParticleModuleUpdatePhase GetUpdatePhase() const override { return EParticleModuleUpdatePhase::PMUP_SpawnAndUpdate; }
     virtual EParticleModuleClass       GetModuleClass() const override { return EParticleModuleClass::SubUV; }
@@ -32,9 +36,12 @@ class UParticleModuleSubUV : public UParticleModule
 };
 
 /** Particle 위치 기반 Light 효과 모듈 */
+UCLASS()
 class UParticleModuleLight : public UParticleModule
 {
   public:
+    GENERATED_BODY(UParticleModuleLight)
+
     virtual EParticleModuleType        GetModuleType() const override { return EParticleModuleType::PMT_Light; }
     virtual EParticleModuleUpdatePhase GetUpdatePhase() const override { return EParticleModuleUpdatePhase::PMUP_Update; }
     virtual EParticleModuleClass       GetModuleClass() const override { return EParticleModuleClass::Light; }
@@ -47,9 +54,12 @@ class UParticleModuleLight : public UParticleModule
 };
 
 /** 3D Vector Field 기반 Particle 이동 모듈 */
+UCLASS()
 class UParticleModuleVectorField : public UParticleModule
 {
   public:
+    GENERATED_BODY(UParticleModuleVectorField)
+
     virtual EParticleModuleType        GetModuleType() const override { return EParticleModuleType::PMT_VectorField; }
     virtual EParticleModuleUpdatePhase GetUpdatePhase() const override { return EParticleModuleUpdatePhase::PMUP_Update; }
     virtual EParticleModuleClass       GetModuleClass() const override { return EParticleModuleClass::VectorField; }
@@ -61,9 +71,12 @@ class UParticleModuleVectorField : public UParticleModule
 };
 
 /** 카메라 기준 Particle 위치 보정 모듈 */
+UCLASS()
 class UParticleModuleCamera : public UParticleModule
 {
   public:
+    GENERATED_BODY(UParticleModuleCamera)
+
     virtual EParticleModuleType        GetModuleType() const override { return EParticleModuleType::PMT_Camera; }
     virtual EParticleModuleUpdatePhase GetUpdatePhase() const override { return EParticleModuleUpdatePhase::PMUP_Update; }
     virtual EParticleModuleClass       GetModuleClass() const override { return EParticleModuleClass::Camera; }
@@ -74,9 +87,12 @@ class UParticleModuleCamera : public UParticleModule
 };
 
 /** Material 등 외부 시스템에 값을 전달하는 모듈 */
+UCLASS()
 class UParticleModuleParameter : public UParticleModule
 {
   public:
+    GENERATED_BODY(UParticleModuleParameter)
+
     virtual EParticleModuleType        GetModuleType() const override { return EParticleModuleType::PMT_Parameter; }
     virtual EParticleModuleUpdatePhase GetUpdatePhase() const override { return EParticleModuleUpdatePhase::PMUP_Update; }
     virtual EParticleModuleClass       GetModuleClass() const override { return EParticleModuleClass::Parameter; }

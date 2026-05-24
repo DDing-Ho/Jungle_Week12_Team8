@@ -13,29 +13,39 @@
 #pragma once
 
 #include "../Modules/ParticleRenderExpressionModules.h"
+#include "ParticleTypeData.generated.h"
 
 /** Emitter 렌더링 타입을 결정하는 TypeData 기반 클래스 */
+UCLASS()
 class UParticleModuleTypeDataBase : public UParticleModule
 {
   public:
+    GENERATED_BODY(UParticleModuleTypeDataBase)
+
     virtual EParticleEmitterType GetEmitterType() const = 0;
     virtual EParticleModuleClass GetModuleClass() const override = 0;
     virtual void Serialize(FArchive& Ar) override = 0;
 };
 
 /** Sprite Emitter TypeData */
+UCLASS()
 class UParticleModuleTypeDataSprite : public UParticleModuleTypeDataBase
 {
   public:
+    GENERATED_BODY(UParticleModuleTypeDataSprite)
+
     virtual EParticleEmitterType GetEmitterType() const override { return EParticleEmitterType::PET_Sprite; }
     virtual EParticleModuleClass GetModuleClass() const override { return EParticleModuleClass::TypeDataSprite; }
     virtual void Serialize(FArchive& Ar) override;
 };
 
 /** Mesh Particle Emitter TypeData */
+UCLASS()
 class UParticleModuleTypeDataMesh : public UParticleModuleTypeDataBase
 {
   public:
+    GENERATED_BODY(UParticleModuleTypeDataMesh)
+
     virtual EParticleEmitterType GetEmitterType() const override { return EParticleEmitterType::PET_Mesh; }
     virtual EParticleModuleClass GetModuleClass() const override { return EParticleModuleClass::TypeDataMesh; }
     virtual void Serialize(FArchive& Ar) override;
@@ -49,9 +59,12 @@ class UParticleModuleTypeDataMesh : public UParticleModuleTypeDataBase
 };
 
 /** Beam Emitter TypeData */
+UCLASS()
 class UParticleModuleTypeDataBeam : public UParticleModuleTypeDataBase
 {
   public:
+    GENERATED_BODY(UParticleModuleTypeDataBeam)
+
     virtual EParticleEmitterType GetEmitterType() const override { return EParticleEmitterType::PET_Beam; }
     virtual EParticleModuleClass GetModuleClass() const override { return EParticleModuleClass::TypeDataBeam; }
     virtual void Serialize(FArchive& Ar) override;
@@ -64,9 +77,12 @@ class UParticleModuleTypeDataBeam : public UParticleModuleTypeDataBase
 };
 
 /** Ribbon / Trail Emitter TypeData */
+UCLASS()
 class UParticleModuleTypeDataRibbon : public UParticleModuleTypeDataBase
 {
   public:
+    GENERATED_BODY(UParticleModuleTypeDataRibbon)
+
     virtual EParticleEmitterType GetEmitterType() const override { return EParticleEmitterType::PET_Ribbon; }
     virtual EParticleModuleClass GetModuleClass() const override { return EParticleModuleClass::TypeDataRibbon; }
     virtual void Serialize(FArchive& Ar) override;
