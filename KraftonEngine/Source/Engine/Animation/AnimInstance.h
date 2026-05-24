@@ -1,14 +1,16 @@
 ﻿#pragma once
 #include "Object/Object.h"
 #include "Animation/AnimTypes.h"
+#include "AnimInstance.generated.h"
 
 class UAnimationStateMachine;
 class USkeletalMeshComponent;
 
+UCLASS()
 class UAnimInstance : public UObject
 {
 public:
-	DECLARE_CLASS(UAnimInstance, UObject)
+	GENERATED_BODY(UAnimInstance)
 	virtual void Initialize(USkeletalMeshComponent* InOwner, const FString& InScriptPath = "");
 	void Update(float DeltaTime);
 	virtual void NativeUpdateAnimation(float DeltaSeconds) {}

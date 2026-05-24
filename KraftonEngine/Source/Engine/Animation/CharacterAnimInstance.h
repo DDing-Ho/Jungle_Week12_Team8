@@ -1,13 +1,15 @@
 #pragma once
 #include "Animation/AnimInstance.h"
+#include "CharacterAnimInstance.generated.h"
 
 class UCharacterMovementComponent;
 class ACharacter;
 
+UCLASS()
 class UCharacterAnimInstance : public UAnimInstance
 {
 public:
-	DECLARE_CLASS(UCharacterAnimInstance, UAnimInstance)
+	GENERATED_BODY(UCharacterAnimInstance)
 
 	~UCharacterAnimInstance();
 

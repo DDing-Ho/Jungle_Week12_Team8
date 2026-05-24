@@ -3,12 +3,14 @@
 #include "Animation/AnimationAsset.h"
 #include "Math/Matrix.h"
 #include "Animation/AnimTypes.h"
+#include "AnimSequenceBase.generated.h"
 
 /** 시간축이 있는 애니메이션의 공통 기반입니다. */
+UCLASS()
 class UAnimSequenceBase : public UAnimationAsset
 {
 public:
-	DECLARE_CLASS(UAnimSequenceBase, UAnimationAsset)
+	GENERATED_BODY(UAnimSequenceBase)
 
 	UAnimSequenceBase() = default;
 	~UAnimSequenceBase() override = default;

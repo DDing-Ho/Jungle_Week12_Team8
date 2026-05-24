@@ -1,14 +1,16 @@
 ﻿#pragma once
 
 #include "Animation/AnimSequenceBase.h"
+#include "AnimSequence.generated.h"
 
 class UAnimDataModel;
 
 /** 실제 단일 Animation Clip입니다. */
+UCLASS()
 class UAnimSequence : public UAnimSequenceBase
 {
 public:
-	DECLARE_CLASS(UAnimSequence, UAnimSequenceBase)
+	GENERATED_BODY(UAnimSequence)
 
 	UAnimSequence() = default;
 	~UAnimSequence() override = default;

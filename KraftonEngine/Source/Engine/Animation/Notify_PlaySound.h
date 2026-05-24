@@ -1,11 +1,13 @@
 ﻿#pragma once
 #include "Notify.h"
+#include "Notify_PlaySound.generated.h"
 
 // notify 예시용 클래스
+UCLASS()
 class UNotify_PlaySound : public UNotify
 {
 public:
-	DECLARE_CLASS(UNotify_PlaySound, UNotify)
+	GENERATED_BODY(UNotify_PlaySound)
 
 	virtual void OnNotify(AActor* MeshOwner, USkeletalMeshComponent* MeshComp) override;
 

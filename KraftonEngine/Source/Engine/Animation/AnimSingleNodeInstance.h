@@ -1,14 +1,16 @@
 ﻿#pragma once
 #include "Animation/AnimInstance.h"
 #include "Animation/AnimTypes.h"
+#include "AnimSingleNodeInstance.generated.h"
 
 class UAnimationAsset;
 class UAnimSequence;
 
+UCLASS()
 class UAnimSingleNodeInstance : public UAnimInstance
 {
 public:
-	DECLARE_CLASS(UAnimSingleNodeInstance, UAnimInstance)
+	GENERATED_BODY(UAnimSingleNodeInstance)
 
 	void SetAnimation(UAnimationAsset* Asset);
 	void Play(bool bInLooping);

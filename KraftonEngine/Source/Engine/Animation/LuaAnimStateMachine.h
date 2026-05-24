@@ -1,13 +1,15 @@
 ﻿#pragma once
 #include "Animation/AnimationStateMachine.h"
+#include "LuaAnimStateMachine.generated.h"
 #include <sol/sol.hpp>
 
 class UAnimSequence;
 
+UCLASS()
 class ULuaAnimStateMachine : public UAnimationStateMachine
 {
 public:
-	DECLARE_CLASS(ULuaAnimStateMachine, UAnimationStateMachine)
+	GENERATED_BODY(ULuaAnimStateMachine)
 
 	void Initialize(USkeletalMeshComponent* InOwner, UAnimInstance* InAnimInstance) override;
 
