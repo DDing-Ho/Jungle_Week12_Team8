@@ -1,9 +1,10 @@
-/**
+﻿/**
  * @file ParticleModules.cpp
  * @brief 모든 Particle Module 및 TypeData Serialize 구현.
  */
 
 #include "Particles/Assets/ParticleTypeData.h"
+#include "Particles/Runtime/ParticleRuntimeTypes.h"
 #include "Serialization/Archive.h"
 #include "Materials/Material.h"
 #include "Materials/MaterialManager.h"
@@ -71,6 +72,19 @@ void UParticleModuleVelocity::Serialize(FArchive& Ar)
     UParticleModule::Serialize(Ar);
     Ar << InitialVelocity;
     Ar << RandomSeedInfo;
+}
+
+void UParticleModuleVelocity::Spawn(FParticleEmitterInstance* Owner, FBaseParticle& Particle, float SpawnTime)
+{
+	if (bEnabled)
+	{
+		// 이미터의 정규화된 시간(0.0~1.0)을 사용하여 커브 샘플링
+		FVector StartVelocityVector = InitialVelocity;
+
+		// 이미터에 대한 상대속도
+		Particle.BaseVelocity =StartVelocityVector;
+		Particle.Velocity =StartVelocityVector;
+	}
 }
 
 void UParticleModuleColor::Serialize(FArchive& Ar)

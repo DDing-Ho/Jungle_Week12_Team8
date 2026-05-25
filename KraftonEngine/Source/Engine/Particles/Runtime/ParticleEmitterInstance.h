@@ -15,6 +15,8 @@
 /** Runtime에서 Particle 생성, 갱신, 제거, Event 처리를 담당하는 Emitter Instance */
 struct FParticleEmitterInstance
 {
+	virtual ~FParticleEmitterInstance();
+
     UParticleEmitter         *EmitterTemplate = nullptr; // 원본 Emitter Asset
     UParticleSystemComponent *OwnerComponent = nullptr;       // 소유 Component
     int32                     CurrentLODLevelIndex = 0;  // 현재 LOD 인덱스
@@ -34,27 +36,34 @@ struct FParticleEmitterInstance
     float  SpawnFraction = 0.0f;                   // SpawnRate 소수점 이월값
 
     TArray<FParticleEventData> PendingEvents; // 이번 프레임 처리 대기 Event 목록
-
-    void Init(UParticleSystemComponent *InComponent, UParticleEmitter *InTemplate);                                                     // Instance 초기화
+	TArray<bool> BurstFired;
+    
+	void Init(UParticleSystemComponent *InComponent, UParticleEmitter *InTemplate);                                                     // Instance 초기화
     void Tick(float DeltaTime);                                                                                                         // 매 프레임 갱신
     void SpawnParticles(int32 Count, float StartTime, float Increment, const FVector &InitialLocation, const FVector &InitialVelocity); // Particle 생성
     void KillParticle(int32 Index);                                                                                                     // 단일 Particle 제거
     void KillAllParticles();                                                                                                            // 전체 Particle 제거
 	void Reset();
+	void ResetParticleParameters(float DeltaTime);												// 전체 초기화 아님, 틱 중에 초기화되어야하는 파라미터 초기화
 
+	void Tick_SpawnParticles(float DeltaTime);
     int32 GetActiveParticleCount() const { return ActiveParticles; }
 
-    FDynamicEmitterDataBase *CreateDynamicEmitterData(FDynamicEmitterReplayDataBase& Data); // 렌더링 데이터 생성
+    FDynamicEmitterDataBase *CreateDynamicEmitterData(); // 렌더링 데이터 생성
 
   private:
     void PreSpawn(FBaseParticle &Particle, const FVector &InitialLocation, const FVector &InitialVelocity); // Spawn 기본값 설정
     void PostSpawn(FBaseParticle &Particle, float SpawnTime);                                               // Spawn 이후 보정
     void KillExpiredParticles();                                                                            // 수명 종료 Particle 제거
     void ProcessEvents();                                                                                   // Pending Event 처리
+	
+	FBaseParticle& GetParticle(int32 index);
 
-	bool bFirstTime;		//처음 스폰 여부
-	bool Loop; 
+	bool bFirstTime;		// 처음 스폰 여부
+	bool bEnabled;			// 가동 여부
+	int32 LoopCount;		// 루프 개수
+	int32 BurstCount;		// burst 회수
 
-	float EmitterTime;		//이미터 시간
-	float LastDeltaTime;	//마지막으로 스폰한 시간
+	float EmitterTime;		// 이미터 시간
+	float LastDeltaTime;	// 마지막으로 스폰한 시간
 };

@@ -3,11 +3,8 @@
 #include "Mesh/Skeleton.h"
 #include "Mesh/SkeletonAsset.h"
 #include "Mesh/SkeletonManager.h"
-#include "Object/ObjectFactory.h"
 #include "Platform/Paths.h"
 #include "Serialization/Archive.h"
-
-IMPLEMENT_CLASS(UAnimationAsset, UObject)
 
 void UAnimationAsset::Serialize(FArchive& Ar)
 {

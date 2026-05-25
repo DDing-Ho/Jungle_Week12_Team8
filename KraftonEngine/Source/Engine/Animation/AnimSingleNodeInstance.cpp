@@ -1,9 +1,6 @@
 ﻿#include "AnimSingleNodeInstance.h"
 #include "Animation/AnimSequence.h"
-#include "Object/ObjectFactory.h"
 #include <algorithm>
-
-IMPLEMENT_CLASS(UAnimSingleNodeInstance, UAnimInstance)
 
 void UAnimSingleNodeInstance::Initialize(USkeletalMeshComponent* InOwner, const FString& InScriptPath)
 {

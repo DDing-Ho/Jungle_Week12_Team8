@@ -19,9 +19,11 @@
 #define DECLARE_PARTICLE_PTR(Index) FBaseParticle &Particle = *reinterpret_cast<FBaseParticle *>(ParticleData + ParticleStride * ParticleIndices[Index])
 
 #define BEGIN_UPDATE_LOOP                                                                                                                                                                              \
-    for (int32 ParticleIndex = 0; ParticleIndex < Owner->ActiveParticles; ++ParticleIndex)                                                                                                             \
-    {                                                                                                                                                                                                  \
-        DECLARE_PARTICLE_PTR(ParticleIndex);
+    for(int Index = ActiveParticles - 1 ; Index >= 0; Index--)							\
+	{																					\
+		const int32 CurrentIndex = ParticleIndices[Index];								\
+		const uint8* ParticlePtr = ParticleData + CurrentIndex * ParticleStride;		\
+		FBaseParticle& Particle = *((FBaseParticle*) ParticlePtr);	
 
 #define END_UPDATE_LOOP }
 
@@ -35,7 +37,7 @@ class UParticleModuleSizeScaleBySpeed : public UParticleModule
     virtual EParticleModuleType        GetModuleType() const override { return EParticleModuleType::PMT_Size; }
     virtual EParticleModuleUpdatePhase GetUpdatePhase() const override { return EParticleModuleUpdatePhase::PMUP_Update; }
 
-    virtual void Update(FParticleEmitterInstance *Owner, float DeltaTime) override;
+    //virtual void Update(FParticleEmitterInstance *Owner, float DeltaTime) override;
 
   private:
     FVector SpeedScale = FVector(1.0f, 1.0f, 1.0f); // 속도 기반 크기 배율

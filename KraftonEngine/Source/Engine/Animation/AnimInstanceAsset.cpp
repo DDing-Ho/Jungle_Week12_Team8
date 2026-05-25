@@ -1,10 +1,7 @@
 ﻿#include "Animation/AnimInstanceAsset.h"
 
 #include "Animation/AnimGraphInstance.h"
-#include "Object/ObjectFactory.h"
 #include "Serialization/Archive.h"
-
-IMPLEMENT_CLASS(UAnimInstanceAsset, UObject)
 
 namespace
 {

@@ -1,11 +1,8 @@
 ﻿#include "AnimInstance.h"
 #include "Animation/AnimationStateMachine.h"
-#include "Object/ObjectFactory.h"
 #include "Component/SkeletalMeshComponent.h"
 
 #include "Core/Log.h"
-
-IMPLEMENT_CLASS(UAnimInstance, UObject)
 
 void UAnimInstance::Initialize(USkeletalMeshComponent* InOwner, const FString& InScriptPath)
 {

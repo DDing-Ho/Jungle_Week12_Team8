@@ -3,12 +3,9 @@
 #include "Animation/AnimDataModel.h"
 #include "Mesh/SkeletonAsset.h"
 #include "Math/Transform.h"
-#include "Object/ObjectFactory.h"
 
 #include <algorithm>
 #include <cmath>
-
-IMPLEMENT_CLASS(UAnimSequence, UAnimSequenceBase)
 
 namespace
 {

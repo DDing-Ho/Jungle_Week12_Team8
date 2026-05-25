@@ -1,11 +1,8 @@
 ﻿#include "Animation/AnimSequenceBase.h"
 
-#include "Object/ObjectFactory.h"
 #include "Serialization/Archive.h"
 
 #include <algorithm>
-
-IMPLEMENT_CLASS(UAnimSequenceBase, UAnimationAsset)
 
 void UAnimSequenceBase::Serialize(FArchive& Ar)
 {
