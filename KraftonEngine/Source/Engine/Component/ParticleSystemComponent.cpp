@@ -106,10 +106,6 @@ FPrimitiveSceneProxy* UParticleSystemComponent::CreateSceneProxy()
 
 void UParticleSystemComponent::SetTemplate(UParticleSystem* InTemplate)
 {
-	if (Template == InTemplate) {
-		return;
-	}
-
 	const bool bShouldActivate = bAutoActivate || bIsActive;
 
 	DeactivateSystem();
