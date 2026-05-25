@@ -74,8 +74,12 @@ void FParticleEmitterInstance::Tick(float DeltaTime)
 
 	for (UParticleModule* Module : CurrentLODLevel->GetUpdateModules())
 	{
-		if (Module && Module->IsEnabled())
-			Module->Update(this, DeltaTime);
+		if (Module && Module->IsEnabled()) {
+			if (Module->GetUpdatePhase() == EParticleModuleUpdatePhase::PMUP_Update ||
+				Module->GetUpdatePhase() == EParticleModuleUpdatePhase::PMUP_SpawnAndUpdate ) {
+				Module->Update(this, DeltaTime);
+			}
+		}
 	}
 
 	//시간되었으면 spawn하는 로직
@@ -148,8 +152,8 @@ void FParticleEmitterInstance::Reset()
 	LastDeltaTime = 0;
 	LoopCount = 0;
 	ParticleCounter = 0;
+	ActiveParticles = 0;
 	bEnabled = true;
-	KillAllParticles();
 }
 
 void FParticleEmitterInstance::ResetParticleParameters(float DeltaTime)
@@ -245,9 +249,50 @@ void FParticleEmitterInstance::Tick_SpawnParticles(float DeltaTime)
 	SpawnFraction = NewSpawnFraction;
 }
 
-FDynamicEmitterDataBase* FParticleEmitterInstance::CreateDynamicEmitterData(FDynamicEmitterReplayDataBase& Data)
+FDynamicEmitterDataBase* FParticleEmitterInstance::CreateDynamicEmitterData()
 {
-	return nullptr;
+	if (ActiveParticles <= 0)
+		return nullptr;
+
+	if (!ParticleData || !ParticleIndices)
+		return nullptr;
+
+	if (!CurrentLODLevel)
+		return nullptr;
+
+	FDynamicSpriteEmitterData* Data = new FDynamicSpriteEmitterData();
+
+	FDynamicSpriteEmitterReplayData& Source = Data->Source;
+
+	Source.eEmitterType = EDynamicEmitterType::DET_Sprite;
+	Source.ActiveParticleCount = ActiveParticles;
+	Source.ParticleStride = ParticleStride;
+	Source.Scale = FVector(1.0f, 1.0f, 1.0f);
+
+	UParticleModuleRequired* RequiredModule = CurrentLODLevel->GetRequiredModule();
+	Source.RequiredModule = RequiredModule;
+
+	if (RequiredModule)
+	{
+		Source.Material = RequiredModule->GetMaterial();
+		Source.SortMode = RequiredModule->GetSortMode();
+	}
+
+	Source.DataContainer.Allocate(ParticleStride, MaxActiveParticles);
+
+	memcpy(
+		Source.DataContainer.ParticleData,
+		ParticleData,
+		ParticleStride * MaxActiveParticles
+	);
+
+	memcpy(
+		Source.DataContainer.ParticleIndices,
+		ParticleIndices,
+		sizeof(uint16) * ActiveParticles
+	);
+
+	return Data;
 }
 
 void FParticleEmitterInstance::PreSpawn(FBaseParticle& Particle, const FVector& InitialLocation, const FVector& InitialVelocity)

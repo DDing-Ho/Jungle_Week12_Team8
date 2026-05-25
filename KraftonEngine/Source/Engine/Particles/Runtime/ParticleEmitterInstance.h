@@ -49,7 +49,7 @@ struct FParticleEmitterInstance
 	void Tick_SpawnParticles(float DeltaTime);
     int32 GetActiveParticleCount() const { return ActiveParticles; }
 
-    FDynamicEmitterDataBase *CreateDynamicEmitterData(FDynamicEmitterReplayDataBase& Data); // 렌더링 데이터 생성
+    FDynamicEmitterDataBase *CreateDynamicEmitterData(); // 렌더링 데이터 생성
 
   private:
     void PreSpawn(FBaseParticle &Particle, const FVector &InitialLocation, const FVector &InitialVelocity); // Spawn 기본값 설정

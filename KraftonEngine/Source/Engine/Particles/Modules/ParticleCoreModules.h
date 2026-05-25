@@ -120,6 +120,7 @@ class UParticleModuleVelocity : public UParticleModule
     virtual EParticleModuleUpdatePhase GetUpdatePhase() const override { return EParticleModuleUpdatePhase::PMUP_Spawn; }
     virtual EParticleModuleClass       GetModuleClass() const override { return EParticleModuleClass::Velocity; }
     virtual void Serialize(FArchive& Ar) override;
+	virtual void Spawn(FParticleEmitterInstance* Owner, FBaseParticle& Particle, float SpawnTime) override;
 
     FVector GetInitialVelocity() const { return InitialVelocity; }
     void    SetInitialVelocity(const FVector &InVelocity) { InitialVelocity = InVelocity; }

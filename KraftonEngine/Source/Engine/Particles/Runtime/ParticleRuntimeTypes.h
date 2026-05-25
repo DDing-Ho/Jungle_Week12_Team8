@@ -12,6 +12,8 @@
 
 #include "../Assets/ParticleAsset.h"
 
+#include <cstring>
+
 /** Runtime Particle 1개의 기본 데이터 */
 struct FBaseParticle
 {
@@ -46,6 +48,49 @@ struct FParticleDataContainer
     void   Release();                                                  // Particle 메모리 해제
     uint8 *GetParticleData(int32 ParticleIndex) const;                 // Particle 데이터 주소 반환
 };
+
+inline void FParticleDataContainer::Allocate(int32 InParticleStride, int32 InMaxParticleCount)
+{
+    Release();
+
+    if (InParticleStride <= 0 || InMaxParticleCount <= 0)
+        return;
+
+    ParticleDataNumBytes = InParticleStride * InMaxParticleCount;
+    ParticleIndicesNumShorts = InMaxParticleCount;
+    MemBlockSize = ParticleDataNumBytes + static_cast<int32>(sizeof(uint16) * ParticleIndicesNumShorts);
+
+    ParticleData = new uint8[ParticleDataNumBytes];
+    ParticleIndices = new uint16[ParticleIndicesNumShorts];
+
+    std::memset(ParticleData, 0, ParticleDataNumBytes);
+    std::memset(ParticleIndices, 0, sizeof(uint16) * ParticleIndicesNumShorts);
+}
+
+inline void FParticleDataContainer::Release()
+{
+    delete[] ParticleData;
+    ParticleData = nullptr;
+
+    delete[] ParticleIndices;
+    ParticleIndices = nullptr;
+
+    MemBlockSize = 0;
+    ParticleDataNumBytes = 0;
+    ParticleIndicesNumShorts = 0;
+}
+
+inline uint8* FParticleDataContainer::GetParticleData(int32 ParticleIndex) const
+{
+    if (!ParticleData || ParticleIndex < 0 || ParticleIndicesNumShorts <= 0)
+        return nullptr;
+
+    const int32 ParticleStride = ParticleDataNumBytes / ParticleIndicesNumShorts;
+    if (ParticleStride <= 0 || ParticleIndex >= ParticleIndicesNumShorts)
+        return nullptr;
+
+    return ParticleData + ParticleStride * ParticleIndex;
+}
 
 /** Particle Collision Event 데이터 */
 struct FParticleEventCollideData

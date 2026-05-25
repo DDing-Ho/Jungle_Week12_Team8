@@ -82,6 +82,10 @@ struct FDynamicSpriteEmitterData : public FDynamicEmitterDataBase
 {
     FDynamicSpriteEmitterReplayData Source; // Sprite ReplayData
 
+	~FDynamicSpriteEmitterData() override {
+		Source.DataContainer.Release();
+	}
+
     virtual const FDynamicEmitterReplayDataBase &GetSource() const override
     {
         return Source;
@@ -97,6 +101,11 @@ struct FDynamicMeshEmitterData : public FDynamicEmitterDataBase
 {
     FDynamicMeshEmitterReplayData Source; // Mesh ReplayData
 
+    ~FDynamicMeshEmitterData() override
+    {
+        Source.DataContainer.Release();
+    }
+
     virtual const FDynamicEmitterReplayDataBase &GetSource() const override
     {
         return Source;
@@ -111,6 +120,11 @@ struct FDynamicMeshEmitterData : public FDynamicEmitterDataBase
 struct FDynamicBeamEmitterData : public FDynamicEmitterDataBase
 {
     FDynamicBeamEmitterReplayData Source; // Beam ReplayData
+
+    ~FDynamicBeamEmitterData() override
+    {
+        Source.DataContainer.Release();
+    }
 
     virtual const FDynamicEmitterReplayDataBase &GetSource() const override
     {

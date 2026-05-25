@@ -37,7 +37,7 @@ class UParticleModuleSizeScaleBySpeed : public UParticleModule
     virtual EParticleModuleType        GetModuleType() const override { return EParticleModuleType::PMT_Size; }
     virtual EParticleModuleUpdatePhase GetUpdatePhase() const override { return EParticleModuleUpdatePhase::PMUP_Update; }
 
-    virtual void Update(FParticleEmitterInstance *Owner, float DeltaTime) override;
+    //virtual void Update(FParticleEmitterInstance *Owner, float DeltaTime) override;
 
   private:
     FVector SpeedScale = FVector(1.0f, 1.0f, 1.0f); // 속도 기반 크기 배율
