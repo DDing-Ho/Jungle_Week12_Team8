@@ -21,6 +21,7 @@
 #include "Component/Light/LightComponentBase.h"
 #include "Component/DecalComponent.h"
 #include "Component/HeightFogComponent.h"
+#include "Component/ParticleSystemComponent.h"
 #include "Core/Property/FArrayProperty.h"
 #include "Core/Property/FEnumProperty.h"
 #include "Core/Property/FObjectPropertyBase/FSoftObjectProperty.h"
@@ -859,6 +860,7 @@ void FEditorPropertyWidget::RenderComponentTree(AActor* Actor)
 			return strcmp(A->GetName(), B->GetName()) < 0;
 		});
 
+	ImGui::TextUnformatted("Components");
 	ImGui::SameLine();
 
 	if (ImGui::Button("Add"))

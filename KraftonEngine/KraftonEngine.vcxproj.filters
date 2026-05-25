@@ -1344,7 +1344,7 @@
       <Filter>ThirdParty\ImGui</Filter>
     </ClCompile>
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="HighPerformanceGpuHint.cpp" />
+    <ClCompile Include="Source\Engine\Render\Proxy\ParticleSceneProxy.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\Editor\EditorEngine.h">
@@ -4083,6 +4083,7 @@
     <ClInclude Include="ThirdParty\sol2\include\sol\utility\to_string.hpp">
       <Filter>ThirdParty\sol2\include\sol\utility</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Render\Proxy\ParticleSceneProxy.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="KraftonEngine.rc" />

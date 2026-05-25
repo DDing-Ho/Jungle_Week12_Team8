@@ -22,9 +22,9 @@ class UParticleModuleTypeDataBase : public UParticleModule
   public:
     GENERATED_BODY(UParticleModuleTypeDataBase)
 
-    virtual EParticleEmitterType GetEmitterType() const = 0;
-    virtual EParticleModuleClass GetModuleClass() const override = 0;
-    virtual void Serialize(FArchive& Ar) override = 0;
+    virtual EParticleEmitterType GetEmitterType() const { return EParticleEmitterType::PET_Sprite; }
+    virtual EParticleModuleClass GetModuleClass() const override { return EParticleModuleClass::Unknown; }
+    virtual void Serialize(FArchive& Ar) override { UParticleModule::Serialize(Ar); }
 };
 
 /** Sprite Emitter TypeData */

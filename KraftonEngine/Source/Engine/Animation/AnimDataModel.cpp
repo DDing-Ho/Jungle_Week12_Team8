@@ -13,8 +13,6 @@
 #include <cstring>
 #include <utility>
 
-IMPLEMENT_CLASS(UAnimDataModel, UObject)
-
 namespace
 {
 	constexpr uint32 AnimNotifyListMagic = 0x544E5645; // EVNT

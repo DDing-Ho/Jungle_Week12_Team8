@@ -5,8 +5,6 @@
 #include "GameFramework/Character.h"
 #include "Object/FUObjectArray.h"
 
-IMPLEMENT_CLASS(UCharacterAnimInstance, UAnimInstance)
-
 UCharacterAnimInstance::~UCharacterAnimInstance()
 {
 	if (StateMachine)

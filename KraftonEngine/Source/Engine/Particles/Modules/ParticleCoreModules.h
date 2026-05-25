@@ -60,6 +60,8 @@ class UParticleModuleSpawn : public UParticleModule
     float GetSpawnRate() const { return SpawnRate; }
     void  SetSpawnRate(float InSpawnRate) { SpawnRate = InSpawnRate; }
 
+	int32 GetBurstCount() const { return BurstCount; }
+	void  SetBurstCount(int32 InBurstCount) { BurstCount = InBurstCount; }
   private:
     float SpawnRate = 10.0f; // 초당 Particle 생성 수
     int32 BurstCount = 0;    // 순간 Spawn 개수
@@ -118,6 +120,7 @@ class UParticleModuleVelocity : public UParticleModule
     virtual EParticleModuleUpdatePhase GetUpdatePhase() const override { return EParticleModuleUpdatePhase::PMUP_Spawn; }
     virtual EParticleModuleClass       GetModuleClass() const override { return EParticleModuleClass::Velocity; }
     virtual void Serialize(FArchive& Ar) override;
+	virtual void Spawn(FParticleEmitterInstance* Owner, FBaseParticle& Particle, float SpawnTime) override;
 
     FVector GetInitialVelocity() const { return InitialVelocity; }
     void    SetInitialVelocity(const FVector &InVelocity) { InitialVelocity = InVelocity; }

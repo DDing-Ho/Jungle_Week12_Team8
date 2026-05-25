@@ -116,8 +116,8 @@ FBX_CONFIGS        = {"Debug", "Release", "Game"}  # x64 와 결합되는 구성
 # PhysX (NuGet, 4.1.2) — vcpkg auto applocal-deps가 일부 환경에서 동작하지 않아
 # PostBuildEvent 에서 명시적으로 *.dll 을 OutDir 로 복사한다.
 # Debug 구성은 debug\\bin, 그 외(Release/Game/Demo)는 release bin 사용.
-PHYSX_DEBUG_BIN   = "packages\\NVIDIA.PhysX.4.1.2\\installed\\x64-windows\\debug\\bin"
-PHYSX_RELEASE_BIN = "packages\\NVIDIA.PhysX.4.1.2\\installed\\x64-windows\\bin"
+PHYSX_DEBUG_BIN   = "packages\\NVIDIA.PhysX.4.1.229882250\\installed\\x64-windows\\debug\\bin"
+PHYSX_RELEASE_BIN = "packages\\NVIDIA.PhysX.4.1.229882250\\installed\\x64-windows\\bin"
 
 # Lua (LuaJIT, 5.1 ABI) — lua51.dll 은 .gitignore 의 **/[Bb]in/* 에 걸려 있어
 # 팀원이 직접 ThirdParty\\lua\\bin\\lua51.dll 위치에 배치해야 한다 (LuaJIT 배포본).
@@ -136,8 +136,8 @@ ADDITIONAL_DEPENDENCIES = [
 
 # NuGet packages (id, version) — restored via packages.config
 NUGET_PACKAGES = [
-    ("directxtk_desktop_win10", "2025.10.28.2"),
-    ("NVIDIA.PhysX", "4.1.2"),
+    ("directxtk_desktop_win10", "2026.5.8.1"),
+    ("NVIDIA.PhysX", "4.1.229882250"),
 ]
 
 NS = "http://schemas.microsoft.com/developer/msbuild/2003"

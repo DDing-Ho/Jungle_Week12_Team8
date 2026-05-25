@@ -5,13 +5,10 @@
 #include "Animation/AnimSequenceManager.h"
 #include "Animation/AnimationRuntime.h"
 #include "Core/Log.h"
-#include "Object/ObjectFactory.h"
 
 #include <algorithm>
 #include <cstdarg>
 #include <cmath>
-
-IMPLEMENT_CLASS(UAnimGraphInstance, UAnimInstance)
 
 namespace
 {

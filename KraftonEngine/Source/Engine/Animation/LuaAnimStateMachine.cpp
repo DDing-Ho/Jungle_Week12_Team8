@@ -2,11 +2,8 @@
 #include "Animation/AnimInstance.h"
 #include "Animation/AnimSequence.h"
 #include "Animation/AnimSequenceManager.h"
-#include "Object/ObjectFactory.h"
 #include "Lua/LuaScriptManager.h"
 #include "Core/Log.h"
-
-IMPLEMENT_CLASS(ULuaAnimStateMachine, UAnimationStateMachine)
 
 void ULuaAnimStateMachine::Initialize(USkeletalMeshComponent* InOwner, UAnimInstance* InAnimInstance)
 {
