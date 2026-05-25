@@ -14,7 +14,7 @@ class UMaterial;
 //                     emitter 타입에 맞는 particle shader permutation으로
 //                     proxy 소유 UMaterial을 생성/재사용하여 SectionDraws에 등록
 // UpdatePerViewport : GatherRenderData() 위임 → staging 버퍼 조립
-// PrepareDrawBuffer : DynVB/DynIB GPU 업로드
+// PrepareDrawBuffer : 공용 quad VB/IB + particle instance VB 업로드
 //
 // Emitter 타입별 전용 셰이더:
 //   Sprite        → ParticleSprite.hlsl
@@ -51,8 +51,9 @@ private:
 	struct FCachedEmitter
 	{
 		const FDynamicEmitterDataBase* Data = nullptr;
-        // TODO: 필드 추가 예정 
-        // Depth 기반 sort key, Material 인덱스, frustum culling 결과값
+		int32 MaterialIndex = INDEX_NONE;
+		// TODO: 필드 추가 예정
+		// Depth 기반 sort key, Material 인덱스, frustum culling 결과값
 	};
 	TArray<FCachedEmitter> CachedEmitters;
 
@@ -62,9 +63,9 @@ private:
 
 	// UpdatePerViewport에서 조립한 CPU staging 버퍼
 	TArray<FSpriteParticleInstanceVertex> StagedInstances;
-	TArray<uint32>                        StagedIndices;
 
 	// GPU 동적 버퍼 (mutable for const PrepareDrawBuffer)
-	mutable FDynamicVertexBuffer DynVB;
-	mutable FDynamicIndexBuffer  DynIB;
+	mutable FVertexBuffer        QuadVB;
+	mutable FIndexBuffer         QuadIB;
+	mutable FDynamicVertexBuffer InstanceVB;
 };

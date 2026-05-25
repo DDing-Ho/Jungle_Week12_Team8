@@ -18,11 +18,15 @@ struct FDrawCommandBuffer
 	ID3D11Buffer* VB       = nullptr;
 	uint32        VBStride = 0;
 	ID3D11Buffer* IB       = nullptr;
+	ID3D11Buffer* InstanceVB       = nullptr;
+	uint32        InstanceVBStride = 0;
 
 	uint32 FirstIndex  = 0;              // 인덱스 시작 오프셋
 	uint32 IndexCount  = 0;              // DrawIndexed 인덱스 수
 	uint32 VertexCount = 0;              // IB 없을 때 Draw(VertexCount, 0)
 	int32  BaseVertex  = 0;              // DrawIndexed BaseVertexLocation
+	uint32 StartInstance = 0;            // DrawIndexedInstanced 시작 인스턴스
+	uint32 InstanceCount = 0;            // DrawIndexedInstanced 인스턴스 수
 
 	bool HasBuffers() const { return VB != nullptr; }
 };

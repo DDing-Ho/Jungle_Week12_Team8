@@ -28,8 +28,9 @@ FParticleSceneProxy::FParticleSceneProxy(UParticleSystemComponent* InComponent)
 FParticleSceneProxy::~FParticleSceneProxy()
 {
 	ReleaseParticleMaterials();
-	DynVB.Release();
-	DynIB.Release();
+	QuadVB.Release();
+	QuadIB.Release();
+	InstanceVB.Release();
 }
 
 // ============================================================
@@ -121,7 +122,7 @@ void FParticleSceneProxy::UpdateMesh()
 				const_cast<ID3D11ShaderResourceView*>(SrcSRVs[(int)EMaterialTextureSlot::Diffuse]));
 		}
 
-		CachedEmitters.push_back({ Data });
+		CachedEmitters.push_back({ Data, i });
 		// SectionDraws 범위는 UpdatePerViewport에서 vertex 조립 후 확정
 		// 여기서는 proxy material만 SectionDraws와 순서를 맞추기 위해 보관
 	}
@@ -133,7 +134,6 @@ void FParticleSceneProxy::UpdateMesh()
 void FParticleSceneProxy::UpdatePerViewport(const FFrameContext& Frame)
 {
 	StagedInstances.clear();
-	StagedIndices.clear();
 	SectionDraws.clear();
 
 	if (!bVisible || CachedEmitters.empty()) return;
@@ -144,20 +144,32 @@ void FParticleSceneProxy::UpdatePerViewport(const FFrameContext& Frame)
 		Frame.CameraUp,
 		Frame.CameraForward
 	};
+	TArray<uint32> IgnoredIndices;
 
 	for (int32 i = 0; i < static_cast<int32>(CachedEmitters.size()); ++i)
 	{
 		const FCachedEmitter& E = CachedEmitters[i];
-		if (!E.Data || i >= static_cast<int32>(ParticleMaterials.size()) || !ParticleMaterials[i]) continue;
+		const int32 MaterialIndex = E.MaterialIndex;
+		if (!E.Data ||
+			MaterialIndex < 0 ||
+			MaterialIndex >= static_cast<int32>(ParticleMaterials.size()) ||
+			!ParticleMaterials[MaterialIndex])
+		{
+			continue;
+		}
 
-		const uint32 FirstIndex = static_cast<uint32>(StagedIndices.size());
+		const FDynamicEmitterReplayDataBase& Source = E.Data->GetSource();
+		if (Source.eEmitterType != EDynamicEmitterType::DET_Sprite)
+			continue;
 
-		// 타입별 구현에 위임 — 프록시는 타입을 알 필요 없음
-		E.Data->GatherRenderData(Ctx, StagedInstances, StagedIndices);
+		const uint32 FirstInstance = static_cast<uint32>(StagedInstances.size());
 
-		const uint32 IndexCount = static_cast<uint32>(StagedIndices.size()) - FirstIndex;
-		if (IndexCount > 0)
-			SectionDraws.push_back({ ParticleMaterials[i], FirstIndex, IndexCount });
+		IgnoredIndices.clear();
+		E.Data->GatherRenderData(Ctx, StagedInstances, IgnoredIndices);
+
+		const uint32 InstanceCount = static_cast<uint32>(StagedInstances.size()) - FirstInstance;
+		if (InstanceCount > 0)
+			SectionDraws.push_back({ ParticleMaterials[MaterialIndex], 0, 6, FirstInstance, InstanceCount });
 	}
 }
 
@@ -170,25 +182,46 @@ bool FParticleSceneProxy::PrepareDrawBuffer(ID3D11Device* Device, ID3D11DeviceCo
 	if (StagedInstances.empty())
 		return false;
 
-	const uint32 VCount = static_cast<uint32>(StagedInstances.size());
-	const uint32 ICount  = static_cast<uint32>(StagedIndices.size());
+	if (!QuadVB.GetBuffer())
+	{
+		static const FSpriteParticleQuadVertex QuadVertices[4] =
+		{
+			{ FVector(-0.5f, -0.5f, 0.0f), FVector2(0.0f, 1.0f) },
+			{ FVector( 0.5f, -0.5f, 0.0f), FVector2(1.0f, 1.0f) },
+			{ FVector( 0.5f,  0.5f, 0.0f), FVector2(1.0f, 0.0f) },
+			{ FVector(-0.5f,  0.5f, 0.0f), FVector2(0.0f, 0.0f) },
+		};
+		QuadVB.Create(Device, QuadVertices, 4, sizeof(QuadVertices), sizeof(FSpriteParticleQuadVertex));
+	}
 
-	if (DynVB.GetStride() == 0)
-		DynVB.Create(Device, VCount, sizeof(FSpriteParticleInstanceVertex));
+	if (!QuadIB.GetBuffer())
+	{
+		static const uint32 QuadIndices[6] = { 0, 1, 2, 0, 2, 3 };
+		QuadIB.Create(Device, QuadIndices, 6, sizeof(QuadIndices));
+	}
+
+	if (!QuadVB.GetBuffer() || !QuadIB.GetBuffer())
+		return false;
+
+	const uint32 InstanceCount = static_cast<uint32>(StagedInstances.size());
+	if (InstanceVB.GetStride() == 0)
+		InstanceVB.Create(Device, InstanceCount, sizeof(FSpriteParticleInstanceVertex));
 	else
-		DynVB.EnsureCapacity(Device, VCount);
+		InstanceVB.EnsureCapacity(Device, InstanceCount);
 
-	DynIB.EnsureCapacity(Device, ICount);
+	if (!InstanceVB.Update(Context, StagedInstances.data(), InstanceCount)) return false;
 
-	if (!DynVB.Update(Context, StagedInstances.data(), VCount)) return false;
-	if (!DynIB.Update(Context, StagedIndices.data(),  ICount)) return false;
-
-	OutBuffer.VB       = DynVB.GetBuffer();
-	OutBuffer.VBStride = DynVB.GetStride();
-	OutBuffer.IB       = DynIB.GetBuffer();
-	OutBuffer.IndexCount = ICount;
+	OutBuffer = {};
+	OutBuffer.VB = QuadVB.GetBuffer();
+	OutBuffer.VBStride = QuadVB.GetStride();
+	OutBuffer.IB = QuadIB.GetBuffer();
+	OutBuffer.InstanceVB = InstanceVB.GetBuffer();
+	OutBuffer.InstanceVBStride = InstanceVB.GetStride();
+	OutBuffer.IndexCount = QuadIB.GetIndexCount();
 	OutBuffer.FirstIndex = 0;
 	OutBuffer.BaseVertex = 0;
+	OutBuffer.StartInstance = 0;
+	OutBuffer.InstanceCount = InstanceCount;
 
 	return true;
 }

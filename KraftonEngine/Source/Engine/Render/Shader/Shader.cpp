@@ -7,6 +7,7 @@
 #include "Core/Log.h"
 #include "Core/Notification.h"
 #include <algorithm>
+#include <cstring>
 #include <iostream>
 #pragma comment(lib, "dxguid.lib")
 #pragma comment(lib, "d3dcompiler.lib")
@@ -270,6 +271,40 @@ namespace
 		}
 		return DXGI_FORMAT_UNKNOWN;
 	}
+
+	uint32 FormatByteSize(DXGI_FORMAT Format)
+	{
+		switch (Format)
+		{
+		case DXGI_FORMAT_R32_FLOAT:
+		case DXGI_FORMAT_R32_UINT:
+		case DXGI_FORMAT_R32_SINT:
+			return 4;
+
+		case DXGI_FORMAT_R32G32_FLOAT:
+		case DXGI_FORMAT_R32G32_UINT:
+		case DXGI_FORMAT_R32G32_SINT:
+			return 8;
+
+		case DXGI_FORMAT_R32G32B32_FLOAT:
+		case DXGI_FORMAT_R32G32B32_UINT:
+		case DXGI_FORMAT_R32G32B32_SINT:
+			return 12;
+
+		case DXGI_FORMAT_R32G32B32A32_FLOAT:
+		case DXGI_FORMAT_R32G32B32A32_UINT:
+		case DXGI_FORMAT_R32G32B32A32_SINT:
+			return 16;
+
+		default:
+			return 0;
+		}
+	}
+
+	bool IsInstanceSemantic(const char* SemanticName)
+	{
+		return SemanticName && std::strncmp(SemanticName, "INSTANCE", 8) == 0;
+	}
 }
 
 void FShader::CreateInputLayoutFromReflection(ID3D11Device* InDevice, ID3DBlob* VSBlob)
@@ -283,6 +318,7 @@ void FShader::CreateInputLayoutFromReflection(ID3D11Device* InDevice, ID3DBlob* 
 	Reflector->GetDesc(&ShaderDesc);
 
 	TArray<D3D11_INPUT_ELEMENT_DESC> Elements;
+	uint32 SlotOffsets[2] = {};
 
 	for (UINT i = 0; i < ShaderDesc.InputParameters; ++i)
 	{
@@ -297,10 +333,21 @@ void FShader::CreateInputLayoutFromReflection(ID3D11Device* InDevice, ID3DBlob* 
 		Elem.SemanticName = ParamDesc.SemanticName;
 		Elem.SemanticIndex = ParamDesc.SemanticIndex;
 		Elem.Format = MaskToFormat(ParamDesc.ComponentType, ParamDesc.Mask);
-		Elem.InputSlot = 0;
-		Elem.AlignedByteOffset = D3D11_APPEND_ALIGNED_ELEMENT;
-		Elem.InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
-		Elem.InstanceDataStepRate = 0;
+
+		const uint32 ByteSize = FormatByteSize(Elem.Format);
+		if (ByteSize == 0)
+			continue;
+
+		const bool bInstanceData = IsInstanceSemantic(ParamDesc.SemanticName);
+		const uint32 Slot = bInstanceData ? 1u : 0u;
+		Elem.InputSlot = Slot;
+		Elem.AlignedByteOffset = SlotOffsets[Slot];
+		Elem.InputSlotClass = bInstanceData
+			? D3D11_INPUT_PER_INSTANCE_DATA
+			: D3D11_INPUT_PER_VERTEX_DATA;
+		Elem.InstanceDataStepRate = bInstanceData ? 1u : 0u;
+
+		SlotOffsets[Slot] += ByteSize;
 
 		Elements.push_back(Elem);
 	}

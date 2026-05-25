@@ -199,11 +199,39 @@ void FDrawCommandList::SubmitCommand(const FDrawCommand& Cmd,
 	// --- Geometry (VB + IB) ---
 	if (Cmd.Buffer.HasBuffers())
 	{
-		if (bForce || Cmd.Buffer.VB != Cache.Buffer.VB || Cmd.Buffer.VBStride != Cache.Buffer.VBStride)
+		const bool bVertexBufferChanged =
+			Cmd.Buffer.VB != Cache.Buffer.VB ||
+			Cmd.Buffer.VBStride != Cache.Buffer.VBStride;
+		const bool bInstanceBufferChanged =
+			Cmd.Buffer.InstanceVB != Cache.Buffer.InstanceVB ||
+			Cmd.Buffer.InstanceVBStride != Cache.Buffer.InstanceVBStride;
+
+		if (Cmd.Buffer.InstanceVB)
 		{
-			uint32 Offset = 0;
-			Ctx->IASetVertexBuffers(0, 1, &Cmd.Buffer.VB, &Cmd.Buffer.VBStride, &Offset);
+			if (bForce || bVertexBufferChanged || bInstanceBufferChanged)
+			{
+				ID3D11Buffer* VertexBuffers[2] = { Cmd.Buffer.VB, Cmd.Buffer.InstanceVB };
+				uint32 Strides[2] = { Cmd.Buffer.VBStride, Cmd.Buffer.InstanceVBStride };
+				uint32 Offsets[2] = { 0, 0 };
+				Ctx->IASetVertexBuffers(0, 2, VertexBuffers, Strides, Offsets);
+			}
 		}
+		else
+		{
+			if (bForce || bVertexBufferChanged)
+			{
+				uint32 Offset = 0;
+				Ctx->IASetVertexBuffers(0, 1, &Cmd.Buffer.VB, &Cmd.Buffer.VBStride, &Offset);
+			}
+
+			if (bForce || Cache.Buffer.InstanceVB)
+			{
+				ID3D11Buffer* NullVB = nullptr;
+				uint32 Zero = 0;
+				Ctx->IASetVertexBuffers(1, 1, &NullVB, &Zero, &Zero);
+			}
+		}
+
 		if (bForce || Cmd.Buffer.IB != Cache.Buffer.IB)
 		{
 			if (Cmd.Buffer.IB)
@@ -215,7 +243,10 @@ void FDrawCommandList::SubmitCommand(const FDrawCommand& Cmd,
 	{
 		// SV_VertexID 기반 드로우 — InputLayout + VB 해제
 		Ctx->IASetInputLayout(nullptr);
-		Ctx->IASetVertexBuffers(0, 0, nullptr, nullptr, nullptr);
+		ID3D11Buffer* NullVBs[2] = {};
+		uint32 ZeroStrides[2] = {};
+		uint32 ZeroOffsets[2] = {};
+		Ctx->IASetVertexBuffers(0, 2, NullVBs, ZeroStrides, ZeroOffsets);
 		Cache.Buffer = {};
 	}
 
@@ -292,7 +323,16 @@ void FDrawCommandList::SubmitCommand(const FDrawCommand& Cmd,
 	Cache.bForceAll = false;
 
 	// --- Draw ---
-	if (Cmd.Buffer.IndexCount > 0)
+	if (Cmd.Buffer.InstanceVB && Cmd.Buffer.InstanceCount > 0 && Cmd.Buffer.IndexCount > 0)
+	{
+		Ctx->DrawIndexedInstanced(
+			Cmd.Buffer.IndexCount,
+			Cmd.Buffer.InstanceCount,
+			Cmd.Buffer.FirstIndex,
+			Cmd.Buffer.BaseVertex,
+			Cmd.Buffer.StartInstance);
+	}
+	else if (Cmd.Buffer.IndexCount > 0)
 	{
 		Ctx->DrawIndexed(Cmd.Buffer.IndexCount, Cmd.Buffer.FirstIndex, Cmd.Buffer.BaseVertex);
 	}

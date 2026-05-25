@@ -335,5 +335,7 @@ struct FMeshSectionDraw
 	UMaterial* Material = nullptr;
 	uint32 FirstIndex = 0;
 	uint32 IndexCount = 0;
+	uint32 FirstInstance = 0;
+	uint32 InstanceCount = 0;
 };
 

@@ -25,15 +25,23 @@ void FDynamicSpriteEmitterData::GatherRenderData(
         // FBaseParticle에 누적 Rotation 필드 없음 → RotationRate * elapsed 근사
         const float Rotation = P->RotationRate * P->RelativeTime * P->Lifetime;
 
-        FSpriteParticleInstanceVertex Inst;
-        Inst.Position = FVector(
+        const FVector Position(
             P->Location.X * Source.Scale.X,
             P->Location.Y * Source.Scale.Y,
             P->Location.Z * Source.Scale.Z);
-        Inst.Rotation = Rotation;
-        Inst.Size  = FVector4(P->Size.X, P->Size.Y, 0.f, 0.f);
-        Inst.Color = FVector4(P->Color.R / 255.f, P->Color.G / 255.f, P->Color.B / 255.f, P->Color.A / 255.f);
-        OutInstances.push_back(Inst);
+
+        const FVector4 Color(
+            P->Color.R / 255.f,
+            P->Color.G / 255.f,
+            P->Color.B / 255.f,
+            P->Color.A / 255.f);
+
+        FSpriteParticleInstanceVertex Instance;
+        Instance.Position = Position;
+        Instance.Rotation = Rotation;
+        Instance.Size = FVector4(P->Size.X * Source.Scale.X, P->Size.Y * Source.Scale.Y, 0.0f, 0.0f);
+        Instance.Color = Color;
+        OutInstances.push_back(Instance);
     }
 }
 

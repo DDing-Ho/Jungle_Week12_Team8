@@ -200,6 +200,8 @@ void FDrawCommandBuilder::BuildCommandForProxy(FScene& Scene, const FPrimitiveSc
 		Cmd.PerObjectCB = PerObjCB;
 		Cmd.Buffer.FirstIndex = Section.FirstIndex;
 		Cmd.Buffer.IndexCount = Section.IndexCount;
+		Cmd.Buffer.StartInstance = Section.FirstInstance;
+		Cmd.Buffer.InstanceCount = Section.InstanceCount;
 
 		if (!bDepthOnly && Section.Material)
 		{

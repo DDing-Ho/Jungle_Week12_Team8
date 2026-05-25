@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file ParticleRenderData.h
  * @brief Particle 렌더링 전달 데이터 정의.
  *
@@ -85,9 +85,9 @@ struct FDynamicEmitterDataBase
     virtual ~FDynamicEmitterDataBase() = default;
 
     // ============================================================
-    // GPU 정점/인덱스 조립 — 타입별 서브클래스가 오버라이드
-    // OutVertices / OutIndices 에 append하며, 인덱스는 OutVertices.size()
-    // 기준으로 계산한다. 기본 구현은 no-op.
+    // GPU 렌더 데이터 조립 — 타입별 서브클래스가 오버라이드
+    // Sprite는 OutInstances에 파티클당 인스턴스 1개만 append한다.
+    // Mesh/Beam/Ribbon은 별도 렌더링 경로에서 확장할 예정이다.
     // ============================================================
     virtual void GatherRenderData(const FParticleVertexBuildContext &Ctx,
                                       TArray<FSpriteParticleInstanceVertex> &OutInstances,
