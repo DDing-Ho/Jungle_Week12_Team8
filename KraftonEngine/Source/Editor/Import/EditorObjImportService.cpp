@@ -567,6 +567,7 @@ FString FEditorObjImportService::ConvertMtlInfoToMat(const FString& ObjFilePath,
 	JsonData["PathFileName"] = MatPath;
 	JsonData["Origin"] = "ObjImport";
 	JsonData["ShaderPath"] = "Shaders/Geometry/UberLit.hlsl";
+	JsonData["BlendMode"] = "Opaque";
 	JsonData["RenderPass"] = "Opaque";
 
 	if (!MtlInfo->map_Kd.empty())

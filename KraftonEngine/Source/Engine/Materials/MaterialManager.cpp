@@ -62,7 +62,7 @@ UMaterial* FMaterialManager::GetOrCreateMaterial(const FString& MatFilePath)
 		UMaterial* DefaultMaterial = GUObjectArray.CreateObject<UMaterial>();
 		FMaterialTemplate* Template = GetOrCreateTemplate(DefaultShaderPath);
 		TMap<FString, std::unique_ptr<FMaterialConstantBuffer>> Buffers = CreateConstantBuffers(Template);
-		DefaultMaterial->Create(GenericPath, Template, ERenderPass::Opaque, EBlendState::Opaque, EDepthStencilState::Default, ERasterizerState::SolidBackCull, std::move(Buffers));
+		DefaultMaterial->Create(GenericPath, Template, ERenderPass::Opaque, EBlendState::Opaque, EDepthStencilState::Default, ERasterizerState::SolidBackCull, std::move(Buffers), EMaterialBlendMode::Opaque);
 		// 폴백: 핑크색으로 미지정 머티리얼임을 표시
 		DefaultMaterial->SetVector4Parameter("SectionColor", FVector4(1.0f, 0.0f, 1.0f, 1.0f));
 		MaterialCache.emplace(GenericPath, DefaultMaterial);
@@ -72,17 +72,42 @@ UMaterial* FMaterialManager::GetOrCreateMaterial(const FString& MatFilePath)
 	// 3. JSON에서 기본 정보 추출
 	FString PathFileName = JsonData[MatKeys::PathFileName].ToString().c_str();
 	FString ShaderPath = JsonData[MatKeys::ShaderPath].ToString().c_str();
-	FString RenderPassStr = JsonData[MatKeys::RenderPass].ToString().c_str();
-	ERenderPass RenderPass = StringToRenderPass(RenderPassStr);
+	FString BlendModeStr = JsonData.hasKey(MatKeys::BlendMode) ? JsonData[MatKeys::BlendMode].ToString().c_str() : "";
+	const bool bHasBlendMode = !BlendModeStr.empty();
+	EMaterialBlendMode BlendMode = bHasBlendMode ? StringToBlendMode(BlendModeStr) : EMaterialBlendMode::Opaque;
+
+	FString RenderPassStr = JsonData.hasKey(MatKeys::RenderPass) ? JsonData[MatKeys::RenderPass].ToString().c_str() : "";
+	const bool bHasExplicitRenderPass = !RenderPassStr.empty();
+	ERenderPass RenderPass = bHasExplicitRenderPass ? StringToRenderPass(RenderPassStr) : ERenderPass::Opaque;
+	const bool bHasSpecialRenderPass =
+		bHasExplicitRenderPass
+		&& RenderPass != ERenderPass::Opaque
+		&& RenderPass != ERenderPass::AlphaBlend;
 
 	// 새로운 렌더 상태 추출 (JSON에 없으면 패스 기반 기본값)
 	FString BlendStr = JsonData.hasKey(MatKeys::BlendState) ? JsonData[MatKeys::BlendState].ToString().c_str() : "";
 	FString DepthStr = JsonData.hasKey(MatKeys::DepthStencilState) ? JsonData[MatKeys::DepthStencilState].ToString().c_str() : "";
 	FString RasterStr = JsonData.hasKey(MatKeys::RasterizerState) ? JsonData[MatKeys::RasterizerState].ToString().c_str() : "";
 
-	EBlendState BlendState = StringToBlendState(BlendStr, RenderPass);
-	EDepthStencilState DepthState = StringToDepthStencilState(DepthStr, RenderPass);
-	ERasterizerState RasterState = StringToRasterizerState(RasterStr, RenderPass);
+	EBlendState BlendState = EBlendState::Opaque;
+	EDepthStencilState DepthState = EDepthStencilState::Default;
+	ERasterizerState RasterState = ERasterizerState::SolidBackCull;
+
+	if (bHasBlendMode && !(BlendMode == EMaterialBlendMode::Opaque && bHasSpecialRenderPass))
+	{
+		RenderPass = MaterialBlendMode::GetDefaultRenderPass(BlendMode);
+		BlendState = MaterialBlendMode::GetDefaultBlendState(BlendMode);
+		DepthState = MaterialBlendMode::GetDefaultDepthStencilState(BlendMode);
+		RasterState = MaterialBlendMode::GetDefaultRasterizerState(BlendMode);
+	}
+	else
+	{
+		RenderPass = StringToRenderPass(RenderPassStr);
+		BlendState = StringToBlendState(BlendStr, RenderPass);
+		DepthState = StringToDepthStencilState(DepthStr, RenderPass);
+		RasterState = StringToRasterizerState(RasterStr, RenderPass);
+		BlendMode = MaterialBlendMode::InferFromRenderState(RenderPass, BlendState);
+	}
 
 	// 4. 템플릿 확보 (없으면 리플렉션을 통해 생성됨)
 	FMaterialTemplate* Template = GetOrCreateTemplate(ShaderPath);
@@ -93,7 +118,7 @@ UMaterial* FMaterialManager::GetOrCreateMaterial(const FString& MatFilePath)
 
 	// 6. UMaterial 인스턴스 생성 및 초기화 (RenderPass는 인스턴스별)
 	UMaterial* Material = GUObjectArray.CreateObject<UMaterial>();
-	Material->Create(PathFileName, Template, RenderPass, BlendState, DepthState, RasterState, std::move(InjectedBuffers));
+	Material->Create(PathFileName, Template, RenderPass, BlendState, DepthState, RasterState, std::move(InjectedBuffers), BlendMode);
 	MaterialCache.emplace(GenericPath, Material);
 
 	//템플릿을 통해 material에 넣기
@@ -108,9 +133,11 @@ UMaterial* FMaterialManager::GetOrCreateMaterial(const FString& MatFilePath)
 	Material->RebuildCachedSRVs();
 
 	// JSON 데이터에도 현재 상태를 기록 (나중에 저장 시 유지되도록)
-	JsonData[MatKeys::BlendState] = BlendStr.empty() ? "" : BlendStr.c_str();
-	JsonData[MatKeys::DepthStencilState] = DepthStr.empty() ? "" : DepthStr.c_str();
-	JsonData[MatKeys::RasterizerState] = RasterStr.empty() ? "" : RasterStr.c_str();
+	JsonData[MatKeys::BlendMode] = MaterialBlendMode::ToString(BlendMode);
+	JsonData[MatKeys::RenderPass] = RenderStateStrings::ToString(RenderStateStrings::RenderPassMap, RenderPass);
+	JsonData[MatKeys::BlendState] = RenderStateStrings::ToString(RenderStateStrings::BlendStateMap, BlendState);
+	JsonData[MatKeys::DepthStencilState] = RenderStateStrings::ToString(RenderStateStrings::DepthStencilStateMap, DepthState);
+	JsonData[MatKeys::RasterizerState] = RenderStateStrings::ToString(RenderStateStrings::RasterizerStateMap, RasterState);
 
 	//최종적으로 material 저장
 	if (bInjected || bPurged)
@@ -141,6 +168,11 @@ bool FMaterialManager::SaveMaterial(UMaterial* Material)
 	}
 
 	JsonData[MatKeys::PathFileName] = MatFilePath.c_str();
+	JsonData[MatKeys::BlendMode] = MaterialBlendMode::ToString(Material->GetBlendMode());
+	JsonData[MatKeys::RenderPass] = RenderStateStrings::ToString(RenderStateStrings::RenderPassMap, Material->GetRenderPass());
+	JsonData[MatKeys::BlendState] = RenderStateStrings::ToString(RenderStateStrings::BlendStateMap, Material->GetBlendState());
+	JsonData[MatKeys::DepthStencilState] = RenderStateStrings::ToString(RenderStateStrings::DepthStencilStateMap, Material->GetDepthStencilState());
+	JsonData[MatKeys::RasterizerState] = RenderStateStrings::ToString(RenderStateStrings::RasterizerStateMap, Material->GetRasterizerState());
 
 	json::JSON Parameters = json::JSON::Make(json::JSON::Class::Object);
 	const auto Layout = Material->GetParameterInfo();
@@ -324,6 +356,11 @@ void FMaterialManager::ApplyTextures(UMaterial* Material, json::JSON& JsonData)
 	}
 }
 
+
+EMaterialBlendMode FMaterialManager::StringToBlendMode(const FString& Str) const
+{
+	return MaterialBlendMode::FromString(Str, EMaterialBlendMode::Opaque);
+}
 
 ERenderPass FMaterialManager::StringToRenderPass(const FString& Str) const
 {

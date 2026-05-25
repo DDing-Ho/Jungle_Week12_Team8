@@ -69,6 +69,61 @@ struct FMaterialConstantBuffer
 	FConstantBuffer* GetConstantBuffer() { return &GPUBuffer; }
 };
 
+enum class EMaterialBlendMode
+{
+	Opaque,
+	Translucent,
+	MAX
+};
+
+namespace MaterialBlendMode
+{
+	inline constexpr RenderStateStrings::FEnumEntry BlendModeMap[] =
+	{
+		{ "Opaque",      (int)EMaterialBlendMode::Opaque },
+		{ "Translucent", (int)EMaterialBlendMode::Translucent },
+	};
+
+	static_assert(ARRAYSIZE(BlendModeMap) == (int)EMaterialBlendMode::MAX, "BlendModeMap must match EMaterialBlendMode entries");
+
+	inline EMaterialBlendMode FromString(const FString& Str, EMaterialBlendMode Default = EMaterialBlendMode::Opaque)
+	{
+		return RenderStateStrings::FromString(BlendModeMap, Str, Default);
+	}
+
+	inline const char* ToString(EMaterialBlendMode Mode)
+	{
+		return RenderStateStrings::ToString(BlendModeMap, Mode);
+	}
+
+	inline ERenderPass GetDefaultRenderPass(EMaterialBlendMode Mode)
+	{
+		return Mode == EMaterialBlendMode::Translucent ? ERenderPass::AlphaBlend : ERenderPass::Opaque;
+	}
+
+	inline EBlendState GetDefaultBlendState(EMaterialBlendMode Mode)
+	{
+		return Mode == EMaterialBlendMode::Translucent ? EBlendState::AlphaBlend : EBlendState::Opaque;
+	}
+
+	inline EDepthStencilState GetDefaultDepthStencilState(EMaterialBlendMode Mode)
+	{
+		return Mode == EMaterialBlendMode::Translucent ? EDepthStencilState::DepthReadOnly : EDepthStencilState::Default;
+	}
+
+	inline ERasterizerState GetDefaultRasterizerState(EMaterialBlendMode Mode)
+	{
+		return ERasterizerState::SolidBackCull;
+	}
+
+	inline EMaterialBlendMode InferFromRenderState(ERenderPass Pass, EBlendState Blend)
+	{
+		return (Pass == ERenderPass::AlphaBlend && Blend == EBlendState::AlphaBlend)
+			? EMaterialBlendMode::Translucent
+			: EMaterialBlendMode::Opaque;
+	}
+}
+
 //파라미터 값 + 텍스처 (런타임 데이터)
 //JSON으로 직렬화되는 데이터
 UCLASS()
@@ -80,6 +135,7 @@ private:
 	FMaterialTemplate* Template; // 공유
 
 	// 렌더링 상태 정보 (인스턴스별)
+	EMaterialBlendMode BlendMode = EMaterialBlendMode::Opaque;
 	ERenderPass RenderPass = ERenderPass::Opaque;
 	EBlendState BlendState = EBlendState::Opaque;
 	EDepthStencilState DepthStencilState = EDepthStencilState::Default;
@@ -107,7 +163,8 @@ public:
 		EBlendState InBlend,
 		EDepthStencilState InDepth,
 		ERasterizerState InRaster,
-		TMap<FString, std::unique_ptr<FMaterialConstantBuffer>>&& InBuffers);
+		TMap<FString, std::unique_ptr<FMaterialConstantBuffer>>&& InBuffers,
+		EMaterialBlendMode InBlendMode = EMaterialBlendMode::Opaque);
 
 	const uint8* GetRawPtr(const FString& BufferName, uint32 Offset) const;
 
@@ -133,6 +190,8 @@ public:
 	void Bind(ID3D11DeviceContext* Context);
 
 	FShader* GetShader() const { return Template ? Template->GetShader() : TransientShader; }
+	EMaterialBlendMode GetBlendMode() const { return BlendMode; }
+	void SetBlendMode(EMaterialBlendMode InMode);
 	ERenderPass GetRenderPass() const { return RenderPass; }
 	EBlendState GetBlendState() const { return BlendState; }
 	EDepthStencilState GetDepthStencilState() const { return DepthStencilState; }

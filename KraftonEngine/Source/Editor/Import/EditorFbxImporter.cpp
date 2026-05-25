@@ -2359,6 +2359,7 @@ FString FEditorFbxImporter::ConvertToMat(const FMaterialInfo* MaterialInfo)
 	JsonData["PathFileName"] = MatPath;
 	JsonData["Origin"] = "FbxImport";
 	JsonData["ShaderPath"] = "Shaders/Geometry/UberLit.hlsl";
+	JsonData["BlendMode"] = "Opaque";
 	JsonData["RenderPass"] = "Opaque";
 
 	if (!MaterialInfo->TexturePath.empty())

@@ -385,6 +385,23 @@ bool FMaterialEditorWidget::RenderDetailsPanel(UMaterial* Material)
 	ImGui::TextUnformatted("Material Details");
 	ImGui::Separator();
 
+	const char* BlendModeItems[] =
+	{
+		MaterialBlendMode::ToString(EMaterialBlendMode::Opaque),
+		MaterialBlendMode::ToString(EMaterialBlendMode::Translucent),
+	};
+	int BlendModeIndex = static_cast<int>(Material->GetBlendMode());
+	if (BlendModeIndex < 0 || BlendModeIndex >= IM_ARRAYSIZE(BlendModeItems))
+	{
+		BlendModeIndex = static_cast<int>(EMaterialBlendMode::Opaque);
+	}
+	if (ImGui::Combo("Blend Mode", &BlendModeIndex, BlendModeItems, IM_ARRAYSIZE(BlendModeItems)))
+	{
+		Material->SetBlendMode(static_cast<EMaterialBlendMode>(BlendModeIndex));
+		bChanged = true;
+	}
+	ImGui::Spacing();
+
 	if (ImGui::CollapsingHeader("Shader Parameters", ImGuiTreeNodeFlags_DefaultOpen))
 	{
 		bChanged |= RenderShaderParameters(Material);

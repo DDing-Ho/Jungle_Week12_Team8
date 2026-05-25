@@ -97,16 +97,27 @@ void UMaterial::Create(const FString& InPathFileName, FMaterialTemplate* InTempl
 	EBlendState InBlend,
 	EDepthStencilState InDepth,
 	ERasterizerState InRaster,
-	TMap<FString, std::unique_ptr<FMaterialConstantBuffer>>&& InBuffers)
+	TMap<FString, std::unique_ptr<FMaterialConstantBuffer>>&& InBuffers,
+	EMaterialBlendMode InBlendMode)
 {
 	PathFileName = InPathFileName;
 	Template = InTemplate;
+	BlendMode = InBlendMode;
 	RenderPass = InRenderPass;
 	BlendState = InBlend;
 	DepthStencilState = InDepth;
 	RasterizerState = InRaster;
 
 	ConstantBufferMap = std::move(InBuffers);
+}
+
+void UMaterial::SetBlendMode(EMaterialBlendMode InMode)
+{
+	BlendMode = InMode;
+	RenderPass = MaterialBlendMode::GetDefaultRenderPass(InMode);
+	BlendState = MaterialBlendMode::GetDefaultBlendState(InMode);
+	DepthStencilState = MaterialBlendMode::GetDefaultDepthStencilState(InMode);
+	RasterizerState = MaterialBlendMode::GetDefaultRasterizerState(InMode);
 }
 
 bool UMaterial::SetParameter(const FString& Name, const void* Data, uint32 Size)
@@ -380,7 +391,7 @@ UMaterial* UMaterial::CreateEditableCopy(ID3D11Device* Device) const
 	}
 
 	UMaterial* Copy = GUObjectArray.CreateObject<UMaterial>();
-	Copy->Create(PathFileName, Template, RenderPass, BlendState, DepthStencilState, RasterizerState, std::move(CopiedBuffers));
+	Copy->Create(PathFileName, Template, RenderPass, BlendState, DepthStencilState, RasterizerState, std::move(CopiedBuffers), BlendMode);
 	Copy->TransientShader = TransientShader;
 	Copy->TextureParameters = TextureParameters;
 	Copy->RebuildCachedSRVs();
@@ -398,6 +409,12 @@ bool UMaterial::CopyEditableStateFrom(const UMaterial* SourceMaterial)
 	{
 		return false;
 	}
+
+	BlendMode = SourceMaterial->BlendMode;
+	RenderPass = SourceMaterial->RenderPass;
+	BlendState = SourceMaterial->BlendState;
+	DepthStencilState = SourceMaterial->DepthStencilState;
+	RasterizerState = SourceMaterial->RasterizerState;
 
 	for (auto& Pair : ConstantBufferMap)
 	{
@@ -431,7 +448,8 @@ UMaterial* UMaterial::CreateTransient(ERenderPass InPass, EBlendState InBlend,
 {
 	UMaterial* Mat = GUObjectArray.CreateObject<UMaterial>();
 	TMap<FString, std::unique_ptr<FMaterialConstantBuffer>> EmptyBuffers;
-	Mat->Create(FString("__transient__"), nullptr, InPass, InBlend, InDepth, InRaster, std::move(EmptyBuffers));
+	const EMaterialBlendMode BlendMode = MaterialBlendMode::InferFromRenderState(InPass, InBlend);
+	Mat->Create(FString("__transient__"), nullptr, InPass, InBlend, InDepth, InRaster, std::move(EmptyBuffers), BlendMode);
 	Mat->TransientShader = InShader;
 	return Mat;
 }

@@ -12,6 +12,7 @@ namespace MatKeys
 {
 	static constexpr const char* PathFileName = "PathFileName";
 	static constexpr const char* ShaderPath = "ShaderPath";
+	static constexpr const char* BlendMode = "BlendMode";
 	static constexpr const char* RenderPass = "RenderPass";
 	static constexpr const char* BlendState = "BlendState";
 	static constexpr const char* DepthStencilState = "DepthStencilState";
@@ -22,6 +23,7 @@ namespace MatKeys
 
 class FMaterialTemplate;
 class UMaterial;
+enum class EMaterialBlendMode;
 struct FMaterialConstantBuffer;
 
 struct FMaterialAssetListItem
@@ -67,6 +69,7 @@ private:
 	void ApplyParameters(UMaterial* Material, json::JSON& JsonData);
 	void ApplyTextures(UMaterial* Material, json::JSON& JsonData);
 
+	EMaterialBlendMode StringToBlendMode(const FString& Str) const;
 	ERenderPass StringToRenderPass(const FString& Str) const;
 	EBlendState StringToBlendState(const FString& Str, ERenderPass Pass) const;
 	EDepthStencilState StringToDepthStencilState(const FString& Str, ERenderPass Pass) const;
