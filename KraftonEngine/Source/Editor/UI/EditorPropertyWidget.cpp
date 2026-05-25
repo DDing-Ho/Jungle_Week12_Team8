@@ -1416,9 +1416,9 @@ bool FEditorPropertyWidget::RenderPropertyWidget(
 		const FNumericProperty& NumericProp = static_cast<const FNumericProperty&>(Prop);
 		int32* Val = static_cast<int32*>(ValuePtr);
 		if (NumericProp.Min != 0.0f || NumericProp.Max != 0.0f)
-			bChanged = ImGui::DragInt("##Value", Val, (int32)NumericProp.Speed, (int32)NumericProp.Min, (int32)NumericProp.Max);
+			bChanged = ImGui::DragInt("##Value", Val, NumericProp.Speed, (int32)NumericProp.Min, (int32)NumericProp.Max);
 		else
-			bChanged = ImGui::DragInt("##Value", Val, (int32)NumericProp.Speed);
+			bChanged = ImGui::DragInt("##Value", Val, NumericProp.Speed);
 		break;
 	}
 	case EPropertyType::Float:

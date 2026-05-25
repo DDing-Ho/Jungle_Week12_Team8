@@ -86,9 +86,9 @@ namespace
 			const FNumericProperty& NumericProp = static_cast<const FNumericProperty&>(Prop);
 			int32* Val = static_cast<int32*>(ValuePtr);
 			if (NumericProp.Min != 0.0f || NumericProp.Max != 0.0f)
-				bChanged = ImGui::DragInt("##v", Val, static_cast<int32>(NumericProp.Speed), static_cast<int32>(NumericProp.Min), static_cast<int32>(NumericProp.Max));
+				bChanged = ImGui::DragInt("##v", Val, NumericProp.Speed, static_cast<int32>(NumericProp.Min), static_cast<int32>(NumericProp.Max));
 			else
-				bChanged = ImGui::DragInt("##v", Val, static_cast<int32>(NumericProp.Speed));
+				bChanged = ImGui::DragInt("##v", Val, NumericProp.Speed);
 			break;
 		}
 		case EPropertyType::Vec3:

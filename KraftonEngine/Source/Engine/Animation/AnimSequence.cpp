@@ -67,8 +67,8 @@ void UAnimSequence::CollectNotifies(float PrevTime, float CurrentTime, bool bLoo
 	float LocalCurrent = fmod(CurrentTime, SeqLength);
 
 	// 이번 틱에서 wrap이 몇 번 일어났는지
-	const int32 PrevLap = floor(PrevTime / SeqLength);
-	const int32 CurrentLap = floor(CurrentTime / SeqLength);
+	const int32 PrevLap = static_cast<int32>(floor(PrevTime / SeqLength));
+	const int32 CurrentLap = static_cast<int32>(floor(CurrentTime / SeqLength));
 	const bool  bWrapped = bLooping && (CurrentLap > PrevLap);
 
 	for (const FAnimNotifyEvent& Notify : DataModel->GetNotifies())

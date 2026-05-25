@@ -54,7 +54,7 @@ void FParticleSystemEditorWidget::Open(UObject* Object)
 
     ImVec2 ViewportSize = ImGui::GetContentRegionAvail();
 
-	ViewportClient.Initialize(GEngine->GetRenderer().GetFD3DDevice().GetDevice(), ViewportSize.x, ViewportSize.y);
+	ViewportClient.Initialize(GEngine->GetRenderer().GetFD3DDevice().GetDevice(), static_cast<uint32>(ViewportSize.x), static_cast<uint32>(ViewportSize.y));
 	ViewportClient.SetPreviewWorld(WorldContext.World);
 	ViewportClient.SetPreviewActor(Actor);
 	ViewportClient.SetPreviewComponent(Actor->GetComponentByClass<UParticleSystemComponent>());

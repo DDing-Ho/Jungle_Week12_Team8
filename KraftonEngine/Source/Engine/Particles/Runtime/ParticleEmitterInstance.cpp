@@ -33,8 +33,8 @@ void FParticleEmitterInstance::Init(UParticleSystemComponent* InComponent, UPart
 
 	PayloadOffset = sizeof(FBaseParticle);
 
-	ParticleSize = std::max<size_t>(
-		static_cast<size_t>(EmitterTemplate->GetParticleSize()),sizeof(FBaseParticle));
+	ParticleSize = static_cast<int32>(std::max<size_t>(
+		static_cast<size_t>(EmitterTemplate->GetParticleSize()), sizeof(FBaseParticle)));
 
 	ParticleStride = ParticleSize;
 
@@ -227,7 +227,7 @@ void FParticleEmitterInstance::Tick_SpawnParticles(float DeltaTime)
 	}
 
 	const float NewLeftover = SpawnFraction + DeltaTime * SpawnRate;
-	int32 SpawnCount = floor(NewLeftover);
+	int32 SpawnCount = static_cast<int32>(floor(NewLeftover));
 	float NewSpawnFraction = NewLeftover - SpawnCount;
 
 	const int32 AvailableSlots = MaxActiveParticles - ActiveParticles;

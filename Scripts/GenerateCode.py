@@ -826,6 +826,19 @@ def collect_property_headers(
     return sorted(headers)
 
 
+def _to_float_literal(val: str | None) -> str | None:
+    """Ensure a plain numeric literal has an 'f' suffix so it compiles as float."""
+    if val is None:
+        return None
+    try:
+        float(val)
+        if not val.lower().endswith("f"):
+            return (val + "f") if "." in val else (val + ".0f")
+    except ValueError:
+        pass
+    return val
+
+
 def emit_property_constructor_args(
     p: PropertyInfo,
     *,
@@ -834,7 +847,11 @@ def emit_property_constructor_args(
     error_context: str,
 ) -> list[str]:
     if p.prop_type in ("EPropertyType::Int", "EPropertyType::Float"):
-        return [p.min or "0.0f", p.max or "0.0f", p.speed or "0.1f"]
+        return [
+            _to_float_literal(p.min) or "0.0f",
+            _to_float_literal(p.max) or "0.0f",
+            _to_float_literal(p.speed) or "0.1f",
+        ]
     if p.prop_type == "EPropertyType::Enum":
         if p.enum_type:
             enum = known_enums.get(p.enum_type)
