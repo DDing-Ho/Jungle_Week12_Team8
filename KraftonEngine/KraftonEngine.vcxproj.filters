@@ -560,9 +560,6 @@
     <ClCompile Include="Source\Editor\UI\EditorTextureManager.cpp">
       <Filter>Source\Editor\UI</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Editor\UI\EditorViewportWidget.cpp">
-      <Filter>Source\Editor\UI</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Editor\UI\EditorWidget.cpp">
       <Filter>Source\Editor\UI</Filter>
     </ClCompile>
@@ -1344,6 +1341,13 @@
       <Filter>ThirdParty\ImGui</Filter>
     </ClCompile>
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="Source\Editor\Viewport\ParticleSystemEditorViewportClient.cpp">
+      <Filter>Source\Editor\Viewport</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Particles\Assets\ParticleSystemAssetManager.cpp">
+      <Filter>Source\Engine\Particles\Assets</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\UI\Asset\ParticleSystemEditorWidget.cpp" />
     <ClCompile Include="Source\Engine\Render\Proxy\ParticleSceneProxy.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -1438,9 +1442,6 @@
       <Filter>Source\Editor\UI</Filter>
     </ClInclude>
     <ClInclude Include="Source\Editor\UI\EditorTextureManager.h">
-      <Filter>Source\Editor\UI</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Editor\UI\EditorViewportWidget.h">
       <Filter>Source\Editor\UI</Filter>
     </ClInclude>
     <ClInclude Include="Source\Editor\UI\EditorWidget.h">
@@ -4083,6 +4084,13 @@
     <ClInclude Include="ThirdParty\sol2\include\sol\utility\to_string.hpp">
       <Filter>ThirdParty\sol2\include\sol\utility</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Editor\Viewport\ParticleSystemEditorViewportClient.h">
+      <Filter>Source\Editor\Viewport</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Particles\Assets\ParticleSystemAssetManager.h">
+      <Filter>Source\Engine\Particles\Assets</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\UI\Asset\ParticleSystemEditorWidget.h" />
     <ClInclude Include="Source\Engine\Render\Proxy\ParticleSceneProxy.h" />
   </ItemGroup>
   <ItemGroup>

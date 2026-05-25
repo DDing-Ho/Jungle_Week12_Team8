@@ -48,7 +48,6 @@ public:
 		bool bStat = false;
 		bool bContentBrowser = true;
 		bool bImGUISettings = false;
-		bool bEditorDebug = false;
 		bool bShadowMapDebug = false;
 	} UI;
 

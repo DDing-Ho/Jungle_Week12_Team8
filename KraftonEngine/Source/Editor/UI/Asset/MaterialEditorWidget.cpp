@@ -266,7 +266,7 @@ void FMaterialEditorWidget::Render(float DeltaTime)
 	ImGuiWindowFlags WindowFlags = ImGuiWindowFlags_None;
 	if (ViewportClient.IsMouseOverViewport())
 	{
-		WindowFlags |= ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse;
+		WindowFlags |= ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse;
 	}
 
 	ImGui::SetNextWindowSize(ImVec2(1040.0f, 640.0f), ImGuiCond_Once);

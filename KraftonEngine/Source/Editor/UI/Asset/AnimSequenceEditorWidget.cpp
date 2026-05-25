@@ -518,7 +518,7 @@ void FAnimSequenceEditorWidget::InitializePreviewWorld()
 
 	ViewportClient.CreatePreviewGizmo();
 	ViewportClient.CreateBoneDebugComponent();
-	ViewportClient.ResetCameraToPreviousBounds();
+	ViewportClient.ResetCameraToPreviewBounds();
 
 	WorldContext.World->SetEditorPOVProvider(&ViewportClient);
 	ViewportClient.SetSelectedBone(PreviewSkeletalMesh, -1);
@@ -737,7 +737,7 @@ void FAnimSequenceEditorWidget::Render(float DeltaTime)
 	ImGuiWindowFlags WindowFlags = ImGuiWindowFlags_None;
 	if (ViewportClient.IsMouseOverViewport())
 	{
-		WindowFlags |= ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse;
+		WindowFlags |= ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse;
 	}
 
 	const FString WindowTitle = VisibleTitle + WindowIdSuffix;

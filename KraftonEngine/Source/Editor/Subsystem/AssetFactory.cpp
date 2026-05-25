@@ -1,15 +1,17 @@
 ﻿#include "Editor/Subsystem/AssetFactory.h"
 
+#include "Object/ObjectFactory.h"
+#include "Platform/Paths.h"
+#include <filesystem>
+
 #include "Animation/AnimInstanceAsset.h"
 #include "Animation/AnimInstanceAssetManager.h"
 #include "CameraShake/CameraShakeAsset.h"
 #include "CameraShake/CameraShakeManager.h"
-#include "FloatCurve/FloatCurveManager.h"
 #include "FloatCurve/FloatCurveAsset.h"
-#include "Object/ObjectFactory.h"
-#include "Platform/Paths.h"
-
-#include <filesystem>
+#include "FloatCurve/FloatCurveManager.h"
+#include "Particles/Assets/ParticleAsset.h"
+#include "Particles/Assets/ParticleSystemAssetManager.h"
 
 namespace
 {
@@ -128,6 +130,31 @@ bool FAssetFactory::CreateAnimInstanceAsset(const FString& DirectoryPath, const 
 	Graph.Nodes.push_back(OutputNode);
 
 	bool bSaved = FAnimInstanceAssetManager::Get().Save(NewAsset);
+	GUObjectArray.DestroyObject(NewAsset);
+
+	if (!bSaved)
+	{
+		return false;
+	}
+
+	OutCreatedPath = FPaths::ToUtf8(AssetPath.wstring());
+	return true;
+}
+
+bool FAssetFactory::CreateParticleSystemAsset(const FString& DirectoryPath, const FString& AssetName, FString& OutCreatedPath)
+{
+	const std::filesystem::path Directory(FPaths::ToWide(DirectoryPath));
+	if (!std::filesystem::exists(Directory) || !std::filesystem::is_directory(Directory))
+	{
+		return false;
+	}
+
+	const std::filesystem::path AssetPath = BuildUniqueAssetPath(Directory, AssetName, L".uasset");
+
+	UParticleSystem* NewAsset = GUObjectArray.CreateObject<UParticleSystem>();
+	NewAsset->SetSourcePath(FPaths::ToUtf8(AssetPath.wstring()));
+
+	bool bSaved = FParticleSystemAssetManager::Get().Save(NewAsset);
 	GUObjectArray.DestroyObject(NewAsset);
 
 	if (!bSaved)

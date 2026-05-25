@@ -52,6 +52,7 @@ public:
 
 	void SetSourcePath(const FString& Path) { SourcePath = Path; }
 	const FString& GetSourcePath() const { return SourcePath; }
+	const FString& GetAssetPathFileName() const override { return SourcePath; }
 
 public:
 	int32 Version = 1;

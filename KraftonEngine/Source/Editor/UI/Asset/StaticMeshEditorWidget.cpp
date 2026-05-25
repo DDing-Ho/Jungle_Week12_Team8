@@ -168,7 +168,7 @@ void FStaticMeshEditorWidget::Render(float DeltaTime)
 	ImGuiWindowFlags WindowFlags = ImGuiWindowFlags_None;
 	if (ViewportClient.IsMouseOverViewport())
 	{
-		WindowFlags |= ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse;
+		WindowFlags |= ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse;
 	}
 
 	FString WindowTitle = VisibleTitle + WindowIdSuffix;
@@ -204,7 +204,7 @@ void FStaticMeshEditorWidget::Render(float DeltaTime)
 		if (VP && Size.x > 0 && Size.y > 0)
 		{
 			VP->RequestResize(static_cast<uint32>(Size.x), static_cast<uint32>(Size.y));
-			MeshViewportWindow.SetRect(FRect(ViewportPos.x, ViewportPos.y, Size.x, Size.y));
+			MeshViewportWindow.SetRect({ViewportPos.x, ViewportPos.y, Size.x, Size.y});
 
 			if (VP->GetSRV())
 			{

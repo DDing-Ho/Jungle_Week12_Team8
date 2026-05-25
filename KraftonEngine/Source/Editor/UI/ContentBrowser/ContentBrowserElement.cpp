@@ -1,25 +1,28 @@
 ﻿#include "ContentBrowserElement.h"
 
+#include "Asset/AssetPackage.h"
+#include "Editor/EditorEngine.h"
+#include "Platform/Paths.h"
+#include "Serialization/SceneSaveManager.h"
+#include "Object/Object.h"
+
+#include "Mesh/StaticMesh.h"
+#include "Mesh/SkeletalMesh.h"
+#include "Editor/Import/EditorFbxImportService.h"
+#include "Editor/Import/EditorObjImportService.h"
+#include "Mesh/MeshManager.h"
+#include "Materials/MaterialManager.h"
+#include "FloatCurve/FloatCurveAsset.h"
+#include "FloatCurve/FloatCurveManager.h"
+#include "CameraShake/CameraShakeAsset.h"
+#include "CameraShake/CameraShakeManager.h"
 #include "Animation/AnimDataModel.h"
 #include "Animation/AnimInstanceAsset.h"
 #include "Animation/AnimInstanceAssetManager.h"
 #include "Animation/AnimSequence.h"
 #include "Animation/AnimSequenceManager.h"
-#include "Asset/AssetPackage.h"
-#include "Editor/EditorEngine.h"
-#include "Editor/Import/EditorFbxImportService.h"
-#include "Editor/Import/EditorObjImportService.h"
-#include "FloatCurve/FloatCurveAsset.h"
-#include "FloatCurve/FloatCurveManager.h"
-#include "CameraShake/CameraShakeAsset.h"
-#include "CameraShake/CameraShakeManager.h"
-#include "Platform/Paths.h"
-#include "Serialization/SceneSaveManager.h"
-#include "Materials/MaterialManager.h"
-#include "Mesh/StaticMesh.h"
-#include "Mesh/SkeletalMesh.h"
-#include "Mesh/MeshManager.h"
-#include "Object/Object.h"
+#include "Particles/Assets/ParticleAsset.h"
+#include "Particles/Assets/ParticleSystemAssetManager.h"
 
 #include <algorithm>
 #include <cctype>
@@ -595,5 +598,14 @@ void MaterialElement::OnDoubleLeftClicked(ContentBrowserContext& Context)
 	if (UMaterial* Material = FMaterialManager::Get().GetOrCreateMaterial(MaterialPath))
 	{
 		Context.EditorEngine->OpenAssetEditorForObject(Material);
+	}
+}
+
+void ParticleSystemElement::OnDoubleLeftClicked(ContentBrowserContext& Context)
+{
+	const FString FilePath = FPaths::ToUtf8(ContentItem.Path.wstring());
+	if (UParticleSystem* Asset = FParticleSystemAssetManager::Get().Load(FilePath))
+	{
+		Context.EditorEngine->OpenAssetEditorForObject(Asset);
 	}
 }

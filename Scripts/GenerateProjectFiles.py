@@ -113,7 +113,7 @@ FBX_DLL            = "libfbxsdk.dll"
 FBX_DEFINE         = "FBXSDK_SHARED"
 FBX_CONFIGS        = {"Debug", "Release", "Game"}  # x64 와 결합되는 구성만 FBX 포함
 
-# PhysX (NuGet, 4.1.2) — vcpkg auto applocal-deps가 일부 환경에서 동작하지 않아
+# PhysX (NuGet, 4.1.229882250) — vcpkg auto applocal-deps가 일부 환경에서 동작하지 않아
 # PostBuildEvent 에서 명시적으로 *.dll 을 OutDir 로 복사한다.
 # Debug 구성은 debug\\bin, 그 외(Release/Game/Demo)는 release bin 사용.
 PHYSX_DEBUG_BIN   = "packages\\NVIDIA.PhysX.4.1.229882250\\installed\\x64-windows\\debug\\bin"
@@ -460,7 +460,7 @@ def generate_vcxproj(files: dict[str, list[str]]):
                                Name="GenerateCode",
                                BeforeTargets="ClCompile")
     ET.SubElement(gen_target, "Exec",
-                  Command=f'python "$(ProjectDir){CODEGEN_SCRIPT}"')
+                  Command="$(SolutionDir)Scripts\\python\\python.exe $(SolutionDir)Scripts\\GenerateCode.py")
     gen_ig = ET.SubElement(gen_target, "ItemGroup")
     ET.SubElement(gen_ig, "ClCompile", Include=CODEGEN_GENCPP_GLOB)
 

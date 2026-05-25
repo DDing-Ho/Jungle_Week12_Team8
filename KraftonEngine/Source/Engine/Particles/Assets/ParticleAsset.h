@@ -128,16 +128,14 @@ class UParticleSystem : public UObject
     void CacheSystemModuleInfo(); // 전체 Emitter Module 정보 캐싱
     virtual void Serialize(FArchive& Ar) override;
 
-    static UParticleSystem* Load(const FString& Path);
-    bool Save(const FString& Path);
-
-    const FString& GetAssetPath() const { return AssetPath; }
-    void           SetAssetPath(const FString& InPath) { AssetPath = InPath; }
-
     //UPROPERTY()
     TArray<float> LODDistances; // LOD 전환 거리 목록
 
+    void SetSourcePath(const FString& InPath) { SourcePath = InPath; }
+    const FString& GetSourcePath() const { return SourcePath; }
+    const FString& GetAssetPathFileName() const override { return SourcePath; }
+
   private:
     TArray<UParticleEmitter *> Emitters; // ParticleSystem 구성 Emitter 목록
-    FString AssetPath;                   // 이 Asset의 파일 경로
+    FString SourcePath;
 };

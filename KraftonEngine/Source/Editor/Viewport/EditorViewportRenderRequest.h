@@ -13,6 +13,4 @@ struct FEditorViewportRenderRequest
 	UWorld* World = nullptr;
 	IPOVProvider* POVProvider = nullptr;
 	FViewportRenderOptions* RenderOptions = nullptr;
-
-	
 };

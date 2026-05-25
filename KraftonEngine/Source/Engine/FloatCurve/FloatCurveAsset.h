@@ -19,6 +19,7 @@ public:
 
 	void SetSourcePath(const FString& InPath) { SourcePath = InPath; }
 	const FString& GetSourcePath() const { return SourcePath; }
+	const FString& GetAssetPathFileName() const override { return SourcePath; }
 
 	void Serialize(FArchive& Ar) override;
 

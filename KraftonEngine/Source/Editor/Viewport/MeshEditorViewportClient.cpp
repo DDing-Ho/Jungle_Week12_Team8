@@ -63,7 +63,7 @@ void FMeshEditorViewportClient::CreateBoneDebugComponent()
 	BoneDebugComponent->CreateRenderState();
 }
 
-void FMeshEditorViewportClient::ResetCameraToPreviousBounds()
+void FMeshEditorViewportClient::ResetCameraToPreviewBounds()
 {
 	if (!PreviewActor)
 	{

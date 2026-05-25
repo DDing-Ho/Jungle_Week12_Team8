@@ -1,24 +1,27 @@
 ﻿#include "ContentBrowser.h"
 
-#include "Animation/AnimInstanceAsset.h"
-#include "Animation/AnimInstanceAssetManager.h"
-#include "Animation/AnimSequenceManager.h"
 #include "Asset/AssetPackage.h"
-#include "CameraShake/CameraShakeAsset.h"
-#include "CameraShake/CameraShakeManager.h"
 #include "ContentBrowserElement.h"
 #include "Core/Log.h"
-#include "Editor/Import/EditorFbxImportService.h"
-#include "Editor/Import/EditorObjImportService.h"
 #include "Editor/Settings/EditorSettings.h"
 #include "Editor/Subsystem/AssetFactory.h"
 #include "Editor/UI/EditorTextureManager.h"
-#include "FloatCurve/FloatCurveAsset.h"
-#include "FloatCurve/FloatCurveManager.h"
-#include "Materials/MaterialManager.h"
+#include "EditorEngine.h"
+
+#include "Editor/Import/EditorObjImportService.h"
+#include "Editor/Import/EditorFbxImportService.h"
 #include "Mesh/MeshImportOptions.h"
 #include "Mesh/MeshManager.h"
-#include "EditorEngine.h"
+#include "Materials/MaterialManager.h"
+#include "CameraShake/CameraShakeAsset.h"
+#include "CameraShake/CameraShakeManager.h"
+#include "FloatCurve/FloatCurveAsset.h"
+#include "FloatCurve/FloatCurveManager.h"
+#include "Animation/AnimInstanceAsset.h"
+#include "Animation/AnimInstanceAssetManager.h"
+#include "Animation/AnimSequenceManager.h"
+#include "Particles/Assets/ParticleAsset.h"
+#include "Particles/Assets/ParticleSystemAssetManager.h"
 
 #include <Windows.h>
 #include <commdlg.h>
@@ -346,30 +349,19 @@ void FEditorContentBrowserWidget::RefreshContent()
 					Element = std::make_shared<SkeletonElement>();
 					break;
 				case EAssetPackageType::AnimSequence:
-					if (FAnimSequenceManager::Get().IsAnimSequencePackage(PackagePath))
-					{
-						Element = std::make_shared<AnimSequenceElement>();
-					}
-					else
-					{
-						Element = std::make_shared<ContentBrowserElement>();
-					}
+					Element = std::make_shared<AnimSequenceElement>();
 					break;
 				case EAssetPackageType::AnimInstance:
-					if (FAnimInstanceAssetManager::Get().IsAnimInstanceAssetPackage(PackagePath))
-					{
-						Element = std::make_shared<AnimInstanceElement>();
-					}
-					else
-					{
-						Element = std::make_shared<ContentBrowserElement>();
-					}
+					Element = std::make_shared<AnimInstanceElement>();
 					break;
 				case EAssetPackageType::FloatCurve:
 					Element = std::make_shared<FloatCurveElement>();
 					break;
 				case EAssetPackageType::CameraShake:
 					Element = std::make_shared<CameraShakeElement>();
+					break;
+				case EAssetPackageType::ParticleSystem:
+					Element = std::make_shared<ParticleSystemElement>();
 					break;
 				default:
 					Element = std::make_shared<ContentBrowserElement>();
@@ -520,6 +512,21 @@ void FEditorContentBrowserWidget::DrawContents()
 						if (UAnimInstanceAsset* AnimInstanceAsset = FAnimInstanceAssetManager::Get().Load(CreatedPath))
 						{
 							BrowserContext.EditorEngine->OpenAssetEditorForObject(AnimInstanceAsset);
+						}
+					}
+				}
+			}
+			if (ImGui::MenuItem("Particle System"))
+			{
+				FString CreatedPath;
+				if (FAssetFactory::CreateParticleSystemAsset(FPaths::ToUtf8(BrowserContext.CurrentPath), "NewParticleSystem", CreatedPath))
+				{
+					Refresh();
+					if (BrowserContext.EditorEngine)
+					{
+						if (UParticleSystem* Asset = FParticleSystemAssetManager::Get().Load(CreatedPath))
+						{
+							BrowserContext.EditorEngine->OpenAssetEditorForObject(Asset);
 						}
 					}
 				}

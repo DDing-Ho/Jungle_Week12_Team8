@@ -11,6 +11,7 @@
 #include "Particles/Runtime/ParticleRuntimeTypes.h"
 #include "Core/CoreTypes.h"
 #include "Component/PrimitiveComponent.h"
+#include "Particles/Runtime/ParticleRuntimeTypes.h"
 #include "ParticleSystemComponent.generated.h"
 
 struct FParticleEventCollideData;
