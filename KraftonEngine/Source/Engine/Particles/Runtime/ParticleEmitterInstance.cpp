@@ -346,6 +346,7 @@ FDynamicEmitterDataBase* FParticleSpriteEmitterInstance::CreateDynamicEmitterDat
 	{
 		Source.Material = RequiredModule->GetMaterial();
 		Source.SortMode = RequiredModule->GetSortMode();
+		Source.TranslucencySortPriority = RequiredModule->GetTranslucencySortPriority();
 	}
 
 	Source.DataContainer.Allocate(ParticleStride, ActiveParticles);
@@ -421,6 +422,7 @@ FDynamicEmitterDataBase* FParticleMeshEmitterInstance::CreateDynamicEmitterData(
 	{
 		Source.Material = RequiredModule->GetMaterial();
 		Source.SortMode = RequiredModule->GetSortMode();
+		Source.TranslucencySortPriority = RequiredModule->GetTranslucencySortPriority();
 	}
 
 	if (!Source.Material && Source.Mesh)

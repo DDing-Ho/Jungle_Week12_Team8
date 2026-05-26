@@ -39,6 +39,7 @@ class UParticleModuleRequired : public UParticleModule
 
     EParticleSortMode GetSortMode() const { return SortMode; }
     void              SetSortMode(EParticleSortMode InSortMode) { SortMode = InSortMode; }
+    int32             GetTranslucencySortPriority() const { return TranslucencySortPriority; }
 
     virtual void PostEditProperty(const char* PropertyName) override;
 

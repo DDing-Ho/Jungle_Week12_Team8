@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "Render/Proxy/PrimitiveSceneProxy.h"
 #include "Render/Resource/Buffer.h"
@@ -6,15 +6,36 @@
 
 class UParticleSystemComponent;
 class UMaterial;
+class FMeshBuffer;
+
+enum class EParticleDrawSectionType : uint8
+{
+	Sprite,
+	Mesh,
+	Beam,
+	Ribbon,
+};
+
+struct FParticleDrawSection
+{
+	EParticleDrawSectionType Type = EParticleDrawSectionType::Sprite;
+	UMaterial* Material = nullptr;
+	FMeshBuffer* MeshBuffer = nullptr;
+	uint32 FirstIndex = 0;
+	uint32 IndexCount = 0;
+	uint32 FirstInstance = 0;
+	uint32 InstanceCount = 0;
+	float SortDepth = 0.0f;
+};
 
 // ============================================================
 // FParticleSceneProxy — UParticleSystemComponent 전용 프록시
 // ============================================================
 // UpdateMesh()      : EmitterRenderData → FCachedEmitter 캐싱
 //                     emitter 타입에 맞는 particle shader permutation으로
-//                     proxy 소유 UMaterial을 생성/재사용하여 SectionDraws에 등록
+//                     proxy 소유 UMaterial을 생성/재사용
 // UpdatePerViewport : GatherRenderData() 위임 → staging 버퍼 조립
-// PrepareDrawBuffer : 공용 quad VB/IB + particle instance VB 업로드
+// PrepareDrawBufferForSection : section 타입별 VB/IB + 업로드된 instance VB range 구성
 //
 // Emitter 타입별 전용 셰이더:
 //   Sprite        → ParticleSprite.hlsl
@@ -32,6 +53,11 @@ public:
 	void UpdatePerViewport(const FFrameContext& Frame) override;
 	bool PrepareDrawBuffer(ID3D11Device* Device, ID3D11DeviceContext* Context,
 		FDrawCommandBuffer& OutBuffer) const override;
+	bool PrepareDrawBufferForSection(const FParticleDrawSection& Section,
+		ID3D11Device* Device, ID3D11DeviceContext* Context,
+		FDrawCommandBuffer& OutBuffer) const;
+
+	const TArray<FParticleDrawSection>& GetDrawSections() const { return DrawSections; }
 
 private:
 	UParticleSystemComponent* GetParticleComponent() const;
@@ -52,10 +78,9 @@ private:
 	{
 		const FDynamicEmitterDataBase* Data = nullptr;
 		int32 MaterialIndex = INDEX_NONE;
-		// TODO: 필드 추가 예정
-		// Depth 기반 sort key, Material 인덱스, frustum culling 결과값
 	};
 	TArray<FCachedEmitter> CachedEmitters;
+	TArray<FParticleDrawSection> DrawSections;
 
 	// Proxy 소유 materials — emitter당 1개, shader permutation 고정
 	// SRV는 UpdateMesh()마다 source material로부터 갱신
@@ -63,9 +88,13 @@ private:
 
 	// UpdatePerViewport에서 조립한 CPU staging 버퍼
 	TArray<FSpriteParticleInstanceVertex> StagedInstances;
+	TArray<FMeshParticleInstanceVertex> StagedMeshInstances;
 
 	// GPU 동적 버퍼 (mutable for const PrepareDrawBuffer)
 	mutable FVertexBuffer        QuadVB;
 	mutable FIndexBuffer         QuadIB;
 	mutable FDynamicVertexBuffer InstanceVB;
+	mutable FDynamicVertexBuffer MeshInstanceVB;
+	mutable bool bSpriteInstanceBufferDirty = true;
+	mutable bool bMeshInstanceBufferDirty = true;
 };

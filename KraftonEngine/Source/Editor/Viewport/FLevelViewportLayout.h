@@ -139,8 +139,10 @@ private:
 	void RenderViewportSlotToolbar(int32 SlotIndex);
 	void HandleViewportContextMenuInput(const FPoint& MousePos);
 	void RenderViewportPlaceActorPopup();
+	int32 FindViewportSlotAtScreenPos(const FPoint& ScreenPos) const;
 	bool TryComputePlacementLocation(int32 SlotIndex, const FPoint& ClientPos, FVector& OutLocation) const;
 	AActor* SpawnActorFromViewportMenu(EViewportPlaceActorType Type, const FVector& Location);
+	AActor* SpawnParticleSystemFromAsset(const FString& AssetPath, const FVector& Location);
 
 	// 아이콘 텍스처
 	void LoadLayoutIcons(ID3D11Device* Device);

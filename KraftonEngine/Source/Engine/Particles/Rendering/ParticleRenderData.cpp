@@ -1,13 +1,15 @@
 ﻿#include "ParticleRenderData.h"
 #include "Particles/Runtime/ParticleRuntimeTypes.h"
 
+#include <algorithm>
+
 // ============================================================
 // FDynamicSpriteEmitterData::GatherRenderData
 // 활성 파티클마다 per-instance 데이터 1개를 OutInstances에 append.
 // 셰이더 측에서 unit quad를 DrawIndexedInstanced로 확장한다.
 // ============================================================
 void FDynamicSpriteEmitterData::GatherRenderData(
-    const FParticleVertexBuildContext& /*Ctx*/,
+    const FParticleVertexBuildContext& Ctx,
     TArray<FSpriteParticleInstanceVertex>& OutInstances,
     TArray<uint32>&                        /*OutIndices*/) const
 {
@@ -15,11 +17,10 @@ void FDynamicSpriteEmitterData::GatherRenderData(
 
     const int32  Stride  = Source.ParticleStride;
     const uint8* RawData = Source.DataContainer.ParticleData;
-    if (!RawData || Stride <= 0) return;
+    if (!RawData || !Source.DataContainer.ParticleIndices || Stride <= 0) return;
 
-    for (int32 i = 0; i < Source.ActiveParticleCount; ++i)
+    auto AppendParticleInstance = [&](uint16 ParticleIdx)
     {
-        const uint16         ParticleIdx = Source.DataContainer.ParticleIndices[i];
         const FBaseParticle* P           = reinterpret_cast<const FBaseParticle*>(RawData + Stride * ParticleIdx);
 
         // FBaseParticle에 누적 Rotation 필드 없음 → RotationRate * elapsed 근사
@@ -42,6 +43,73 @@ void FDynamicSpriteEmitterData::GatherRenderData(
         Instance.Size = FVector4(P->Size.X * Source.Scale.X, P->Size.Y * Source.Scale.Y, 0.0f, 0.0f);
         Instance.Color = Color;
         OutInstances.push_back(Instance);
+    };
+
+    if (Source.SortMode == EParticleSortMode::PSM_None)
+    {
+        for (int32 i = 0; i < Source.ActiveParticleCount; ++i)
+        {
+            AppendParticleInstance(Source.DataContainer.ParticleIndices[i]);
+        }
+        return;
+    }
+
+    struct FParticleSortEntry
+    {
+        uint16 ParticleIdx = 0;
+        float  DistanceSq = 0.0f;
+        float  RelativeTime = 0.0f;
+        int32  OriginalOrder = 0;
+    };
+
+    TArray<FParticleSortEntry> SortEntries;
+    SortEntries.reserve(Source.ActiveParticleCount);
+
+    for (int32 i = 0; i < Source.ActiveParticleCount; ++i)
+    {
+        const uint16 ParticleIdx = Source.DataContainer.ParticleIndices[i];
+        const FBaseParticle* P = reinterpret_cast<const FBaseParticle*>(RawData + Stride * ParticleIdx);
+        const FVector Position(
+            P->Location.X * Source.Scale.X,
+            P->Location.Y * Source.Scale.Y,
+            P->Location.Z * Source.Scale.Z);
+
+        SortEntries.push_back({
+            ParticleIdx,
+            FVector::DistSquared(Position, Ctx.CameraPosition),
+            P->RelativeTime,
+            i
+        });
+    }
+
+    if (Source.SortMode == EParticleSortMode::PSM_Age)
+    {
+        std::ranges::stable_sort(SortEntries,
+                                 [](const FParticleSortEntry& A, const FParticleSortEntry& B)
+                                 {
+	                                 if (A.RelativeTime != B.RelativeTime)
+	                                 {
+		                                 return A.RelativeTime > B.RelativeTime;
+	                                 }
+	                                 return A.OriginalOrder < B.OriginalOrder;
+                                 });
+    }
+    else
+    {
+        std::ranges::stable_sort(SortEntries,
+                                 [](const FParticleSortEntry& A, const FParticleSortEntry& B)
+                                 {
+	                                 if (A.DistanceSq != B.DistanceSq)
+	                                 {
+		                                 return A.DistanceSq > B.DistanceSq;
+	                                 }
+	                                 return A.OriginalOrder < B.OriginalOrder;
+                                 });
+    }
+
+    for (const FParticleSortEntry& Entry : SortEntries)
+    {
+        AppendParticleInstance(Entry.ParticleIdx);
     }
 }
 

@@ -630,11 +630,15 @@ void UParticleModuleTypeDataMesh::Serialize(FArchive& Ar)
     UParticleModule::Serialize(Ar);
     if (Ar.IsSaving())
         MeshPath = Mesh ? Mesh->GetAssetPathFileName() : MeshAsset.GetPath().ToString();
-    Ar << MeshPath;
-    if (Ar.IsLoading())
+    
+	Ar << MeshPath;
+    
+	if (Ar.IsLoading())
     {
         MeshAsset.SetPath(MeshPath);
-        Mesh = FMeshManager::FindStaticMesh(MeshPath);
+        Mesh = nullptr;
+
+		Ar << Mesh;
     }
 }
 

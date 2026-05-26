@@ -3,11 +3,13 @@
 #include "Editor/EditorEngine.h"
 #include "Editor/Viewport/LevelEditorViewportClient.h"
 #include "Editor/Settings/EditorSettings.h"
+#include "Editor/UI/ContentBrowser/ContentItem.h"
 #include "Editor/UI/EditorTextureManager.h"
 #include "Core/ProjectSettings.h"
 #include "Editor/Selection/SelectionManager.h"
 #include "Engine/Runtime/WindowsWindow.h"
 #include "Engine/Input/InputSystem.h"
+#include "GameFramework/AActor.h"
 #include "GameFramework/DecalActor.h"
 #include "GameFramework/HeightFogActor.h"
 #include "GameFramework/TriggerVolumeBase.h"
@@ -26,6 +28,8 @@
 #include "Platform/Paths.h"
 #include "ImGui/imgui.h"
 #include "Component/CameraComponent.h"
+#include "Component/ParticleSystemComponent.h"
+#include "Particles/Assets/ParticleSystemAssetManager.h"
 #include "Render/Types/MinimalViewInfo.h"
 #include "Component/GizmoComponent.h"
 #include "Component/Light/LightComponentBase.h"
@@ -895,6 +899,22 @@ void FLevelViewportLayout::RenderViewportUI(float DeltaTime)
 				NewActor->InitDefaultComponents(FPaths::ToUtf8(ContentItem.Path));
 				Editor->GetWorld()->AddActor(NewActor);
 			}
+			if (const ImGuiPayload* Payload = ImGui::AcceptDragDropPayload("ParticleSystemContentItem"))
+			{
+				FContentItem ContentItem = *reinterpret_cast<const FContentItem*>(Payload->Data);
+				const FString ParticlePath = FPaths::MakeProjectRelative(
+					FPaths::ToUtf8(ContentItem.Path.generic_wstring()));
+
+				const ImVec2 MousePos = ImGui::GetIO().MousePos;
+				const FPoint DropPos = { MousePos.x, MousePos.y };
+				const int32 DropSlot = FindViewportSlotAtScreenPos(DropPos);
+
+				FVector SpawnLocation(0.0f, 0.0f, 0.0f);
+				if (TryComputePlacementLocation(DropSlot, DropPos, SpawnLocation))
+				{
+					SpawnParticleSystemFromAsset(ParticlePath, SpawnLocation);
+				}
+			}
 			ImGui::EndDragDropTarget();
 		}
 	}
@@ -1377,6 +1397,39 @@ void FLevelViewportLayout::RenderViewportPlaceActorPopup()
 	ImGui::EndPopup();
 }
 
+int32 FLevelViewportLayout::FindViewportSlotAtScreenPos(const FPoint& ScreenPos) const
+{
+	for (int32 i = 0; i < ActiveSlotCount; ++i)
+	{
+		if (i >= static_cast<int32>(LevelViewportClients.size()) ||
+			i >= MaxViewportSlots ||
+			!ViewportWindows[i] ||
+			!LevelViewportClients[i])
+		{
+			continue;
+		}
+
+		const FRect& Rect = ViewportWindows[i]->GetRect();
+		if (Rect.Width <= 1.0f || Rect.Height <= 1.0f)
+		{
+			continue;
+		}
+
+		if (ViewportWindows[i]->IsHover(ScreenPos))
+		{
+			return i;
+		}
+	}
+
+	const int32 ActiveSlotIndex = GetActiveViewportSlotIndex();
+	if (ActiveSlotIndex >= 0)
+	{
+		return ActiveSlotIndex;
+	}
+
+	return LevelViewportClients.empty() ? INDEX_NONE : 0;
+}
+
 bool FLevelViewportLayout::TryComputePlacementLocation(int32 SlotIndex, const FPoint& ClientPos, FVector& OutLocation) const
 {
 	if (SlotIndex < 0 ||
@@ -1431,6 +1484,50 @@ bool FLevelViewportLayout::TryComputePlacementLocation(int32 SlotIndex, const FP
 	}
 
 	return true;
+}
+
+AActor* FLevelViewportLayout::SpawnParticleSystemFromAsset(const FString& AssetPath, const FVector& Location)
+{
+	if (!Editor)
+	{
+		return nullptr;
+	}
+
+	UWorld* World = Editor->GetWorld();
+	if (!World)
+	{
+		return nullptr;
+	}
+
+	UParticleSystem* ParticleSystem = FParticleSystemAssetManager::Get().Load(AssetPath);
+	if (!ParticleSystem)
+	{
+		return nullptr;
+	}
+
+	AActor* Actor = World->SpawnActor<AActor>();
+	if (!Actor)
+	{
+		return nullptr;
+	}
+
+	UParticleSystemComponent* ParticleComponent = Actor->AddComponent<UParticleSystemComponent>();
+	if (!ParticleComponent)
+	{
+		return Actor;
+	}
+
+	Actor->SetRootComponent(ParticleComponent);
+	ParticleComponent->SetTemplate(ParticleSystem);
+	Actor->SetActorLocation(Location);
+
+	World->InsertActorToOctree(Actor);
+	if (SelectionManager)
+	{
+		SelectionManager->Select(Actor);
+	}
+
+	return Actor;
 }
 
 AActor* FLevelViewportLayout::SpawnActorFromViewportMenu(EViewportPlaceActorType Type, const FVector& Location)

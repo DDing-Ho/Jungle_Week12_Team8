@@ -1,7 +1,8 @@
-#include "Render/Proxy/ParticleSceneProxy.h"
+﻿#include "Render/Proxy/ParticleSceneProxy.h"
 #include "Component/ParticleSystemComponent.h"
 #include "Particles/Rendering/ParticleRenderData.h"
 #include "Particles/Common/ParticleTypes.h"
+#include "Particles/Runtime/ParticleRuntimeTypes.h"
 #include "Render/Types/FrameContext.h"
 #include "Render/Command/DrawCommand.h"
 #include "Render/Shader/ShaderManager.h"
@@ -10,12 +11,48 @@
 #include "Engine/Runtime/Engine.h"
 #include "Render/Pipeline/Renderer.h"
 #include "Math/Matrix.h"
+#include "Mesh/StaticMesh.h"
+#include "Mesh/StaticMeshAsset.h"
 
 #include <d3d11.h>
+#include <algorithm>
 #include <wrl/client.h>
 
 namespace
 {
+	float CalculateEmitterDistanceSquared(const FDynamicEmitterReplayDataBase& Source, const FVector& CameraPosition)
+	{
+		if (!Source.IsValid() || !Source.DataContainer.ParticleIndices || Source.ParticleStride <= 0)
+		{
+			return 0.0f;
+		}
+
+		FVector Center = FVector::ZeroVector;
+		const uint8* RawData = Source.DataContainer.ParticleData;
+		int32 ValidParticleCount = 0;
+
+		for (int32 i = 0; i < Source.ActiveParticleCount; ++i)
+		{
+			const uint16 ParticleIdx = Source.DataContainer.ParticleIndices[i];
+			const FBaseParticle* Particle = reinterpret_cast<const FBaseParticle*>(
+				RawData + Source.ParticleStride * ParticleIdx);
+
+			Center += FVector(
+				Particle->Location.X * Source.Scale.X,
+				Particle->Location.Y * Source.Scale.Y,
+				Particle->Location.Z * Source.Scale.Z);
+			++ValidParticleCount;
+		}
+
+		if (ValidParticleCount <= 0)
+		{
+			return 0.0f;
+		}
+
+		Center /= static_cast<float>(ValidParticleCount);
+		return FVector::DistSquared(Center, CameraPosition);
+	}
+
 	ID3D11ShaderResourceView* GetParticleFallbackWhiteSRV()
 	{
 		static Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> WhiteSRV;
@@ -59,6 +96,7 @@ namespace
 
 		return WhiteSRV.Get();
 	}
+
 }
 
 // ============================================================
@@ -69,6 +107,7 @@ FParticleSceneProxy::FParticleSceneProxy(UParticleSystemComponent* InComponent)
 	: FPrimitiveSceneProxy(static_cast<UPrimitiveComponent*>(InComponent))
 {
 	ProxyFlags |= EPrimitiveProxyFlags::PerViewportUpdate;
+	ProxyFlags |= EPrimitiveProxyFlags::Particle;
 	ProxyFlags &= ~EPrimitiveProxyFlags::ShowAABB;
 	ProxyFlags &= ~EPrimitiveProxyFlags::SupportsOutline;
 
@@ -83,6 +122,7 @@ FParticleSceneProxy::~FParticleSceneProxy()
 	QuadVB.Release();
 	QuadIB.Release();
 	InstanceVB.Release();
+	MeshInstanceVB.Release();
 }
 
 // ============================================================
@@ -129,6 +169,7 @@ void FParticleSceneProxy::UpdateMesh()
 {
 	UParticleSystemComponent* Comp = GetParticleComponent();
 	CachedEmitters.clear();
+	DrawSections.clear();
 	SectionDraws.clear();
 
 	if (!Comp->IsParticleVisible() || !Comp->IsActive())
@@ -179,32 +220,79 @@ void FParticleSceneProxy::UpdateMesh()
 		ParticleMaterials[i]->SetCachedSRV(EMaterialTextureSlot::Diffuse, ParticleSRV);
 
 		CachedEmitters.push_back({ Data, i });
-		// SectionDraws 범위는 UpdatePerViewport에서 vertex 조립 후 확정
-		// 여기서는 proxy material만 SectionDraws와 순서를 맞추기 위해 보관
 	}
 }
 
 // ============================================================
-// UpdatePerViewport — GatherRenderData 위임 + SectionDraws 확정
+// UpdatePerViewport — GatherRenderData 위임 + particle draw section 확정
 // ============================================================
 void FParticleSceneProxy::UpdatePerViewport(const FFrameContext& Frame)
 {
 	StagedInstances.clear();
+	StagedMeshInstances.clear();
+	DrawSections.clear();
 	SectionDraws.clear();
+	bSpriteInstanceBufferDirty = true;
+	bMeshInstanceBufferDirty = true;
 
 	if (!bVisible || CachedEmitters.empty()) return;
 
 	const FParticleVertexBuildContext Ctx
 	{
+		Frame.CameraPosition,
 		Frame.CameraRight,
 		Frame.CameraUp,
 		Frame.CameraForward
 	};
 	TArray<uint32> IgnoredIndices;
 
+	struct FSortedEmitter
+	{
+		FCachedEmitter E;
+		int32 Priority = 0;
+		float DistanceSq = 0.0f;
+		int32 OriginalOrder = 0;
+	};
+
+	TArray<FSortedEmitter> SortedEmitters;
+	SortedEmitters.reserve(CachedEmitters.size());
+
 	for (int32 i = 0; i < static_cast<int32>(CachedEmitters.size()); ++i)
 	{
 		const FCachedEmitter& E = CachedEmitters[i];
+		if (!E.Data)
+		{
+			continue;
+		}
+
+		const FDynamicEmitterReplayDataBase& Source = E.Data->GetSource();
+
+		SortedEmitters.push_back({
+			E,
+			Source.TranslucencySortPriority,
+			CalculateEmitterDistanceSquared(Source, Frame.CameraPosition),
+			i
+		});
+	}
+
+	std::stable_sort(SortedEmitters.begin(), SortedEmitters.end(),
+		[](const FSortedEmitter& A, const FSortedEmitter& B)
+		{
+			if (A.Priority != B.Priority)
+			{
+				return A.Priority < B.Priority;
+			}
+			if (A.DistanceSq != B.DistanceSq)
+			{
+				return A.DistanceSq > B.DistanceSq;
+			}
+			return A.OriginalOrder < B.OriginalOrder;
+		});
+
+	for (int32 SortedIndex = 0; SortedIndex < static_cast<int32>(SortedEmitters.size()); ++SortedIndex)
+	{
+		const FSortedEmitter& SortedEmitter = SortedEmitters[SortedIndex];
+		const FCachedEmitter& E = SortedEmitter.E;
 		const int32 MaterialIndex = E.MaterialIndex;
 		if (!E.Data ||
 			MaterialIndex < 0 ||
@@ -215,71 +303,192 @@ void FParticleSceneProxy::UpdatePerViewport(const FFrameContext& Frame)
 		}
 
 		const FDynamicEmitterReplayDataBase& Source = E.Data->GetSource();
-		if (Source.eEmitterType != EDynamicEmitterType::DET_Sprite)
+		const float SortDepth = static_cast<float>(SortedEmitters.size() - static_cast<size_t>(SortedIndex));
+
+		if (Source.eEmitterType == EDynamicEmitterType::DET_Sprite)
+		{
+			const uint32 FirstInstance = static_cast<uint32>(StagedInstances.size());
+
+			IgnoredIndices.clear();
+			E.Data->GatherRenderData(Ctx, StagedInstances, IgnoredIndices);
+
+			const uint32 InstanceCount = static_cast<uint32>(StagedInstances.size()) - FirstInstance;
+			if (InstanceCount == 0)
+				continue;
+
+			FParticleDrawSection Draw;
+			Draw.Type = EParticleDrawSectionType::Sprite;
+			Draw.Material = ParticleMaterials[MaterialIndex];
+			Draw.FirstIndex = 0;
+			Draw.IndexCount = 6;
+			Draw.FirstInstance = FirstInstance;
+			Draw.InstanceCount = InstanceCount;
+			Draw.SortDepth = SortDepth;
+			DrawSections.push_back(Draw);
 			continue;
+		}
 
-		const uint32 FirstInstance = static_cast<uint32>(StagedInstances.size());
+		if (Source.eEmitterType == EDynamicEmitterType::DET_Mesh)
+		{
+			const FDynamicMeshEmitterData* MeshData = static_cast<const FDynamicMeshEmitterData*>(E.Data);
+			const FDynamicMeshEmitterReplayData& MeshSource = MeshData->Source;
+			if (!MeshSource.Mesh)
+				continue;
 
-		IgnoredIndices.clear();
-		E.Data->GatherRenderData(Ctx, StagedInstances, IgnoredIndices);
+			FMeshBuffer* MeshBuffer = MeshSource.Mesh->GetLODMeshBuffer(0);
+			if (!MeshBuffer || !MeshBuffer->IsValid())
+				continue;
 
-		const uint32 InstanceCount = static_cast<uint32>(StagedInstances.size()) - FirstInstance;
-		if (InstanceCount > 0)
-			SectionDraws.push_back({ ParticleMaterials[MaterialIndex], 0, 6, FirstInstance, InstanceCount });
+			const uint32 FirstInstance = static_cast<uint32>(StagedMeshInstances.size());
+			MeshData->GatherRenderData(Ctx, StagedMeshInstances);
+
+			const uint32 InstanceCount = static_cast<uint32>(StagedMeshInstances.size()) - FirstInstance;
+			if (InstanceCount == 0)
+				continue;
+
+			const TArray<FStaticMeshSection>& Sections = MeshSource.Mesh->GetLODSections(0);
+			if (!Sections.empty())
+			{
+				for (const FStaticMeshSection& Section : Sections)
+				{
+					FParticleDrawSection Draw;
+					Draw.Type = EParticleDrawSectionType::Mesh;
+					Draw.Material = ParticleMaterials[MaterialIndex];
+					Draw.MeshBuffer = MeshBuffer;
+					Draw.FirstIndex = Section.FirstIndex;
+					Draw.IndexCount = Section.NumTriangles * 3;
+					Draw.FirstInstance = FirstInstance;
+					Draw.InstanceCount = InstanceCount;
+					Draw.SortDepth = SortDepth;
+					DrawSections.push_back(Draw);
+				}
+			}
+			else
+			{
+				FParticleDrawSection Draw;
+				Draw.Type = EParticleDrawSectionType::Mesh;
+				Draw.Material = ParticleMaterials[MaterialIndex];
+				Draw.MeshBuffer = MeshBuffer;
+				Draw.FirstIndex = 0;
+				Draw.IndexCount = MeshBuffer->GetIndexBuffer().GetIndexCount();
+				Draw.FirstInstance = FirstInstance;
+				Draw.InstanceCount = InstanceCount;
+				Draw.SortDepth = SortDepth;
+				DrawSections.push_back(Draw);
+			}
+			continue;
+		}
+
+		// Beam/Ribbon은 section 타입만 예약해 둔다. GatherRenderData 구현 후 여기서 추가한다.
 	}
 }
 
 // ============================================================
-// PrepareDrawBuffer — staging 버퍼를 GPU 동적 VB/IB에 업로드
+// PrepareDrawBuffer — particle은 section별 buffer 경로를 사용한다.
 // ============================================================
 bool FParticleSceneProxy::PrepareDrawBuffer(ID3D11Device* Device, ID3D11DeviceContext* Context,
 	FDrawCommandBuffer& OutBuffer) const
 {
-	if (StagedInstances.empty())
+	return false;
+}
+
+// ============================================================
+// PrepareDrawBufferForSection — section 타입별 GPU buffer range 구성
+// ============================================================
+bool FParticleSceneProxy::PrepareDrawBufferForSection(const FParticleDrawSection& Section,
+	ID3D11Device* Device, ID3D11DeviceContext* Context, FDrawCommandBuffer& OutBuffer) const
+{
+	if (Section.InstanceCount == 0)
 		return false;
 
-	if (!QuadVB.GetBuffer())
+	if (Section.Type == EParticleDrawSectionType::Sprite)
 	{
-		static const FSpriteParticleQuadVertex QuadVertices[4] =
+		if (StagedInstances.empty())
+			return false;
+
+		if (!QuadVB.GetBuffer())
 		{
-			{ FVector(-0.5f, -0.5f, 0.0f), FVector2(0.0f, 1.0f) },
-			{ FVector( 0.5f, -0.5f, 0.0f), FVector2(1.0f, 1.0f) },
-			{ FVector( 0.5f,  0.5f, 0.0f), FVector2(1.0f, 0.0f) },
-			{ FVector(-0.5f,  0.5f, 0.0f), FVector2(0.0f, 0.0f) },
-		};
-		QuadVB.Create(Device, QuadVertices, 4, sizeof(QuadVertices), sizeof(FSpriteParticleQuadVertex));
+			static const FSpriteParticleQuadVertex QuadVertices[4] =
+			{
+				{ FVector(-0.5f, -0.5f, 0.0f), FVector2(0.0f, 1.0f) },
+				{ FVector( 0.5f, -0.5f, 0.0f), FVector2(1.0f, 1.0f) },
+				{ FVector( 0.5f,  0.5f, 0.0f), FVector2(1.0f, 0.0f) },
+				{ FVector(-0.5f,  0.5f, 0.0f), FVector2(0.0f, 0.0f) },
+			};
+			QuadVB.Create(Device, QuadVertices, 4, sizeof(QuadVertices), sizeof(FSpriteParticleQuadVertex));
+		}
+
+		if (!QuadIB.GetBuffer())
+		{
+			static const uint32 QuadIndices[6] = { 0, 1, 2, 0, 2, 3 };
+			QuadIB.Create(Device, QuadIndices, 6, sizeof(QuadIndices));
+		}
+
+		if (!QuadVB.GetBuffer() || !QuadIB.GetBuffer())
+			return false;
+
+		const uint32 TotalInstanceCount = static_cast<uint32>(StagedInstances.size());
+		if (bSpriteInstanceBufferDirty)
+		{
+			if (InstanceVB.GetStride() == 0)
+				InstanceVB.Create(Device, TotalInstanceCount, sizeof(FSpriteParticleInstanceVertex));
+			else
+				InstanceVB.EnsureCapacity(Device, TotalInstanceCount);
+
+			if (!InstanceVB.Update(Context, StagedInstances.data(), TotalInstanceCount))
+				return false;
+
+			bSpriteInstanceBufferDirty = false;
+		}
+
+		OutBuffer = {};
+		OutBuffer.VB = QuadVB.GetBuffer();
+		OutBuffer.VBStride = QuadVB.GetStride();
+		OutBuffer.IB = QuadIB.GetBuffer();
+		OutBuffer.InstanceVB = InstanceVB.GetBuffer();
+		OutBuffer.InstanceVBStride = InstanceVB.GetStride();
+		OutBuffer.IndexCount = QuadIB.GetIndexCount();
+		OutBuffer.FirstIndex = 0;
+		OutBuffer.BaseVertex = 0;
+		OutBuffer.StartInstance = 0;
+		OutBuffer.InstanceCount = TotalInstanceCount;
+		return true;
 	}
 
-	if (!QuadIB.GetBuffer())
+	if (Section.Type == EParticleDrawSectionType::Mesh)
 	{
-		static const uint32 QuadIndices[6] = { 0, 1, 2, 0, 2, 3 };
-		QuadIB.Create(Device, QuadIndices, 6, sizeof(QuadIndices));
+		if (StagedMeshInstances.empty() || !Section.MeshBuffer || !Section.MeshBuffer->IsValid())
+			return false;
+
+		const uint32 TotalInstanceCount = static_cast<uint32>(StagedMeshInstances.size());
+		if (bMeshInstanceBufferDirty)
+		{
+			if (MeshInstanceVB.GetStride() == 0)
+				MeshInstanceVB.Create(Device, TotalInstanceCount, sizeof(FMeshParticleInstanceVertex));
+			else
+				MeshInstanceVB.EnsureCapacity(Device, TotalInstanceCount);
+
+			if (!MeshInstanceVB.Update(Context, StagedMeshInstances.data(), TotalInstanceCount))
+				return false;
+
+			bMeshInstanceBufferDirty = false;
+		}
+
+		OutBuffer = {};
+		OutBuffer.VB = Section.MeshBuffer->GetVertexBuffer().GetBuffer();
+		OutBuffer.VBStride = Section.MeshBuffer->GetVertexBuffer().GetStride();
+		OutBuffer.IB = Section.MeshBuffer->GetIndexBuffer().GetBuffer();
+		OutBuffer.InstanceVB = MeshInstanceVB.GetBuffer();
+		OutBuffer.InstanceVBStride = MeshInstanceVB.GetStride();
+		OutBuffer.IndexCount = Section.MeshBuffer->GetIndexBuffer().GetIndexCount();
+		OutBuffer.FirstIndex = 0;
+		OutBuffer.BaseVertex = 0;
+		OutBuffer.StartInstance = 0;
+		OutBuffer.InstanceCount = TotalInstanceCount;
+		return true;
 	}
 
-	if (!QuadVB.GetBuffer() || !QuadIB.GetBuffer())
-		return false;
-
-	const uint32 InstanceCount = static_cast<uint32>(StagedInstances.size());
-	if (InstanceVB.GetStride() == 0)
-		InstanceVB.Create(Device, InstanceCount, sizeof(FSpriteParticleInstanceVertex));
-	else
-		InstanceVB.EnsureCapacity(Device, InstanceCount);
-
-	if (!InstanceVB.Update(Context, StagedInstances.data(), InstanceCount)) return false;
-
-	OutBuffer = {};
-	OutBuffer.VB = QuadVB.GetBuffer();
-	OutBuffer.VBStride = QuadVB.GetStride();
-	OutBuffer.IB = QuadIB.GetBuffer();
-	OutBuffer.InstanceVB = InstanceVB.GetBuffer();
-	OutBuffer.InstanceVBStride = InstanceVB.GetStride();
-	OutBuffer.IndexCount = QuadIB.GetIndexCount();
-	OutBuffer.FirstIndex = 0;
-	OutBuffer.BaseVertex = 0;
-	OutBuffer.StartInstance = 0;
-	OutBuffer.InstanceCount = InstanceCount;
-
-	return true;
+	return false;
 }
 
 UParticleSystemComponent* FParticleSceneProxy::GetParticleComponent() const

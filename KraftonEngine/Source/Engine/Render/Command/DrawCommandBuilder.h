@@ -8,6 +8,7 @@
 
 class FPassRenderStateTable;
 class FTextRenderSceneProxy;
+class FParticleSceneProxy;
 class FScene;
 struct FCollectOutput;
 
@@ -43,6 +44,7 @@ private:
 	void BuildProxyCommands(const FFrameContext& Frame, FScene& Scene, const FCollectOutput& Output);
 	void BuildDecalCommands(FScene& Scene, FPrimitiveSceneProxy* Proxy, const FFrameContext& Frame, const FCollectOutput& Output);
 	void BuildMeshCommands(FScene& Scene, const FPrimitiveSceneProxy* Proxy);
+	void BuildParticleCommands(FScene& Scene, const FParticleSceneProxy* Proxy);
 	void BuildSelectionCommands(FPrimitiveSceneProxy* Proxy, bool bShowBoundingVolume, FScene& Scene);
 
 	// Scene 경량 데이터 → 동적 지오메트리 → FDrawCommand
