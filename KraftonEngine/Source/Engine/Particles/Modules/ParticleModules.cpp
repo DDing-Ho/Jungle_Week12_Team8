@@ -116,18 +116,34 @@ void UParticleModuleSpawn::Serialize(FArchive& Ar)
 
 namespace
 {
-    constexpr float DefaultParticleLifetime = 0.1f;
+    constexpr float   DefaultParticleLifetime    = 1.0f;
+    const     FVector DefaultLocationMin         = FVector::ZeroVector;
+    const     FVector DefaultLocationMax         = FVector::ZeroVector;
+    const     FVector DefaultVelocityMin         = FVector(0.f, 0.f, 0.f);
+    const     FVector DefaultVelocityMax         = FVector(0.f, 0.f, 10.f);
 
     void InitializeDefaultLifetimeDistribution(UDistributionFloat* Distribution)
     {
-        if (!Distribution)
-        {
-            return;
-        }
-
+        if (!Distribution) return;
         Distribution->Type = EDistributionType::Constant;
-        Distribution->Min = DefaultParticleLifetime;
-        Distribution->Max = DefaultParticleLifetime;
+        Distribution->Min  = DefaultParticleLifetime;
+        Distribution->Max  = DefaultParticleLifetime;
+    }
+
+    void InitializeDefaultLocationDistribution(UDistributionVector* Distribution)
+    {
+        if (!Distribution) return;
+        Distribution->Type = EDistributionType::Constant;
+        Distribution->Min  = DefaultLocationMin;
+        Distribution->Max  = DefaultLocationMax;
+    }
+
+    void InitializeDefaultVelocityDistribution(UDistributionVector* Distribution)
+    {
+        if (!Distribution) return;
+        Distribution->Type = EDistributionType::Uniform;
+        Distribution->Min  = DefaultVelocityMin;
+        Distribution->Max  = DefaultVelocityMax;
     }
 }
 
@@ -176,7 +192,11 @@ void UParticleModuleLocation::Serialize(FArchive& Ar)
     UParticleModule::Serialize(Ar);
 
     if (!LocationDist)
+    {
         LocationDist = GUObjectArray.CreateObject<UDistributionVector>(this);
+        if (Ar.IsSaving())
+            InitializeDefaultLocationDistribution(LocationDist);
+    }
 
     LocationDist->Serialize(Ar);
     Ar << SphereRadius << CylinderRadius << CylinderHeight;
@@ -187,6 +207,12 @@ void UParticleModuleLocation::Serialize(FArchive& Ar)
 
 void UParticleModuleLocation::CacheModuleValues()
 {
+    if (!LocationDist)
+    {
+        LocationDist = GUObjectArray.CreateObject<UDistributionVector>(this);
+        InitializeDefaultLocationDistribution(LocationDist);
+    }
+
     if (LocationDist)
         RawLocation = LocationDist->BuildRaw();
 }
@@ -204,7 +230,11 @@ void UParticleModuleVelocity::Serialize(FArchive& Ar)
     UParticleModule::Serialize(Ar);
 
     if (!VelocityDist)
+    {
         VelocityDist = GUObjectArray.CreateObject<UDistributionVector>(this);
+        if (Ar.IsSaving())
+            InitializeDefaultVelocityDistribution(VelocityDist);
+    }
 
     VelocityDist->Serialize(Ar);
 
@@ -214,6 +244,12 @@ void UParticleModuleVelocity::Serialize(FArchive& Ar)
 
 void UParticleModuleVelocity::CacheModuleValues()
 {
+    if (!VelocityDist)
+    {
+        VelocityDist = GUObjectArray.CreateObject<UDistributionVector>(this);
+        InitializeDefaultVelocityDistribution(VelocityDist);
+    }
+
     if (VelocityDist)
         RawVelocity = VelocityDist->BuildRaw();
 }
@@ -233,7 +269,10 @@ void UParticleModuleColor::Serialize(FArchive& Ar)
     UParticleModule::Serialize(Ar);
 
     if (!ColorDist)
+    {
         ColorDist = GUObjectArray.CreateObject<UDistributionLinearColor>(this);
+        // UDistributionLinearColor 기본값(White)을 그대로 사용
+    }
 
     ColorDist->Serialize(Ar);
 
@@ -243,6 +282,12 @@ void UParticleModuleColor::Serialize(FArchive& Ar)
 
 void UParticleModuleColor::CacheModuleValues()
 {
+    if (!ColorDist)
+    {
+        ColorDist = GUObjectArray.CreateObject<UDistributionLinearColor>(this);
+        // 기본값은 헤더 초기화(White)와 동일하므로 별도 설정 불필요
+    }
+
     if (ColorDist)
         RawColor = ColorDist->BuildRaw();
 }
@@ -287,7 +332,14 @@ void UParticleModuleSize::Serialize(FArchive& Ar)
     UParticleModule::Serialize(Ar);
 
     if (!SizeDist)
+    {
         SizeDist = GUObjectArray.CreateObject<UDistributionVector>(this);
+        if (Ar.IsSaving())
+        {
+            SizeDist->Min = FVector(1.f, 1.f, 1.f);
+            SizeDist->Max = FVector(1.f, 1.f, 1.f);
+        }
+    }
 
     SizeDist->Serialize(Ar);
 
@@ -297,6 +349,13 @@ void UParticleModuleSize::Serialize(FArchive& Ar)
 
 void UParticleModuleSize::CacheModuleValues()
 {
+    if (!SizeDist)
+    {
+        SizeDist = GUObjectArray.CreateObject<UDistributionVector>(this);
+        SizeDist->Min = FVector(1.f, 1.f, 1.f);
+        SizeDist->Max = FVector(1.f, 1.f, 1.f);
+    }
+
     if (SizeDist)
         RawSize = SizeDist->BuildRaw();
 }
@@ -343,6 +402,9 @@ void UParticleModuleRotation::Serialize(FArchive& Ar)
 
 void UParticleModuleRotation::CacheModuleValues()
 {
+    if (!RotationDist)
+        RotationDist = GUObjectArray.CreateObject<UDistributionFloat>(this);
+
     if (RotationDist)
         RawRotation = RotationDist->BuildRaw();
 }
@@ -368,6 +430,9 @@ void UParticleModuleRotationRate::Serialize(FArchive& Ar)
 
 void UParticleModuleRotationRate::CacheModuleValues()
 {
+    if (!RotationRateDist)
+        RotationRateDist = GUObjectArray.CreateObject<UDistributionFloat>(this);
+
     if (RotationRateDist)
         RawRotationRate = RotationRateDist->BuildRaw();
 }

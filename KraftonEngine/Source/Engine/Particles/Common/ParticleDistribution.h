@@ -42,21 +42,43 @@ private:
 // Curve — 키프레임 보간
 // ─────────────────────────────────────────────────────────────────────────────
 
-enum class EParticleCurveInterpMode : uint8
+enum class EParticleKeyInterpMode : uint8
 {
-    Linear,      // 직선 보간
-    Constant,    // 계단식 (다음 키까지 값 유지)
-    CurveAuto,   // Cubic — 탄젠트 자동 계산 (Catmull-Rom)
-    CurveUser,   // Cubic — 탄젠트 수동 입력, In=Out 대칭
-    CurveBreak,  // Cubic — In/Out 탄젠트 완전 독립
+    Constant,
+    Linear,
+    Cubic,
+};
+
+enum class EParticleCurveTangentMode : uint8
+{
+    Auto,
+    User,
+    Break,
+};
+
+enum class EParticleLockedAxesMode : uint8
+{
+    None,
+    XY,
+    XZ,
+    YZ,
+    XYZ,
+};
+
+enum EParticleMirrorFlags : uint8
+{
+    PMF_None = 0,
+    PMF_X    = 1 << 0,
+    PMF_Y    = 1 << 1,
+    PMF_Z    = 1 << 2,
 };
 
 /**
  * 커브의 키프레임 하나.
- * - Linear / Constant: Time, Value 만 사용
- * - CurveAuto:         ArriveTangent / LeaveTangent 를 ComputeAutoTangents() 가 채워줌
- * - CurveUser:         LeaveTangent 를 설정하면 ArriveTangent 도 같은 값으로 미러
- * - CurveBreak:        ArriveTangent / LeaveTangent 를 독립적으로 설정
+ * - InterpMode 가 Constant / Linear 이면 Time, Value 위주로 사용
+ * - Cubic + Auto:  Arrive/Leave tangent 를 AutoSetTangents() 가 채워줌
+ * - Cubic + User:  Arrive/Leave tangent 를 같은 값으로 유지
+ * - Cubic + Break: Arrive/Leave tangent 를 독립적으로 설정
  */
 struct FFloatCurveKey
 {
@@ -64,22 +86,21 @@ struct FFloatCurveKey
     float Value          = 0.f;
     float ArriveTangent  = 0.f; // 이 키에 들어오는 기울기 (dV/dT)
     float LeaveTangent   = 0.f; // 이 키에서 나가는 기울기 (dV/dT)
+    EParticleKeyInterpMode InterpMode = EParticleKeyInterpMode::Linear;
+    EParticleCurveTangentMode TangentMode = EParticleCurveTangentMode::Auto;
 };
 
 struct FParticleFloatCurve
 {
     TArray<FFloatCurveKey> Keys;
-    EParticleCurveInterpMode InterpMode = EParticleCurveInterpMode::Linear;
 
     float Eval(float T) const;
 
-    // ArriveTangent / LeaveTangent 는 CurveUser / CurveBreak 에서만 의미 있음.
-    // CurveAuto 는 ComputeAutoTangents() 가 자동으로 채우므로 전달 불필요.
     void AddKey(float Time, float Value,
-                float ArriveTangent = 0.f, float LeaveTangent = 0.f);
-
-    // CurveAuto 모드에서 모든 키의 탄젠트를 Catmull-Rom으로 재계산
-    void ComputeAutoTangents();
+                EParticleKeyInterpMode InterpMode = EParticleKeyInterpMode::Linear);
+    void SortKeys();
+    void AutoSetTangents();
+    void ComputeAutoTangents() { AutoSetTangents(); }
 
 private:
     // 구간 [A, B] 에서 s∈[0,1] 위치의 Cubic Hermite 값
@@ -121,9 +142,25 @@ struct FLinearColorCurve
     }
 
     // 모든 채널의 InterpMode를 한 번에 설정
-    void SetInterpMode(EParticleCurveInterpMode Mode)
+    void SetInterpMode(EParticleKeyInterpMode Mode)
     {
-        R.InterpMode = G.InterpMode = B.InterpMode = A.InterpMode = Mode;
+        auto ApplyMode = [Mode](FParticleFloatCurve& Curve)
+        {
+            for (FFloatCurveKey& Key : Curve.Keys)
+            {
+                Key.InterpMode = Mode;
+                if (Mode == EParticleKeyInterpMode::Cubic)
+                {
+                    Key.TangentMode = EParticleCurveTangentMode::Auto;
+                }
+            }
+            Curve.AutoSetTangents();
+        };
+
+        ApplyMode(R);
+        ApplyMode(G);
+        ApplyMode(B);
+        ApplyMode(A);
     }
 };
 
@@ -150,6 +187,13 @@ struct FRawDistributionFloat
     EDistributionType Type = EDistributionType::Constant;
     float             Min  = 0.f;
     float             Max  = 0.f;
+    bool              bIsLooped = false;
+    float             LoopKeyOffset = 0.f;
+    bool              bUseExtremes = false;
+    bool              bCanBeBaked = true;
+
+    FParticleFloatCurve MinCurve;
+    FParticleFloatCurve MaxCurve;
 
     // 런타임 Baked 테이블 (Curve 타입일 때 사용, 직렬화하지 않음)
     TArray<float> BakedMin;
@@ -167,9 +211,17 @@ struct FRawDistributionFloat
 struct FRawDistributionVector
 {
     EDistributionType Type      = EDistributionType::Constant;
-    FVector           Min       = FVector(0.f, 0.f, 5.f); //FVector::ZeroVector;
-    FVector           Max       = FVector(0.f, 0.f, 10.f); //FVector::ZeroVector;
-    bool              bLockAxes = false;
+    FVector           Min       = FVector::ZeroVector;
+    FVector           Max       = FVector::ZeroVector;
+    bool              bIsLooped = false;
+    float             LoopKeyOffset = 0.f;
+    bool              bUseExtremes = false;
+    bool              bCanBeBaked = true;
+    EParticleLockedAxesMode LockedAxesMode = EParticleLockedAxesMode::None;
+    uint8             MirrorFlags = PMF_None;
+
+    FVectorCurve      MinCurve;
+    FVectorCurve      MaxCurve;
 
     TArray<FVector> BakedMin;
     TArray<FVector> BakedMax;
@@ -187,6 +239,13 @@ struct FRawDistributionLinearColor
     EDistributionType Type = EDistributionType::Constant;
     FLinearColor      Min  = FLinearColor::White();
     FLinearColor      Max  = FLinearColor::White();
+    bool              bIsLooped = false;
+    float             LoopKeyOffset = 0.f;
+    bool              bUseExtremes = false;
+    bool              bCanBeBaked = true;
+
+    FLinearColorCurve MinCurve;
+    FLinearColorCurve MaxCurve;
 
     // 런타임 Baked 테이블 (직렬화하지 않음)
     TArray<FLinearColor> BakedMin;

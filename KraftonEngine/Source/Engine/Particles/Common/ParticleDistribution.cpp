@@ -5,6 +5,125 @@
 
 #include "Particles/Common/ParticleDistribution.h"
 #include <algorithm>
+#include <cmath>
+
+namespace
+{
+    constexpr float ParticleCurveTimeEpsilon = 1e-6f;
+
+    static FArchive& operator<<(FArchive& Ar, FFloatCurveKey& Key)
+    {
+        Ar << Key.Time;
+        Ar << Key.Value;
+
+        int32 InterpMode = static_cast<int32>(Key.InterpMode);
+        Ar << InterpMode;
+        if (Ar.IsLoading())
+        {
+            Key.InterpMode = static_cast<EParticleKeyInterpMode>(InterpMode);
+        }
+
+        int32 TangentMode = static_cast<int32>(Key.TangentMode);
+        Ar << TangentMode;
+        if (Ar.IsLoading())
+        {
+            Key.TangentMode = static_cast<EParticleCurveTangentMode>(TangentMode);
+        }
+
+        Ar << Key.ArriveTangent;
+        Ar << Key.LeaveTangent;
+        return Ar;
+    }
+
+    static float NormalizeCurveTime(float T, const FParticleFloatCurve& Curve, bool bIsLooped, float LoopKeyOffset)
+    {
+        if (Curve.Keys.empty())
+        {
+            return T;
+        }
+
+        const float StartTime = Curve.Keys.front().Time;
+        const float EndTime = Curve.Keys.back().Time;
+        if (!bIsLooped)
+        {
+            return T;
+        }
+
+        const float LoopDuration = (EndTime - StartTime) + LoopKeyOffset;
+        if (LoopDuration <= ParticleCurveTimeEpsilon)
+        {
+            return EndTime;
+        }
+
+        float Offset = std::fmod(T - StartTime, LoopDuration);
+        if (Offset < 0.0f)
+        {
+            Offset += LoopDuration;
+        }
+
+        const float LoopTime = StartTime + Offset;
+        return LoopTime > EndTime ? EndTime : LoopTime;
+    }
+
+    static float EvalFloatCurveWithOptions(const FParticleFloatCurve& Curve, float T, bool bIsLooped, float LoopKeyOffset)
+    {
+        return Curve.Eval(NormalizeCurveTime(T, Curve, bIsLooped, LoopKeyOffset));
+    }
+
+    static FVector ApplyLockedAxes(const FVector& Value, EParticleLockedAxesMode LockedAxesMode)
+    {
+        FVector Result = Value;
+        switch (LockedAxesMode)
+        {
+        case EParticleLockedAxesMode::XY:
+            Result.Y = Result.X;
+            break;
+        case EParticleLockedAxesMode::XZ:
+            Result.Z = Result.X;
+            break;
+        case EParticleLockedAxesMode::YZ:
+            Result.Z = Result.Y;
+            break;
+        case EParticleLockedAxesMode::XYZ:
+            Result.Y = Result.X;
+            Result.Z = Result.X;
+            break;
+        case EParticleLockedAxesMode::None:
+        default:
+            break;
+        }
+        return Result;
+    }
+
+    static float MaybeMirrorFloat(float Value, bool bMirror, FRandomStream* Stream)
+    {
+        if (!bMirror)
+        {
+            return Value;
+        }
+
+        const float Sign = (Stream ? Stream->GetFraction() : 0.5f) < 0.5f ? -1.0f : 1.0f;
+        return std::fabs(Value) * Sign;
+    }
+
+    static FVector ApplyMirrorFlags(const FVector& Value, uint8 MirrorFlags, FRandomStream* Stream)
+    {
+        FVector Result = Value;
+        Result.X = MaybeMirrorFloat(Result.X, (MirrorFlags & PMF_X) != 0, Stream);
+        Result.Y = MaybeMirrorFloat(Result.Y, (MirrorFlags & PMF_Y) != 0, Stream);
+        Result.Z = MaybeMirrorFloat(Result.Z, (MirrorFlags & PMF_Z) != 0, Stream);
+        return Result;
+    }
+
+    static FLinearColor EvalLinearColorCurveWithOptions(const FLinearColorCurve& Curve, float T, bool bIsLooped, float LoopKeyOffset)
+    {
+        return FLinearColor(
+            EvalFloatCurveWithOptions(Curve.R, T, bIsLooped, LoopKeyOffset),
+            EvalFloatCurveWithOptions(Curve.G, T, bIsLooped, LoopKeyOffset),
+            EvalFloatCurveWithOptions(Curve.B, T, bIsLooped, LoopKeyOffset),
+            EvalFloatCurveWithOptions(Curve.A, T, bIsLooped, LoopKeyOffset));
+    }
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // FRandomStream
@@ -47,39 +166,65 @@ FVector FRandomStream::VRandRange(const FVector& InMin, const FVector& InMax) co
 // FParticleFloatCurve
 // ─────────────────────────────────────────────────────────────────────────────
 
-void FParticleFloatCurve::AddKey(float Time, float Value, float ArriveTangent, float LeaveTangent)
+void FParticleFloatCurve::AddKey(float Time, float Value, EParticleKeyInterpMode InterpMode)
 {
     FFloatCurveKey Key;
-    Key.Time           = Time;
-    Key.Value          = Value;
-    Key.ArriveTangent  = ArriveTangent;
-    Key.LeaveTangent   = (InterpMode == EParticleCurveInterpMode::CurveUser) ? ArriveTangent : LeaveTangent;
-
+    Key.Time = Time;
+    Key.Value = Value;
+    Key.InterpMode = InterpMode;
     Keys.push_back(Key);
-    std::sort(Keys.begin(), Keys.end(),
-        [](const FFloatCurveKey& A, const FFloatCurveKey& B) { return A.Time < B.Time; });
-
-    if (InterpMode == EParticleCurveInterpMode::CurveAuto)
-        ComputeAutoTangents();
+    SortKeys();
+    AutoSetTangents();
 }
 
-void FParticleFloatCurve::ComputeAutoTangents()
+void FParticleFloatCurve::SortKeys()
+{
+    std::sort(Keys.begin(), Keys.end(),
+        [](const FFloatCurveKey& A, const FFloatCurveKey& B) { return A.Time < B.Time; });
+}
+
+void FParticleFloatCurve::AutoSetTangents()
 {
     const int32 N = static_cast<int32>(Keys.size());
-    if (N < 2) return;
+    if (N == 0)
+    {
+        return;
+    }
 
     for (int32 i = 0; i < N; ++i)
     {
-        float Tangent;
-        if (i == 0)
-            Tangent = (Keys[1].Value - Keys[0].Value) / (Keys[1].Time - Keys[0].Time);
-        else if (i == N - 1)
-            Tangent = (Keys[N-1].Value - Keys[N-2].Value) / (Keys[N-1].Time - Keys[N-2].Time);
-        else
-            Tangent = (Keys[i+1].Value - Keys[i-1].Value) / (Keys[i+1].Time - Keys[i-1].Time);
+        FFloatCurveKey& Key = Keys[i];
+        if (Key.TangentMode == EParticleCurveTangentMode::User)
+        {
+            Key.LeaveTangent = Key.ArriveTangent;
+            continue;
+        }
+        if (Key.TangentMode != EParticleCurveTangentMode::Auto)
+        {
+            continue;
+        }
 
-        Keys[i].ArriveTangent = Tangent;
-        Keys[i].LeaveTangent  = Tangent;
+        float Slope = 0.0f;
+        const bool bHasPrev = i > 0;
+        const bool bHasNext = i + 1 < N;
+        if (bHasPrev && bHasNext)
+        {
+            const float Dt = Keys[i + 1].Time - Keys[i - 1].Time;
+            Slope = std::fabs(Dt) <= ParticleCurveTimeEpsilon ? 0.0f : (Keys[i + 1].Value - Keys[i - 1].Value) / Dt;
+        }
+        else if (bHasNext)
+        {
+            const float Dt = Keys[i + 1].Time - Keys[i].Time;
+            Slope = std::fabs(Dt) <= ParticleCurveTimeEpsilon ? 0.0f : (Keys[i + 1].Value - Keys[i].Value) / Dt;
+        }
+        else if (bHasPrev)
+        {
+            const float Dt = Keys[i].Time - Keys[i - 1].Time;
+            Slope = std::fabs(Dt) <= ParticleCurveTimeEpsilon ? 0.0f : (Keys[i].Value - Keys[i - 1].Value) / Dt;
+        }
+
+        Key.ArriveTangent = Slope;
+        Key.LeaveTangent = Slope;
     }
 }
 
@@ -116,15 +261,13 @@ float FParticleFloatCurve::Eval(float T) const
     const float Dt = B.Time - A.Time;
     const float s  = (T - A.Time) / Dt;
 
-    switch (InterpMode)
+    switch (A.InterpMode)
     {
-    case EParticleCurveInterpMode::Constant:
+    case EParticleKeyInterpMode::Constant:
         return A.Value;
-    case EParticleCurveInterpMode::Linear:
+    case EParticleKeyInterpMode::Linear:
         return A.Value + s * (B.Value - A.Value);
-    case EParticleCurveInterpMode::CurveAuto:
-    case EParticleCurveInterpMode::CurveUser:
-    case EParticleCurveInterpMode::CurveBreak:
+    case EParticleKeyInterpMode::Cubic:
         return HermiteInterp(s, Dt, A.Value, A.LeaveTangent, B.Value, B.ArriveTangent);
     }
     return A.Value;
@@ -143,6 +286,10 @@ float FRawDistributionFloat::GetValue(float T, FRandomStream* Stream) const
 
     case EDistributionType::Uniform:
     {
+        if (bUseExtremes)
+        {
+            return (Stream ? Stream->GetFraction() : 0.5f) < 0.5f ? Min : Max;
+        }
         const float Alpha = Stream ? Stream->GetFraction() : 0.5f;
         return Min + (Max - Min) * Alpha;
     }
@@ -150,18 +297,32 @@ float FRawDistributionFloat::GetValue(float T, FRandomStream* Stream) const
     case EDistributionType::ConstantCurve:
     case EDistributionType::UniformCurve:
     {
-        if (BakedMin.empty()) return Min;
+        float MinVal = Min;
+        float MaxVal = Max;
 
-        const float NormT = T * static_cast<float>(NUM_BAKED_SAMPLES - 1);
-        int32 Idx = static_cast<int32>(NormT);
-        if (Idx >= NUM_BAKED_SAMPLES - 1) Idx = NUM_BAKED_SAMPLES - 2;
-        const float Frac = NormT - static_cast<float>(Idx);
+        if (bCanBeBaked && !BakedMin.empty())
+        {
+            const float NormT = T * static_cast<float>(NUM_BAKED_SAMPLES - 1);
+            int32 Idx = static_cast<int32>(NormT);
+            if (Idx >= NUM_BAKED_SAMPLES - 1) Idx = NUM_BAKED_SAMPLES - 2;
+            const float Frac = NormT - static_cast<float>(Idx);
+            MinVal = BakedMin[Idx] + Frac * (BakedMin[Idx + 1] - BakedMin[Idx]);
+            MaxVal = BakedMax[Idx] + Frac * (BakedMax[Idx + 1] - BakedMax[Idx]);
+        }
+        else
+        {
+            MinVal = EvalFloatCurveWithOptions(MinCurve, T, bIsLooped, LoopKeyOffset);
+            MaxVal = EvalFloatCurveWithOptions(MaxCurve, T, bIsLooped, LoopKeyOffset);
+        }
 
-        const float MinVal = BakedMin[Idx] + Frac * (BakedMin[Idx + 1] - BakedMin[Idx]);
         if (Type == EDistributionType::ConstantCurve)
+        {
             return MinVal;
-
-        const float MaxVal = BakedMax[Idx] + Frac * (BakedMax[Idx + 1] - BakedMax[Idx]);
+        }
+        if (bUseExtremes)
+        {
+            return (Stream ? Stream->GetFraction() : 0.5f) < 0.5f ? MinVal : MaxVal;
+        }
         const float Alpha  = Stream ? Stream->GetFraction() : 0.5f;
         return MinVal + (MaxVal - MinVal) * Alpha;
     }
@@ -196,47 +357,74 @@ FVector FRawDistributionVector::GetValue(float T, FRandomStream* Stream) const
     switch (Type)
     {
     case EDistributionType::Constant:
-        return Min;
+        return ApplyLockedAxes(Min, LockedAxesMode);
 
     case EDistributionType::Uniform:
     {
-        if (bLockAxes)
+        FVector Result = FVector::ZeroVector;
+        if (bUseExtremes)
         {
-            const float Alpha = Stream ? Stream->GetFraction() : 0.5f;
-            const float S = Min.X + (Max.X - Min.X) * Alpha;
-            return FVector(S, S, S);
+            Result = (Stream ? Stream->GetFraction() : 0.5f) < 0.5f ? Min : Max;
         }
-        return Stream ? Stream->VRandRange(Min, Max)
-                      : FVector(Min.X + (Max.X - Min.X) * 0.5f,
-                                Min.Y + (Max.Y - Min.Y) * 0.5f,
-                                Min.Z + (Max.Z - Min.Z) * 0.5f);
+        else
+        {
+            Result = Stream ? Stream->VRandRange(Min, Max)
+                            : FVector(Min.X + (Max.X - Min.X) * 0.5f,
+                                      Min.Y + (Max.Y - Min.Y) * 0.5f,
+                                      Min.Z + (Max.Z - Min.Z) * 0.5f);
+        }
+
+        Result = ApplyLockedAxes(Result, LockedAxesMode);
+        return ApplyMirrorFlags(Result, MirrorFlags, Stream);
     }
 
     case EDistributionType::ConstantCurve:
     case EDistributionType::UniformCurve:
     {
-        if (BakedMin.empty()) return Min;
+        FVector MinVal = Min;
+        FVector MaxVal = Max;
 
-        const float NormT = T * static_cast<float>(NUM_BAKED_SAMPLES - 1);
-        int32 Idx = static_cast<int32>(NormT);
-        if (Idx >= NUM_BAKED_SAMPLES - 1) Idx = NUM_BAKED_SAMPLES - 2;
-        const float Frac = NormT - static_cast<float>(Idx);
-
-        const FVector MinVal = BakedMin[Idx] + (BakedMin[Idx + 1] - BakedMin[Idx]) * Frac;
-        if (Type == EDistributionType::ConstantCurve)
-            return MinVal;
-
-        const FVector MaxVal = BakedMax[Idx] + (BakedMax[Idx + 1] - BakedMax[Idx]) * Frac;
-        if (bLockAxes)
+        if (bCanBeBaked && !BakedMin.empty())
         {
-            const float Alpha = Stream ? Stream->GetFraction() : 0.5f;
-            const float S = MinVal.X + (MaxVal.X - MinVal.X) * Alpha;
-            return FVector(S, S, S);
+            const float NormT = T * static_cast<float>(NUM_BAKED_SAMPLES - 1);
+            int32 Idx = static_cast<int32>(NormT);
+            if (Idx >= NUM_BAKED_SAMPLES - 1) Idx = NUM_BAKED_SAMPLES - 2;
+            const float Frac = NormT - static_cast<float>(Idx);
+            MinVal = BakedMin[Idx] + (BakedMin[Idx + 1] - BakedMin[Idx]) * Frac;
+            MaxVal = BakedMax[Idx] + (BakedMax[Idx + 1] - BakedMax[Idx]) * Frac;
         }
-        return Stream ? Stream->VRandRange(MinVal, MaxVal)
-                      : FVector(MinVal.X + (MaxVal.X - MinVal.X) * 0.5f,
-                                MinVal.Y + (MaxVal.Y - MinVal.Y) * 0.5f,
-                                MinVal.Z + (MaxVal.Z - MinVal.Z) * 0.5f);
+        else
+        {
+            MinVal = FVector(
+                EvalFloatCurveWithOptions(MinCurve.X, T, bIsLooped, LoopKeyOffset),
+                EvalFloatCurveWithOptions(MinCurve.Y, T, bIsLooped, LoopKeyOffset),
+                EvalFloatCurveWithOptions(MinCurve.Z, T, bIsLooped, LoopKeyOffset));
+            MaxVal = FVector(
+                EvalFloatCurveWithOptions(MaxCurve.X, T, bIsLooped, LoopKeyOffset),
+                EvalFloatCurveWithOptions(MaxCurve.Y, T, bIsLooped, LoopKeyOffset),
+                EvalFloatCurveWithOptions(MaxCurve.Z, T, bIsLooped, LoopKeyOffset));
+        }
+
+        if (Type == EDistributionType::ConstantCurve)
+        {
+            return ApplyLockedAxes(MinVal, LockedAxesMode);
+        }
+
+        FVector Result = FVector::ZeroVector;
+        if (bUseExtremes)
+        {
+            Result = (Stream ? Stream->GetFraction() : 0.5f) < 0.5f ? MinVal : MaxVal;
+        }
+        else
+        {
+            Result = Stream ? Stream->VRandRange(MinVal, MaxVal)
+                            : FVector(MinVal.X + (MaxVal.X - MinVal.X) * 0.5f,
+                                      MinVal.Y + (MaxVal.Y - MinVal.Y) * 0.5f,
+                                      MinVal.Z + (MaxVal.Z - MinVal.Z) * 0.5f);
+        }
+
+        Result = ApplyLockedAxes(Result, LockedAxesMode);
+        return ApplyMirrorFlags(Result, MirrorFlags, Stream);
     }
     }
     return Min;
@@ -283,6 +471,10 @@ FLinearColor FRawDistributionLinearColor::GetValue(float T, FRandomStream* Strea
 
     case EDistributionType::Uniform:
     {
+        if (bUseExtremes)
+        {
+            return (Stream ? Stream->GetFraction() : 0.5f) < 0.5f ? Min : Max;
+        }
         const float Alpha = Stream ? Stream->GetFraction() : 0.5f;
         return LerpColor(Min, Max, Alpha);
     }
@@ -290,18 +482,32 @@ FLinearColor FRawDistributionLinearColor::GetValue(float T, FRandomStream* Strea
     case EDistributionType::ConstantCurve:
     case EDistributionType::UniformCurve:
     {
-        if (BakedMin.empty()) return Min;
+        FLinearColor MinVal = Min;
+        FLinearColor MaxVal = Max;
 
-        const float NormT = T * static_cast<float>(NUM_BAKED_SAMPLES - 1);
-        int32 Idx = static_cast<int32>(NormT);
-        if (Idx >= NUM_BAKED_SAMPLES - 1) Idx = NUM_BAKED_SAMPLES - 2;
-        const float Frac = NormT - static_cast<float>(Idx);
+        if (bCanBeBaked && !BakedMin.empty())
+        {
+            const float NormT = T * static_cast<float>(NUM_BAKED_SAMPLES - 1);
+            int32 Idx = static_cast<int32>(NormT);
+            if (Idx >= NUM_BAKED_SAMPLES - 1) Idx = NUM_BAKED_SAMPLES - 2;
+            const float Frac = NormT - static_cast<float>(Idx);
+            MinVal = LerpColor(BakedMin[Idx], BakedMin[Idx + 1], Frac);
+            MaxVal = LerpColor(BakedMax[Idx], BakedMax[Idx + 1], Frac);
+        }
+        else
+        {
+            MinVal = EvalLinearColorCurveWithOptions(MinCurve, T, bIsLooped, LoopKeyOffset);
+            MaxVal = EvalLinearColorCurveWithOptions(MaxCurve, T, bIsLooped, LoopKeyOffset);
+        }
 
-        const FLinearColor MinVal = LerpColor(BakedMin[Idx], BakedMin[Idx + 1], Frac);
         if (Type == EDistributionType::ConstantCurve)
+        {
             return MinVal;
-
-        const FLinearColor MaxVal = LerpColor(BakedMax[Idx], BakedMax[Idx + 1], Frac);
+        }
+        if (bUseExtremes)
+        {
+            return (Stream ? Stream->GetFraction() : 0.5f) < 0.5f ? MinVal : MaxVal;
+        }
         const float Alpha = Stream ? Stream->GetFraction() : 0.5f;
         return LerpColor(MinVal, MaxVal, Alpha);
     }
@@ -341,10 +547,23 @@ FArchive& operator<<(FArchive& Ar, FRandomStream& S)
 
 FArchive& operator<<(FArchive& Ar, FParticleFloatCurve& C)
 {
-    uint8 Mode = static_cast<uint8>(C.InterpMode);
-    Ar << Mode;
-    if (Ar.IsLoading()) C.InterpMode = static_cast<EParticleCurveInterpMode>(Mode);
-    Ar << C.Keys;
+    uint32 KeyCount = static_cast<uint32>(C.Keys.size());
+    Ar << KeyCount;
+    if (Ar.IsLoading())
+    {
+        C.Keys.resize(KeyCount);
+    }
+
+    for (FFloatCurveKey& Key : C.Keys)
+    {
+        Ar << Key;
+    }
+
+    if (Ar.IsLoading())
+    {
+        C.SortKeys();
+        C.AutoSetTangents();
+    }
     return Ar;
 }
 

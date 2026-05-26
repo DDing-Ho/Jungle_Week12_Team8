@@ -38,6 +38,10 @@ class UDistributionFloat : public UObject
     float             Min     = 0.f;
     UPROPERTY(Edit, Category="Particle")
     float             Max     = 0.f;
+    bool              bIsLooped = false;
+    float             LoopKeyOffset = 0.f;
+    bool              bUseExtremes = false;
+    bool              bCanBeBaked = true;
     FParticleFloatCurve       MinCurve;
     FParticleFloatCurve       MaxCurve;
 };
@@ -62,8 +66,12 @@ class UDistributionVector : public UObject
     FVector           Min       = FVector::ZeroVector;
     UPROPERTY(Edit, Category="Particle")
     FVector           Max       = FVector::ZeroVector;
-    UPROPERTY(Edit, Category="Particle")
-    bool              bLockAxes = false; // x,y,z 세 축에 동일한 값을 적용
+    bool              bIsLooped = false;
+    float             LoopKeyOffset = 0.f;
+    bool              bUseExtremes = false;
+    bool              bCanBeBaked = true;
+    EParticleLockedAxesMode LockedAxesMode = EParticleLockedAxesMode::None;
+    uint8             MirrorFlags = PMF_None;
     FVectorCurve      MinCurve;
     FVectorCurve      MaxCurve;
 };
@@ -86,6 +94,10 @@ class UDistributionLinearColor : public UObject
     EDistributionType  Type = EDistributionType::Constant;
     FLinearColor       Min  = FLinearColor::White();
     FLinearColor       Max  = FLinearColor::White();
+    bool               bIsLooped = false;
+    float              LoopKeyOffset = 0.f;
+    bool               bUseExtremes = false;
+    bool               bCanBeBaked = true;
     FLinearColorCurve  MinCurve;
     FLinearColorCurve  MaxCurve;
 };

@@ -8,6 +8,42 @@
 
 #include "Particles/Common/ParticleDistributionTypes.h"
 #include "Serialization/Archive.h"
+#include <cmath>
+
+namespace
+{
+    constexpr float ParticleDistributionTypeTimeEpsilon = 1e-6f;
+
+    static float NormalizeCurveTimeForBake(float T, const FParticleFloatCurve& Curve, bool bIsLooped, float LoopKeyOffset)
+    {
+        if (!bIsLooped || Curve.Keys.empty())
+        {
+            return T;
+        }
+
+        const float StartTime = Curve.Keys.front().Time;
+        const float EndTime = Curve.Keys.back().Time;
+        const float LoopDuration = (EndTime - StartTime) + LoopKeyOffset;
+        if (LoopDuration <= ParticleDistributionTypeTimeEpsilon)
+        {
+            return EndTime;
+        }
+
+        float Offset = std::fmod(T - StartTime, LoopDuration);
+        if (Offset < 0.0f)
+        {
+            Offset += LoopDuration;
+        }
+
+        const float LoopTime = StartTime + Offset;
+        return LoopTime > EndTime ? EndTime : LoopTime;
+    }
+
+    static float EvalBakeCurve(const FParticleFloatCurve& Curve, float T, bool bIsLooped, float LoopKeyOffset)
+    {
+        return Curve.Eval(NormalizeCurveTimeForBake(T, Curve, bIsLooped, LoopKeyOffset));
+    }
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // UDistributionFloat
@@ -19,17 +55,28 @@ FRawDistributionFloat UDistributionFloat::BuildRaw() const
     Raw.Type = Type;
     Raw.Min  = Min;
     Raw.Max  = Max;
+    Raw.bIsLooped = bIsLooped;
+    Raw.LoopKeyOffset = LoopKeyOffset;
+    Raw.bUseExtremes = bUseExtremes;
+    Raw.bCanBeBaked = bCanBeBaked;
+    Raw.MinCurve = MinCurve;
+    Raw.MaxCurve = MaxCurve;
 
     if (Type == EDistributionType::ConstantCurve || Type == EDistributionType::UniformCurve)
     {
-        Raw.BakedMin.resize(NUM_BAKED_SAMPLES);
-        Raw.BakedMax.resize(NUM_BAKED_SAMPLES);
-
-        for (int32 i = 0; i < NUM_BAKED_SAMPLES; ++i)
+        if (bCanBeBaked)
         {
-            const float T  = static_cast<float>(i) / static_cast<float>(NUM_BAKED_SAMPLES - 1);
-            Raw.BakedMin[i] = MinCurve.Eval(T);
-            Raw.BakedMax[i] = (Type == EDistributionType::UniformCurve) ? MaxCurve.Eval(T) : Raw.BakedMin[i];
+            Raw.BakedMin.resize(NUM_BAKED_SAMPLES);
+            Raw.BakedMax.resize(NUM_BAKED_SAMPLES);
+
+            for (int32 i = 0; i < NUM_BAKED_SAMPLES; ++i)
+            {
+                const float T = static_cast<float>(i) / static_cast<float>(NUM_BAKED_SAMPLES - 1);
+                Raw.BakedMin[i] = EvalBakeCurve(Raw.MinCurve, T, Raw.bIsLooped, Raw.LoopKeyOffset);
+                Raw.BakedMax[i] = (Type == EDistributionType::UniformCurve)
+                    ? EvalBakeCurve(Raw.MaxCurve, T, Raw.bIsLooped, Raw.LoopKeyOffset)
+                    : Raw.BakedMin[i];
+            }
         }
     }
 
@@ -43,6 +90,7 @@ void UDistributionFloat::Serialize(FArchive& Ar)
     if (Ar.IsLoading()) Type = static_cast<EDistributionType>(TypeInt);
 
     Ar << Min << Max;
+    Ar << bIsLooped << LoopKeyOffset << bUseExtremes << bCanBeBaked;
     Ar << MinCurve << MaxCurve;
 }
 
@@ -53,21 +101,39 @@ void UDistributionFloat::Serialize(FArchive& Ar)
 FRawDistributionVector UDistributionVector::BuildRaw() const
 {
     FRawDistributionVector Raw;
-    Raw.Type      = Type;
-    Raw.Min       = Min;
-    Raw.Max       = Max;
-    Raw.bLockAxes = bLockAxes;
+    Raw.Type = Type;
+    Raw.Min = Min;
+    Raw.Max = Max;
+    Raw.bIsLooped = bIsLooped;
+    Raw.LoopKeyOffset = LoopKeyOffset;
+    Raw.bUseExtremes = bUseExtremes;
+    Raw.bCanBeBaked = bCanBeBaked;
+    Raw.LockedAxesMode = LockedAxesMode;
+    Raw.MirrorFlags = MirrorFlags;
+    Raw.MinCurve = MinCurve;
+    Raw.MaxCurve = MaxCurve;
 
     if (Type == EDistributionType::ConstantCurve || Type == EDistributionType::UniformCurve)
     {
-        Raw.BakedMin.resize(NUM_BAKED_SAMPLES);
-        Raw.BakedMax.resize(NUM_BAKED_SAMPLES);
-
-        for (int32 i = 0; i < NUM_BAKED_SAMPLES; ++i)
+        if (bCanBeBaked)
         {
-            const float T  = static_cast<float>(i) / static_cast<float>(NUM_BAKED_SAMPLES - 1);
-            Raw.BakedMin[i] = MinCurve.Eval(T);
-            Raw.BakedMax[i] = (Type == EDistributionType::UniformCurve) ? MaxCurve.Eval(T) : Raw.BakedMin[i];
+            Raw.BakedMin.resize(NUM_BAKED_SAMPLES);
+            Raw.BakedMax.resize(NUM_BAKED_SAMPLES);
+
+            for (int32 i = 0; i < NUM_BAKED_SAMPLES; ++i)
+            {
+                const float T = static_cast<float>(i) / static_cast<float>(NUM_BAKED_SAMPLES - 1);
+                Raw.BakedMin[i] = FVector(
+                    EvalBakeCurve(Raw.MinCurve.X, T, Raw.bIsLooped, Raw.LoopKeyOffset),
+                    EvalBakeCurve(Raw.MinCurve.Y, T, Raw.bIsLooped, Raw.LoopKeyOffset),
+                    EvalBakeCurve(Raw.MinCurve.Z, T, Raw.bIsLooped, Raw.LoopKeyOffset));
+                Raw.BakedMax[i] = (Type == EDistributionType::UniformCurve)
+                    ? FVector(
+                        EvalBakeCurve(Raw.MaxCurve.X, T, Raw.bIsLooped, Raw.LoopKeyOffset),
+                        EvalBakeCurve(Raw.MaxCurve.Y, T, Raw.bIsLooped, Raw.LoopKeyOffset),
+                        EvalBakeCurve(Raw.MaxCurve.Z, T, Raw.bIsLooped, Raw.LoopKeyOffset))
+                    : Raw.BakedMin[i];
+            }
         }
     }
 
@@ -80,7 +146,12 @@ void UDistributionVector::Serialize(FArchive& Ar)
     Ar << TypeInt;
     if (Ar.IsLoading()) Type = static_cast<EDistributionType>(TypeInt);
 
-    Ar << Min << Max << bLockAxes;
+    int32 LockedAxesModeInt = static_cast<int32>(LockedAxesMode);
+    Ar << Min << Max;
+    Ar << bIsLooped << LoopKeyOffset << bUseExtremes << bCanBeBaked;
+    Ar << LockedAxesModeInt;
+    if (Ar.IsLoading()) LockedAxesMode = static_cast<EParticleLockedAxesMode>(LockedAxesModeInt);
+    Ar << MirrorFlags;
     Ar << MinCurve << MaxCurve;
 }
 
@@ -104,17 +175,36 @@ FRawDistributionLinearColor UDistributionLinearColor::BuildRaw() const
     Raw.Type = Type;
     Raw.Min  = Min;
     Raw.Max  = Max;
+    Raw.bIsLooped = bIsLooped;
+    Raw.LoopKeyOffset = LoopKeyOffset;
+    Raw.bUseExtremes = bUseExtremes;
+    Raw.bCanBeBaked = bCanBeBaked;
+    Raw.MinCurve = MinCurve;
+    Raw.MaxCurve = MaxCurve;
 
     if (Type == EDistributionType::ConstantCurve || Type == EDistributionType::UniformCurve)
     {
-        Raw.BakedMin.resize(NUM_BAKED_SAMPLES);
-        Raw.BakedMax.resize(NUM_BAKED_SAMPLES);
-
-        for (int32 i = 0; i < NUM_BAKED_SAMPLES; ++i)
+        if (bCanBeBaked)
         {
-            const float T  = static_cast<float>(i) / static_cast<float>(NUM_BAKED_SAMPLES - 1);
-            Raw.BakedMin[i] = MinCurve.Eval(T);
-            Raw.BakedMax[i] = (Type == EDistributionType::UniformCurve) ? MaxCurve.Eval(T) : Raw.BakedMin[i];
+            Raw.BakedMin.resize(NUM_BAKED_SAMPLES);
+            Raw.BakedMax.resize(NUM_BAKED_SAMPLES);
+
+            for (int32 i = 0; i < NUM_BAKED_SAMPLES; ++i)
+            {
+                const float T = static_cast<float>(i) / static_cast<float>(NUM_BAKED_SAMPLES - 1);
+                Raw.BakedMin[i] = FLinearColor(
+                    EvalBakeCurve(Raw.MinCurve.R, T, Raw.bIsLooped, Raw.LoopKeyOffset),
+                    EvalBakeCurve(Raw.MinCurve.G, T, Raw.bIsLooped, Raw.LoopKeyOffset),
+                    EvalBakeCurve(Raw.MinCurve.B, T, Raw.bIsLooped, Raw.LoopKeyOffset),
+                    EvalBakeCurve(Raw.MinCurve.A, T, Raw.bIsLooped, Raw.LoopKeyOffset));
+                Raw.BakedMax[i] = (Type == EDistributionType::UniformCurve)
+                    ? FLinearColor(
+                        EvalBakeCurve(Raw.MaxCurve.R, T, Raw.bIsLooped, Raw.LoopKeyOffset),
+                        EvalBakeCurve(Raw.MaxCurve.G, T, Raw.bIsLooped, Raw.LoopKeyOffset),
+                        EvalBakeCurve(Raw.MaxCurve.B, T, Raw.bIsLooped, Raw.LoopKeyOffset),
+                        EvalBakeCurve(Raw.MaxCurve.A, T, Raw.bIsLooped, Raw.LoopKeyOffset))
+                    : Raw.BakedMin[i];
+            }
         }
     }
 
@@ -128,5 +218,6 @@ void UDistributionLinearColor::Serialize(FArchive& Ar)
     if (Ar.IsLoading()) Type = static_cast<EDistributionType>(TypeInt);
 
     Ar << Min << Max;
+    Ar << bIsLooped << LoopKeyOffset << bUseExtremes << bCanBeBaked;
     Ar << MinCurve << MaxCurve;
 }

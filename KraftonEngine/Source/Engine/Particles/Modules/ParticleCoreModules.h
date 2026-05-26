@@ -103,7 +103,7 @@ class UParticleModuleLifetime : public UParticleModule
     // 에디터 측: 커브/범위 편집 가능
     UDistributionFloat* LifetimeDist = nullptr;
     // 런타임 측: Baked 테이블
-    FRawDistributionFloat RawLifetime = FRawDistributionFloat::MakeConstant(0.1f);
+    FRawDistributionFloat RawLifetime = FRawDistributionFloat::MakeConstant(1.0f);
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -127,7 +127,7 @@ class UParticleModuleLocation : public UParticleModule
 
   private:
     UDistributionVector* LocationDist = nullptr;
-    FRawDistributionVector RawLocation;
+    FRawDistributionVector RawLocation = FRawDistributionVector::MakeConstant(FVector::ZeroVector);
 
     UPROPERTY(Edit, Category="Particle", DisplayName="Sphere Radius", Min=0.0, Max=100000.0, Speed=0.1)
     float SphereRadius   = 0.0f;
@@ -158,7 +158,7 @@ class UParticleModuleVelocity : public UParticleModule
 
   private:
     UDistributionVector* VelocityDist = nullptr;
-    FRawDistributionVector RawVelocity;
+    FRawDistributionVector RawVelocity = FRawDistributionVector::MakeUniform(FVector(0.f, 0.f, 0.f), FVector(0.f, 0.f, 10.f));
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
