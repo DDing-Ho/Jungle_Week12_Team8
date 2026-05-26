@@ -28,6 +28,8 @@ class UParticleModule : public UObject
     virtual void Spawn(FParticleEmitterInstance *Owner, FBaseParticle &Particle, float SpawnTime) {}
     virtual void Update(FParticleEmitterInstance *Owner, float DeltaTime) {}
     virtual void Serialize(FArchive& Ar) override;
+	//나중에 추가적 payload를 가진 module이 있으면 사용해야함
+	virtual uint32 RequiredBytes(UParticleModuleTypeDataBase* TypeData) const { return 0; }
 
     /** UDistribution 에디터 데이터로부터 FRawDistribution 런타임 캐시를 재구성한다. */
     virtual void CacheModuleValues() {}

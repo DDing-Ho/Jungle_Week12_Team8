@@ -30,6 +30,7 @@ public:
 
 	FViewport* GetViewport() const override { return Viewport; }
 	UWorld* GetPreviewWorld() const override { return PreviewWorld; }
+	UParticleSystemComponent* GetPreviewComponent() const { return PreviewComponent; }
 
 	FViewportRenderOptions& GetRenderOptions() override { return RenderOptions; }
 	const FViewportRenderOptions& GetRenderOptions() const override { return RenderOptions; }

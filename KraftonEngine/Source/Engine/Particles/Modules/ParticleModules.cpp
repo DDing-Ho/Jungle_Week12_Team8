@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file ParticleModules.cpp
  * @brief 모든 Particle Module 및 TypeData Serialize / Spawn / Update / CacheModuleValues 구현.
  */
@@ -79,7 +79,7 @@ void UParticleModuleLifetime::Serialize(FArchive& Ar)
 {
     UParticleModule::Serialize(Ar);
 
-    if (Ar.IsLoading())
+    if (!LifetimeDist)
         LifetimeDist = GUObjectArray.CreateObject<UDistributionFloat>(this);
 
     LifetimeDist->Serialize(Ar);
@@ -107,7 +107,7 @@ void UParticleModuleLocation::Serialize(FArchive& Ar)
 {
     UParticleModule::Serialize(Ar);
 
-    if (Ar.IsLoading())
+    if (!LocationDist)
         LocationDist = GUObjectArray.CreateObject<UDistributionVector>(this);
 
     LocationDist->Serialize(Ar);
@@ -135,7 +135,7 @@ void UParticleModuleVelocity::Serialize(FArchive& Ar)
 {
     UParticleModule::Serialize(Ar);
 
-    if (Ar.IsLoading())
+    if (!VelocityDist)
         VelocityDist = GUObjectArray.CreateObject<UDistributionVector>(this);
 
     VelocityDist->Serialize(Ar);
@@ -153,7 +153,7 @@ void UParticleModuleVelocity::CacheModuleValues()
 void UParticleModuleVelocity::Spawn(FParticleEmitterInstance* Owner, FBaseParticle& Particle, float SpawnTime)
 {
     if (!bEnabled) return;
-    const FVector V       = RawVelocity.GetValue(0.f, &ModuleStream);
+    const FVector V       = FVector(0.f, 0.f, 5.f); //RawVelocity.GetValue(0.f, &ModuleStream);
     Particle.BaseVelocity = V;
     Particle.Velocity     = V;
 }
@@ -164,7 +164,7 @@ void UParticleModuleColor::Serialize(FArchive& Ar)
 {
     UParticleModule::Serialize(Ar);
 
-    if (Ar.IsLoading())
+    if (!ColorDist)
         ColorDist = GUObjectArray.CreateObject<UDistributionLinearColor>(this);
 
     ColorDist->Serialize(Ar);
@@ -218,7 +218,7 @@ void UParticleModuleSize::Serialize(FArchive& Ar)
 {
     UParticleModule::Serialize(Ar);
 
-    if (Ar.IsLoading())
+    if (!SizeDist)
         SizeDist = GUObjectArray.CreateObject<UDistributionVector>(this);
 
     SizeDist->Serialize(Ar);
@@ -263,7 +263,7 @@ void UParticleModuleRotation::Serialize(FArchive& Ar)
 {
     UParticleModule::Serialize(Ar);
 
-    if (Ar.IsLoading())
+    if (!RotationDist)
         RotationDist = GUObjectArray.CreateObject<UDistributionFloat>(this);
 
     RotationDist->Serialize(Ar);
@@ -288,7 +288,7 @@ void UParticleModuleRotationRate::Serialize(FArchive& Ar)
 {
     UParticleModule::Serialize(Ar);
 
-    if (Ar.IsLoading())
+    if (!RotationRateDist)
         RotationRateDist = GUObjectArray.CreateObject<UDistributionFloat>(this);
 
     RotationRateDist->Serialize(Ar);

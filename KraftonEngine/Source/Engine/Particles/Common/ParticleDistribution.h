@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file ParticleDistribution.h
  * @brief Particle 랜덤 분포 및 커브 기반 값 타입 정의.
  *
@@ -146,8 +146,8 @@ static constexpr int32 NUM_BAKED_SAMPLES = 256; // 커브를 256등분으로 굽
 struct FRawDistributionFloat
 {
     EDistributionType Type = EDistributionType::Constant;
-    float             Min  = 0.f;
-    float             Max  = 0.f;
+    float             Min  = 5.f;
+    float             Max  = 10.f;
 
     // 런타임 Baked 테이블 (Curve 타입일 때 사용, 직렬화하지 않음)
     TArray<float> BakedMin;
@@ -165,8 +165,8 @@ struct FRawDistributionFloat
 struct FRawDistributionVector
 {
     EDistributionType Type      = EDistributionType::Constant;
-    FVector           Min       = FVector::ZeroVector;
-    FVector           Max       = FVector::ZeroVector;
+    FVector           Min       = FVector(0.f, 0.f, 5.f); //FVector::ZeroVector;
+    FVector           Max       = FVector(0.f, 0.f, 10.f); //FVector::ZeroVector;
     bool              bLockAxes = false;
 
     TArray<FVector> BakedMin;

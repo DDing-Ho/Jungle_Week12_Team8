@@ -124,6 +124,7 @@ class UParticleSystem : public UObject
     UParticleEmitter *GetEmitter(int32 Index) const { return Index < (int32)Emitters.size() ? Emitters[Index] : nullptr; }
 
     void AddEmitter(UParticleEmitter *InEmitter) { Emitters.push_back(InEmitter); }
+    void RemoveEmitter(int32 Index) { Emitters.erase(Emitters.begin() + Index); }
 
     void CacheSystemModuleInfo(); // 전체 Emitter Module 정보 캐싱
     virtual void Serialize(FArchive& Ar) override;

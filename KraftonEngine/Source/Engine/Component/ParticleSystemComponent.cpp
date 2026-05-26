@@ -2,9 +2,12 @@
 #include "Particles/Runtime/ParticleEmitterInstance.h"
 #include "Particles/Rendering/ParticleRenderData.h"
 #include "Render/Proxy/ParticleSceneProxy.h"
-#include <algorithm>
+#include "Particles/Assets/ParticleSystemAssetManager.h"
 
-void UParticleSystemComponent::InitializeComponent()
+#include <algorithm>
+#include <Platform/Paths.h>
+
+UParticleSystemComponent::UParticleSystemComponent()
 {
 	ClearEmitterInstances();
 
@@ -18,19 +21,6 @@ void UParticleSystemComponent::InitializeComponent()
 	EmitterMaterials.clear();
 	CollisionEvents.clear();
 	EmitterRenderData.clear();
-
-	//test용 코드 commit 전에 삭제할것
-	if (!Template)
-	{
-		//Template = CreateDefaultParticleTemplate(this);
-	}
-
-	if (Template)
-	{
-		Template->CacheSystemModuleInfo();
-		CreateEmitterInstances();
-		MarkProxyDirty(EDirtyFlag::Mesh);
-	}
 }
 
 void UParticleSystemComponent::EndPlay()
@@ -116,18 +106,18 @@ FPrimitiveSceneProxy* UParticleSystemComponent::CreateSceneProxy()
 
 void UParticleSystemComponent::SetTemplate(UParticleSystem* InTemplate)
 {
-	if (Template == InTemplate) {
-		return;
-	}
-
 	const bool bShouldActivate = bAutoActivate || bIsActive;
 
 	DeactivateSystem();
 	ClearEmitterInstances();
 
 	Template = InTemplate;
+	TemplateAsset = InTemplate;
+
 	if (Template)
 	{
+		TemplateAsset.SetPath(FPaths::MakeProjectRelative(Template->GetAssetPathFileName()));
+		Template->CacheSystemModuleInfo();
 		CreateEmitterInstances();
 	}
 
@@ -242,6 +232,37 @@ void UParticleSystemComponent::ClearRenderData()
 	EmitterRenderData.clear();
 }
 
+void UParticleSystemComponent::PostEditProperty(const char* PropertyName)
+{
+	UPrimitiveComponent::PostEditProperty(PropertyName);
+
+	if (strcmp(PropertyName, "Template") == 0)
+	{
+		if (TemplateAsset.IsNull())
+		{
+			SetTemplate(nullptr);
+			return;
+		}
+
+		UParticleSystem* Loaded =
+			FParticleSystemAssetManager::Get().Load(TemplateAsset.GetPath().ToString());
+
+		SetTemplate(Loaded);
+	}
+}
+
+void UParticleSystemComponent::PostDuplicate()
+{
+	UPrimitiveComponent::PostDuplicate();
+
+	if (!TemplateAsset.IsNull())
+	{
+		UParticleSystem* Loaded =
+			FParticleSystemAssetManager::Get().Load(TemplateAsset.GetPath().ToString());
+
+		SetTemplate(Loaded);
+	}
+}
 void UParticleSystemComponent::BuildRenderData()
 {
 	ClearRenderData();

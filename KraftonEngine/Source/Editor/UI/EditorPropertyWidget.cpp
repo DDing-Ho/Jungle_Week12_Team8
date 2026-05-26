@@ -1797,6 +1797,40 @@ bool FEditorPropertyWidget::RenderPropertyWidget(
 				}
 			}
 		}
+		else if (SoftObjectProp.PropertyClass == UParticleSystem::StaticClass())
+		{
+			auto* Val = static_cast<TSoftObjectPtr<UParticleSystem>*>(ValuePtr);
+
+			FString CurrentPath = FPaths::MakeProjectRelative(Val->GetPath().ToString());
+			FString Preview = CurrentPath.empty() ? "None" : GetStemFromPath(CurrentPath);
+
+			ImGui::SetNextItemWidth(-1);
+			if (ImGui::BeginCombo("##ParticleSystem", Preview.c_str()))
+			{
+				const bool bSelectedNone = CurrentPath.empty() || CurrentPath == "None";
+				if (ImGui::Selectable("None", bSelectedNone))
+				{
+					Val->Reset();
+					bChanged = true;
+				}
+
+				ImGui::EndCombo();
+			}
+
+			if (ImGui::BeginDragDropTarget())
+			{
+				if (const ImGuiPayload* Payload = ImGui::AcceptDragDropPayload("ParticleSystemContentItem"))
+				{
+					FContentItem ContentItem = *reinterpret_cast<const FContentItem*>(Payload->Data);
+					const FString DroppedPath =
+						FPaths::MakeProjectRelative(FPaths::ToUtf8(ContentItem.Path.generic_wstring()));
+
+					Val->SetPath(DroppedPath);
+					bChanged = true;
+				}
+				ImGui::EndDragDropTarget();
+			}
+		}
 		break;
 	}
 	case EPropertyType::MaterialSlot:

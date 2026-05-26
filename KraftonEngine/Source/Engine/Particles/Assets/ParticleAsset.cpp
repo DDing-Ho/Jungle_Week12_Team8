@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file ParticleAsset.cpp
  * @brief UParticleSystem / UParticleEmitter / UParticleLODLevel
  *        의 Cache, Serialize, Save, Load 구현.
@@ -183,6 +183,31 @@ void UParticleEmitter::CacheEmitterModuleInfo()
     // FBaseParticle 크기를 기본값으로 설정
     // 추후 Module별 payload가 추가되면 여기서 누적
     ParticleSize = sizeof(FBaseParticle);
+
+	if (LODLevels.size() == 0)
+		return;
+	UParticleLODLevel* HightestLODLevel = LODLevels[0];
+
+	UParticleModuleTypeDataBase* HighTypeData = HightestLODLevel->GetTypeDataModule();
+	if (HighTypeData)
+	{
+		// TODO : Mesh, Beam 처리	
+	}
+
+	auto& Modules = HightestLODLevel->GetModules();
+	for (int32 ModuleIndex = 0; ModuleIndex < Modules.size(); ModuleIndex++)
+	{
+		UParticleModule* ParticleModule = Modules[ModuleIndex];
+		
+		if (ParticleModule->IsA(UParticleModuleTypeDataBase::StaticClass()) == false)
+		{
+			int32 ReqBytes = ParticleModule->RequiredBytes(HighTypeData);
+			if (ReqBytes)
+			{
+				ParticleSize += ReqBytes;
+			}
+		}
+	}
 }
 
 void UParticleEmitter::Serialize(FArchive& Ar)

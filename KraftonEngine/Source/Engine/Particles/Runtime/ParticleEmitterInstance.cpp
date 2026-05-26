@@ -82,10 +82,7 @@ void FParticleEmitterInstance::Tick(float DeltaTime)
 	for (UParticleModule* Module : CurrentLODLevel->GetUpdateModules())
 	{
 		if (Module && Module->IsEnabled()) {
-			if (Module->GetUpdatePhase() == EParticleModuleUpdatePhase::PMUP_Update ||
-				Module->GetUpdatePhase() == EParticleModuleUpdatePhase::PMUP_SpawnAndUpdate ) {
-				Module->Update(this, DeltaTime);
-			}
+			Module->Update(this, DeltaTime);
 		}
 	}
 
@@ -235,7 +232,6 @@ void FParticleEmitterInstance::Tick_SpawnParticles(float DeltaTime)
 
 	if (TotalSpawnCount > 0)
 	{
-		//
 		const float Increment = SpawnRate > 0.0f ? 1.0f / SpawnRate : 0.0f;
 		const float StartTime = DeltaTime + SpawnFraction * Increment - Increment;
 

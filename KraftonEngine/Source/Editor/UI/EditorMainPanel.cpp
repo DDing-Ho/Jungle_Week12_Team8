@@ -42,6 +42,7 @@ void FEditorMainPanel::Create(FWindowsWindow* InWindow, FRenderer& InRenderer, U
 	ImGuiIO& IO = ImGui::GetIO();
 	IO.IniFilename = "Settings/imgui.ini";
 	IO.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+	IO.ConfigWindowsMoveFromTitleBarOnly = true;
 
 	Window = InWindow;
 	EditorEngine = InEditorEngine;
