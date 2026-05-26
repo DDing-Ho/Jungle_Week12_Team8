@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @file ParticleAsset.h
  * @brief ParticleSystem Asset 계층 정의.
  *
@@ -38,11 +38,14 @@ class UParticleLODLevel : public UObject
     const TArray<UParticleModule *> &GetUpdateModules() const { return UpdateModules; }
 
     void AddModule(UParticleModule *InModule); // 일반 Module 추가
+    void RemoveModule(int32 Index) { Modules.erase(Modules.begin() + Index); }
     void CacheModules();                       // Spawn / Update 실행 캐시 구성
     virtual void Serialize(FArchive& Ar) override;
 
   private:
+    UPROPERTY(Edit, Category="Particle")
     int32 Level = 0;       // LOD 단계
+    UPROPERTY(Edit, Category="Particle")
     bool  bEnabled = true; // LOD 사용 여부
 
     UParticleModuleRequired     *RequiredModule = nullptr; // 필수 Emitter 설정
@@ -93,22 +96,28 @@ class UParticleEmitter : public UObject
     void  SetMaxActiveParticles(int32 InMaxCount) { MaxActiveParticles = InMaxCount; }
 
   private:
+    UPROPERTY(Edit, Category="Particle", DisplayName="Emitter Name")
     FName EmitterName; // Emitter 이름
 
+    UPROPERTY(Edit, Category="Particle", DisplayName="Render Mode")
     EParticleEmitterRenderMode EmitterRenderMode = EParticleEmitterRenderMode::ERM_Normal; // Emitter 렌더 표시 모드
 
     FColor EmitterEditorColor = FColor::White(); // 에디터 / 디버그 표시 색상
 
+    UPROPERTY(Edit, Category="Particle", DisplayName="Initial Allocation", Min=0, Max=100000, Speed=1.0)
     int32 InitialAllocationCount = 0; // 초기화 시 미리 할당할 Particle 수
 
+    UPROPERTY(Edit, Category="Particle", DisplayName="Medium Detail Spawn Rate Scale", Min=0.0, Max=10.0, Speed=0.01)
     float MediumDetailSpawnRateScale = 1.0f; // Medium / Low Detail에서 SpawnRate를 줄이는 배율
 
+    UPROPERTY(Edit, Category="Particle", DisplayName="Collapsed")
     bool bCollapsed = false; // 에디터 Emitter List 접힘 상태
 
     TArray<UParticleLODLevel *> LODLevels; // Emitter LOD 목록
 
     int32 ParticleSize = 0; // Particle 1개 메모리 크기
 
+    UPROPERTY(Edit, Category="Particle", DisplayName="Max Active Particles", Min=1, Max=100000, Speed=1.0)
     int32 MaxActiveParticles = 1000; // 최대 활성 Particle 수
 };
 
@@ -124,6 +133,7 @@ class UParticleSystem : public UObject
     UParticleEmitter *GetEmitter(int32 Index) const { return Index < (int32)Emitters.size() ? Emitters[Index] : nullptr; }
 
     void AddEmitter(UParticleEmitter *InEmitter) { Emitters.push_back(InEmitter); }
+    void RemoveEmitter(int32 Index) { Emitters.erase(Emitters.begin() + Index); }
 
     void CacheSystemModuleInfo(); // 전체 Emitter Module 정보 캐싱
     virtual void Serialize(FArchive& Ar) override;

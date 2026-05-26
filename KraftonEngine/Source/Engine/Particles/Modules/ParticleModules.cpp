@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file ParticleModules.cpp
  * @brief 모든 Particle Module 및 TypeData Serialize / Spawn / Update / CacheModuleValues 구현.
  */
@@ -14,6 +14,7 @@
 #include "Mesh/MeshManager.h"
 #include "Object/FUObjectArray.h"
 #include <chrono>
+#include <cstring>
 
 // ─────────────────────────────────────────────────────────────────────────────
 // UParticleModule (base)
@@ -46,6 +47,35 @@ void UParticleModule::InitializeStream()
 // Core Modules
 // ─────────────────────────────────────────────────────────────────────────────
 
+void UParticleModuleRequired::SetMaterial(UMaterial* InMaterial)
+{
+	Material = InMaterial;
+	if (Material)
+	{
+		MaterialSlot.Path = Material->GetAssetPathFileName();
+	}
+	else
+	{
+		MaterialSlot.Path = "None";
+	}
+}
+
+void UParticleModuleRequired::PostEditProperty(const char* PropertyName)
+{
+    UParticleModule::PostEditProperty(PropertyName);
+    if (PropertyName && strcmp(PropertyName, "Material") == 0)
+    {
+        if (MaterialSlot.Path.empty() || MaterialSlot.Path == "None")
+        {
+            SetMaterial(nullptr);
+        }
+        else
+        {
+            SetMaterial(FMaterialManager::Get().GetOrCreateMaterial(MaterialSlot.Path));
+        }
+    }
+}
+
 void UParticleModuleRequired::Serialize(FArchive& Ar)
 {
     UParticleModule::Serialize(Ar);
@@ -54,10 +84,19 @@ void UParticleModuleRequired::Serialize(FArchive& Ar)
     Ar << TypeInt;
     if (Ar.IsLoading()) EmitterType = static_cast<EParticleEmitterType>(TypeInt);
 
-    FString MatPath = (Ar.IsSaving() && Material) ? Material->GetAssetPathFileName() : FString();
+    FString MatPath = MaterialSlot.Path;
     Ar << MatPath;
-    if (Ar.IsLoading() && !MatPath.empty())
-        Material = FMaterialManager::Get().GetOrCreateMaterial(MatPath);
+    if (Ar.IsLoading())
+    {
+        if (MatPath.empty() || MatPath == "None")
+        {
+            SetMaterial(nullptr);
+        }
+        else
+        {
+            SetMaterial(FMaterialManager::Get().GetOrCreateMaterial(MatPath));
+        }
+    }
 
     int32 SortInt = static_cast<int32>(SortMode);
     Ar << SortInt;
@@ -75,12 +114,35 @@ void UParticleModuleSpawn::Serialize(FArchive& Ar)
 
 // ── Lifetime ─────────────────────────────────────────────────────────────────
 
+namespace
+{
+    constexpr float DefaultParticleLifetime = 0.1f;
+
+    void InitializeDefaultLifetimeDistribution(UDistributionFloat* Distribution)
+    {
+        if (!Distribution)
+        {
+            return;
+        }
+
+        Distribution->Type = EDistributionType::Constant;
+        Distribution->Min = DefaultParticleLifetime;
+        Distribution->Max = DefaultParticleLifetime;
+    }
+}
+
 void UParticleModuleLifetime::Serialize(FArchive& Ar)
 {
     UParticleModule::Serialize(Ar);
 
     if (!LifetimeDist)
+    {
         LifetimeDist = GUObjectArray.CreateObject<UDistributionFloat>(this);
+        if (Ar.IsSaving())
+        {
+            InitializeDefaultLifetimeDistribution(LifetimeDist);
+        }
+    }
 
     LifetimeDist->Serialize(Ar);
 
@@ -90,6 +152,12 @@ void UParticleModuleLifetime::Serialize(FArchive& Ar)
 
 void UParticleModuleLifetime::CacheModuleValues()
 {
+    if (!LifetimeDist)
+    {
+        LifetimeDist = GUObjectArray.CreateObject<UDistributionFloat>(this);
+        InitializeDefaultLifetimeDistribution(LifetimeDist);
+    }
+
     if (LifetimeDist)
         RawLifetime = LifetimeDist->BuildRaw();
 }
@@ -98,7 +166,7 @@ void UParticleModuleLifetime::Spawn(FParticleEmitterInstance* Owner, FBasePartic
 {
     if (!bEnabled) return;
     Particle.Lifetime     = RawLifetime.GetValue(0.f, &ModuleStream);
-    Particle.RelativeTime = 0.f;
+    Particle.RelativeTime = Particle.Lifetime > 0.0f ? SpawnTime / Particle.Lifetime : 0.0f;
 }
 
 // ── Location ─────────────────────────────────────────────────────────────────

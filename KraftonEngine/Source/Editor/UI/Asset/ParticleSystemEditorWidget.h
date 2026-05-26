@@ -5,7 +5,12 @@
 #include "Editor/Slate/SWindow.h"
 #include "Editor/Viewport/ParticleSystemEditorViewportClient.h"
 
+struct ImVec2;
 class UParticleSystem;
+class UParticleEmitter;
+class UParticleModule;
+class UObject;
+class FProperty;
 
 class FParticleSystemEditorWidget : public FAssetEditorWidget
 {
@@ -25,8 +30,18 @@ public:
 	void Render(float DeltaTime) override;
 
 private:
-	void RenderPreviewViewport();
+	void RenderPreviewViewport(const ImVec2& Size);
 	bool RenderDetailsPanel();
+	bool RenderEditableProperties(UObject* Object);
+	bool RenderParticleProperty(const FProperty& Prop, void* Container);
+	bool RenderParticleDistribution(UParticleModule* Module);
+	void HandleEditedParticleProperty(UObject* Object, const FProperty* Prop);
+	bool RenderEmittersPanel();
+	bool RenderEmitterBlock(UParticleEmitter* Emitter, int32 EmitterIndex);
+	bool RenderEmitterHeader(UParticleEmitter* Emitter, int32 EmitterIndex);
+	bool RenderEmitterModules(UParticleEmitter* Emitter, int32 EmitterIndex);
+	bool RenderParticleModuleItem(UParticleModule* Module, int32 EmitterIndex);
+	bool RenderCurveEditorPanel();
 
 private:
 	SWindow ViewportWindow;
@@ -35,6 +50,13 @@ private:
 	uint32 InstanceId;
 	FName PreviewWorldHandle = FName::None;
 	FString WindowIdSuffix;
+
+	float LeftPanelRatio = 0.4f;
+	float LeftTopPanelRatio = 0.6f;
+	float RightTopPanelRatio = 0.6f;
+
+	int32 SelectedEmitterIndex = -1;
+	UParticleModule* SelectedModule = nullptr;
 
 	bool bPendingClose = false;
 };

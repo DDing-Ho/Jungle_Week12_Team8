@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file ParticleCoreModules.h
  * @brief 기본 Particle Module 정의.
  *
@@ -11,6 +11,7 @@
 
 #include "ParticleModules.h"
 #include "Particles/Common/ParticleDistributionTypes.h"
+#include "Core/Property/PropertyTypes.h"
 #include "ParticleCoreModules.generated.h"
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -32,15 +33,22 @@ class UParticleModuleRequired : public UParticleModule
     void                 SetEmitterType(EParticleEmitterType InType) { EmitterType = InType; }
 
     UMaterial *GetMaterial() const { return Material; }
-    void       SetMaterial(UMaterial *InMaterial) { Material = InMaterial; }
+    void       SetMaterial(UMaterial *InMaterial);
 
     EParticleSortMode GetSortMode() const { return SortMode; }
     void              SetSortMode(EParticleSortMode InSortMode) { SortMode = InSortMode; }
 
+    virtual void PostEditProperty(const char* PropertyName) override;
+
   private:
+    UPROPERTY(Edit, Category="Particle", DisplayName="Emitter Type")
     EParticleEmitterType EmitterType = EParticleEmitterType::PET_Sprite; // 기본 Emitter 타입
+    UPROPERTY(Edit, Category="Particle", DisplayName="Material", Type=MaterialSlot)
+    FMaterialSlot        MaterialSlot;                                    // Particle 렌더링 Material 경로
     UMaterial           *Material = nullptr;                             // Particle 렌더링 Material
+    UPROPERTY(Edit, Category="Particle", DisplayName="Sort Mode")
     EParticleSortMode    SortMode = EParticleSortMode::PSM_None;         // Particle 정렬 방식
+    UPROPERTY(Edit, Category="Particle", DisplayName="Translucency Sort Priority", Speed=1.0)
     int32                TranslucencySortPriority = 0;                   // Translucent Pass 정렬 우선순위
 };
 
@@ -66,7 +74,9 @@ class UParticleModuleSpawn : public UParticleModule
     void  SetBurstCount(int32 InBurstCount) { BurstCount = InBurstCount; }
 
   private:
+    UPROPERTY(Edit, Category="Particle", DisplayName="Spawn Rate", Min=0.0, Max=10000.0, Speed=0.1)
     float SpawnRate  = 10.0f; // 초당 Particle 생성 수
+    UPROPERTY(Edit, Category="Particle", DisplayName="Burst Count", Min=0, Max=100000, Speed=1.0)
     int32 BurstCount = 0;    // 순간 Spawn 개수
 };
 
@@ -93,7 +103,7 @@ class UParticleModuleLifetime : public UParticleModule
     // 에디터 측: 커브/범위 편집 가능
     UDistributionFloat* LifetimeDist = nullptr;
     // 런타임 측: Baked 테이블
-    FRawDistributionFloat RawLifetime = FRawDistributionFloat::MakeConstant(1.0f);
+    FRawDistributionFloat RawLifetime = FRawDistributionFloat::MakeConstant(0.1f);
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -119,8 +129,11 @@ class UParticleModuleLocation : public UParticleModule
     UDistributionVector* LocationDist = nullptr;
     FRawDistributionVector RawLocation;
 
+    UPROPERTY(Edit, Category="Particle", DisplayName="Sphere Radius", Min=0.0, Max=100000.0, Speed=0.1)
     float SphereRadius   = 0.0f;
+    UPROPERTY(Edit, Category="Particle", DisplayName="Cylinder Radius", Min=0.0, Max=100000.0, Speed=0.1)
     float CylinderRadius = 0.0f;
+    UPROPERTY(Edit, Category="Particle", DisplayName="Cylinder Height", Min=0.0, Max=100000.0, Speed=0.1)
     float CylinderHeight = 0.0f;
 };
 

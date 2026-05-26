@@ -38,8 +38,8 @@ struct FParticleEmitterInstance
     TArray<FParticleEventData> PendingEvents; // 이번 프레임 처리 대기 Event 목록
 	TArray<bool> BurstFired;
     
-	void Init(UParticleSystemComponent *InComponent, UParticleEmitter *InTemplate);                                                     // Instance 초기화
-    void Tick(float DeltaTime);                                                                                                         // 매 프레임 갱신
+	virtual void Init(UParticleSystemComponent *InComponent, UParticleEmitter *InTemplate);                                                     // Instance 초기화
+    virtual void Tick(float DeltaTime);                                                                                                         // 매 프레임 갱신
     void SpawnParticles(int32 Count, float StartTime, float Increment, const FVector &InitialLocation, const FVector &InitialVelocity); // Particle 생성
     void KillParticle(int32 Index);                                                                                                     // 단일 Particle 제거
     void KillAllParticles();                                                                                                            // 전체 Particle 제거
@@ -49,7 +49,7 @@ struct FParticleEmitterInstance
 	void Tick_SpawnParticles(float DeltaTime);
     int32 GetActiveParticleCount() const { return ActiveParticles; }
 
-    FDynamicEmitterDataBase *CreateDynamicEmitterData(); // 렌더링 데이터 생성
+    virtual FDynamicEmitterDataBase *CreateDynamicEmitterData(); // 렌더링 데이터 생성
 
   private:
     void PreSpawn(FBaseParticle &Particle, const FVector &InitialLocation, const FVector &InitialVelocity); // Spawn 기본값 설정
@@ -66,4 +66,27 @@ struct FParticleEmitterInstance
 
 	float EmitterTime;		// 이미터 시간
 	float LastDeltaTime;	// 마지막으로 스폰한 시간
+};
+
+// Sprite Paticle============================================================
+
+struct FParticleSpriteEmitterInstance : public FParticleEmitterInstance
+{
+public:
+	FDynamicEmitterDataBase* CreateDynamicEmitterData() override;
+
+};
+
+// Mesh Paticle============================================================
+
+struct FParticleMeshEmitterInstance : public FParticleEmitterInstance 
+{
+public:
+	void Init(UParticleSystemComponent* InComponent, UParticleEmitter* InTemplate) override;
+	void Tick(float DeltaTime) override;
+	FDynamicEmitterDataBase* CreateDynamicEmitterData() override;
+
+private:
+	UParticleModuleTypeDataMesh* MeshTypeData = nullptr;
+	TArray<UMaterial*> CurrentMaterials;
 };

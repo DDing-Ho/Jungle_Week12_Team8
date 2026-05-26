@@ -43,6 +43,34 @@ namespace
 			++Suffix;
 		}
 	}
+
+	void InitializeDefaultParticleSystem(UParticleSystem* NewAsset) 
+	{
+		if (!NewAsset)
+		{
+			return;
+		}
+
+		UParticleEmitter* Emitter = GUObjectArray.CreateObject<UParticleEmitter>(NewAsset);
+		UParticleLODLevel* LOD = GUObjectArray.CreateObject<UParticleLODLevel>(Emitter);
+
+		UParticleModuleRequired* Required = GUObjectArray.CreateObject<UParticleModuleRequired>(LOD);
+		UParticleModuleTypeDataSprite* TypeData = GUObjectArray.CreateObject<UParticleModuleTypeDataSprite>(LOD);
+		UParticleModuleSpawn* Spawn = GUObjectArray.CreateObject<UParticleModuleSpawn>(LOD);
+		UParticleModuleLifetime* Lifetime = GUObjectArray.CreateObject<UParticleModuleLifetime>(LOD);
+		UParticleModuleVelocity* Velocity = GUObjectArray.CreateObject<UParticleModuleVelocity>(LOD);
+
+		LOD->SetRequiredModule(Required);
+		LOD->SetTypeDataModule(TypeData);
+		LOD->AddModule(Spawn);
+		LOD->AddModule(Lifetime);
+		LOD->AddModule(Velocity);
+		LOD->CacheModules();
+
+		Emitter->AddLODLevel(LOD);
+		NewAsset->AddEmitter(Emitter);
+		NewAsset->CacheSystemModuleInfo();
+	}
 }
 
 bool FAssetFactory::CreateFloatCurve(const FString& DirectoryPath, const FString& AssetName, FString& OutCreatedPath)
@@ -153,6 +181,8 @@ bool FAssetFactory::CreateParticleSystemAsset(const FString& DirectoryPath, cons
 
 	UParticleSystem* NewAsset = GUObjectArray.CreateObject<UParticleSystem>();
 	NewAsset->SetSourcePath(FPaths::ToUtf8(AssetPath.wstring()));
+
+	InitializeDefaultParticleSystem(NewAsset);
 
 	bool bSaved = FParticleSystemAssetManager::Get().Save(NewAsset);
 	GUObjectArray.DestroyObject(NewAsset);

@@ -10,8 +10,8 @@
 #include "Particles/Assets/ParticleAsset.h"
 #include "Particles/Runtime/ParticleRuntimeTypes.h"
 #include "Core/CoreTypes.h"
+#include "Core/UObject/TSoftObjectPtr.h"
 #include "Component/PrimitiveComponent.h"
-#include "Particles/Runtime/ParticleRuntimeTypes.h"
 #include "ParticleSystemComponent.generated.h"
 
 struct FParticleEventCollideData;
@@ -24,7 +24,7 @@ class UParticleSystemComponent : public UPrimitiveComponent
   public:
 	GENERATED_BODY(UParticleSystemComponent)
 
-    void InitializeComponent(); // Component 초기화
+    UParticleSystemComponent(); // Component 초기화
 	void EndPlay() override;
 	void Activate() override;
 	void Deactivate() override;
@@ -52,6 +52,9 @@ class UParticleSystemComponent : public UPrimitiveComponent
 
 	void BuildRenderData();
 	void ClearRenderData();
+
+	void PostEditProperty(const char* PropertyName) override;
+	void PostDuplicate() override;
 private:
 	void CreateEmitterInstances(); //Emitter정보를 가지고 Instance를 제작함
 	void ClearEmitterInstances();
@@ -59,6 +62,9 @@ private:
   private:
     TArray<FParticleEmitterInstance *>	EmitterInstances;        // Runtime Emitter Instance 목록
 	
+	UPROPERTY(Edit, Category = "ParticleSystemComponent", DisplayName = "Template", Type = SoftObject, Class = UParticleSystem)
+	TSoftObjectPtr<UParticleSystem> TemplateAsset;
+
 	UParticleSystem					   *Template = nullptr;      // 재생할 ParticleSystem Asset
     TArray<FDynamicEmitterDataBase *>	EmitterRenderData;       // 렌더 패스 전달용 데이터
     TArray<FParticleEventCollideData>	CollisionEvents;         // 이번 프레임 Collision Event 목록

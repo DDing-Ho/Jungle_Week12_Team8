@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @file ParticleCollisionKillModules.h
  * @brief Particle Collision / Kill Module 정의.
  *
@@ -26,9 +26,13 @@ class UParticleModuleCollision : public UParticleModule
     virtual void Serialize(FArchive& Ar) override;
 
   private:
+    UPROPERTY(Edit, Category="Particle", DisplayName="Enable Collision")
     bool  bEnableCollision = true;  // Collision 사용 여부
+    UPROPERTY(Edit, Category="Particle", DisplayName="Kill On Collision")
     bool  bKillOnCollision = false; // 충돌 시 Particle 제거 여부
+    UPROPERTY(Edit, Category="Particle", DisplayName="Bounce", Min=0.0, Max=1.0, Speed=0.01)
     float Bounce = 0.3f;            // 충돌 반사 계수
+    UPROPERTY(Edit, Category="Particle", DisplayName="Friction", Min=0.0, Max=1.0, Speed=0.01)
     float Friction = 0.1f;          // 충돌 마찰 계수
 };
 
@@ -45,8 +49,11 @@ class UParticleModuleKill : public UParticleModule
     virtual void Serialize(FArchive& Ar) override;
 
   private:
+    UPROPERTY(Edit, Category="Particle", DisplayName="Use Kill Box")
     bool  bUseKillBox = false;    // Box 기준 제거 사용 여부
+    UPROPERTY(Edit, Category="Particle", DisplayName="Use Kill Height")
     bool  bUseKillHeight = false; // Height 기준 제거 사용 여부
     FBoundingBox  KillBox;                // Particle 제거 기준 Box
+    UPROPERTY(Edit, Category="Particle", DisplayName="Kill Height", Speed=0.1)
     float KillHeight = 0.0f;      // Particle 제거 기준 높이
 };

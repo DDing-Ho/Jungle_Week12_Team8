@@ -42,6 +42,7 @@ class UParticleModuleRotation : public UParticleModule
   private:
     UDistributionFloat *RotationDist = nullptr;
     FRawDistributionFloat RawRotation = FRawDistributionFloat::MakeConstant(0.f);
+    UPROPERTY(Edit, Category="Particle", DisplayName="Initial Mesh Rotation")
     FRotator InitialMeshRotation; // Mesh Particle 초기 회전값
 };
 
@@ -80,6 +81,7 @@ class UParticleModuleRotationRate : public UParticleModule
   private:
     UDistributionFloat *RotationRateDist = nullptr;
     FRawDistributionFloat RawRotationRate = FRawDistributionFloat::MakeConstant(0.f);
+    UPROPERTY(Edit, Category="Particle", DisplayName="Mesh Rotation Rate")
     FVector MeshRotationRate; // Mesh Particle 회전 속도
 };
 
@@ -108,9 +110,13 @@ class UParticleModuleAcceleration : public UParticleModule
     virtual void Serialize(FArchive &Ar) override;
 
   private:
+    UPROPERTY(Edit, Category="Particle", DisplayName="Acceleration")
     FVector Acceleration = FVector::ZeroVector;      // 매 프레임 적용할 가속도
+    UPROPERTY(Edit, Category="Particle", DisplayName="Const Acceleration")
     FVector ConstAcceleration = FVector::ZeroVector; // 고정 가속도
+    UPROPERTY(Edit, Category="Particle", DisplayName="Drag", Min=0.0, Max=1000.0, Speed=0.01)
     float   Drag = 0.0f;                             // 속도 감쇠 계수
+    UPROPERTY(Edit, Category="Particle", DisplayName="Use Acceleration Over Life")
     bool    bUseAccelerationOverLife = false;        // 수명 기반 가속도 변화 사용 여부
 };
 
@@ -139,8 +145,11 @@ class UParticleModuleAttractor : public UParticleModule
     virtual void Serialize(FArchive &Ar) override;
 
   private:
+    UPROPERTY(Edit, Category="Particle", DisplayName="Target Location")
     FVector TargetLocation = FVector::ZeroVector; // 흡인 목표 위치
+    UPROPERTY(Edit, Category="Particle", DisplayName="Strength", Speed=0.1)
     float   Strength = 0.0f;                      // 흡인 강도
+    UPROPERTY(Edit, Category="Particle", DisplayName="Radius", Min=0.0, Max=100000.0, Speed=0.1)
     float   Radius = 0.0f;                        // 흡인 영향 반경
 };
 
@@ -169,6 +178,8 @@ class UParticleModuleOrbit : public UParticleModule
     virtual void Serialize(FArchive &Ar) override;
 
   private:
+    UPROPERTY(Edit, Category="Particle", DisplayName="Offset")
     FVector Offset       = FVector::ZeroVector; // 렌더링 위치 오프셋
+    UPROPERTY(Edit, Category="Particle", DisplayName="Rotation Rate")
     FVector RotationRate = FVector::ZeroVector; // 궤도 회전 속도
 };

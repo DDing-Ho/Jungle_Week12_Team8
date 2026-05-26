@@ -32,8 +32,11 @@ class UDistributionFloat : public UObject
     /** 현재 설정으로 런타임 FRawDistributionFloat를 생성한다. */
     FRawDistributionFloat BuildRaw() const;
 
+    UPROPERTY(Edit, Category="Particle")
     EDistributionType Type    = EDistributionType::Constant;
+    UPROPERTY(Edit, Category="Particle")
     float             Min     = 0.f;
+    UPROPERTY(Edit, Category="Particle")
     float             Max     = 0.f;
     FParticleFloatCurve       MinCurve;
     FParticleFloatCurve       MaxCurve;
@@ -53,9 +56,13 @@ class UDistributionVector : public UObject
 
     FRawDistributionVector BuildRaw() const;
 
+    UPROPERTY(Edit, Category="Particle")
     EDistributionType Type      = EDistributionType::Constant;
+    UPROPERTY(Edit, Category="Particle")
     FVector           Min       = FVector::ZeroVector;
+    UPROPERTY(Edit, Category="Particle")
     FVector           Max       = FVector::ZeroVector;
+    UPROPERTY(Edit, Category="Particle")
     bool              bLockAxes = false; // x,y,z 세 축에 동일한 값을 적용
     FVectorCurve      MinCurve;
     FVectorCurve      MaxCurve;
@@ -75,6 +82,7 @@ class UDistributionLinearColor : public UObject
 
     FRawDistributionLinearColor BuildRaw() const;
 
+    UPROPERTY(Edit, Category="Particle")
     EDistributionType  Type = EDistributionType::Constant;
     FLinearColor       Min  = FLinearColor::White();
     FLinearColor       Max  = FLinearColor::White();
