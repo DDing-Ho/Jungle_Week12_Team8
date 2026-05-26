@@ -40,8 +40,17 @@ class UParticleSystemComponent : public UPrimitiveComponent
 
     const TArray<FParticleEmitterInstance *> &GetEmitterInstances() const { return EmitterInstances; }
     const TArray<FDynamicEmitterDataBase *>  &GetEmitterRenderData() const { return EmitterRenderData; }
+    const TArray<FParticleEventData>         &GetFrameEventQueue() const { return FrameEventQueue; }
 
     bool IsActive() const { return bIsActive; }
+    bool IsEventTraceEnabled() const
+    {
+#if defined(_DEBUG)
+        return bDebugEventTrace;
+#else
+        return false;
+#endif
+    }
 
     void SetParticleVisible(bool bInVisible) { bParticleVisible = bInVisible; }
     bool IsParticleVisible() const { return bParticleVisible; }
@@ -72,6 +81,9 @@ private:
 
 	UPROPERTY(Edit, Category = "ParticleSystemComponent", DisplayName = "EmitterDelay")
 	float EmitterDelay;				// Emitter시작 지연 시간
+
+	UPROPERTY(Edit, Category = "ParticleSystemComponent", DisplayName = "Debug Event Trace")
+	bool bDebugEventTrace = false; // Event Trace 로그 출력 여부
 
 	bool bIsActive = false;			// 재생 상태
 	bool bParticleVisible = true;	// ShowFlag 표시 여부

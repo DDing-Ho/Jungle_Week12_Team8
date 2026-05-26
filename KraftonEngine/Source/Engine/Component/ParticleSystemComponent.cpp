@@ -3,6 +3,7 @@
 #include "Particles/Rendering/ParticleRenderData.h"
 #include "Render/Proxy/ParticleSceneProxy.h"
 #include "Particles/Assets/ParticleSystemAssetManager.h"
+#include "Core/Log.h"
 
 #include <algorithm>
 #include <Platform/Paths.h>
@@ -93,11 +94,25 @@ void UParticleSystemComponent::TickComponent(float DeltaTime, ELevelTick TickTyp
 		instance->Tick(DeltaTimeTick, FrameEventQueue);
 	}
 
+#if defined(_DEBUG)
+	if (bDebugEventTrace && !FrameEventQueue.empty())
+	{
+		UE_LOG("[ParticleEvent][Component %p] queued %zu event(s) this frame.", this, FrameEventQueue.size());
+	}
+#endif
+
 	for (auto instance : EmitterInstances) {
 		if (!instance) continue;
 		instance->ProcessEvents(FrameEventQueue);
 		TotalActiveParticles += instance->ActiveParticles;
 	}
+
+#if defined(_DEBUG)
+	if (bDebugEventTrace && !FrameEventQueue.empty())
+	{
+		UE_LOG("[ParticleEvent][Component %p] finished dispatch. activeParticles=%d", this, TotalActiveParticles);
+	}
+#endif
 
 	// RenderData 수집
 	BuildRenderData();

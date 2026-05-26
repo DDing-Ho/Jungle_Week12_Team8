@@ -8,6 +8,24 @@
 #include <utility>
 #include <Core/Log.h>
 
+namespace
+{
+#if defined(_DEBUG)
+	const char* ParticleEventTypeToString(EParticleEventType EventType)
+	{
+		switch (EventType)
+		{
+		case EParticleEventType::PEET_Spawn:     return "Spawn";
+		case EParticleEventType::PEET_Death:     return "Death";
+		case EParticleEventType::PEET_Collision: return "Collision";
+		case EParticleEventType::PEET_Burst:     return "Burst";
+		case EParticleEventType::PEET_Custom:    return "Custom";
+		default:                                 return "Unknown";
+		}
+	}
+#endif
+}
+
 FParticleEmitterInstance::~FParticleEmitterInstance()
 {
 	delete[] ParticleData;
@@ -366,6 +384,16 @@ void FParticleEmitterInstance::ProcessEvents(const TArray<FParticleEventData>& E
 		}
 	}
 
+#if defined(_DEBUG)
+	if (OwnerComponent && OwnerComponent->IsEventTraceEnabled() && !ReceivedEvents.empty())
+	{
+		UE_LOG("[ParticleEvent][Emitter %d] received %zu / %zu event(s).",
+			ResolveEmitterIndex(),
+			ReceivedEvents.size(),
+			EventQueue.size());
+	}
+#endif
+
 	ProcessReceivedEvents();
 }
 
@@ -412,6 +440,18 @@ void FParticleEmitterInstance::ProcessReceivedEvents()
 		{
 			if (Receiver->MatchesEvent(EventData))
 			{
+#if defined(_DEBUG)
+				if (OwnerComponent && OwnerComponent->IsEventTraceEnabled())
+				{
+					UE_LOG("[ParticleEvent][Emitter %d] handling %s event name=%s sourceEmitter=%d sourceParticle=%d",
+						ResolveEmitterIndex(),
+						ParticleEventTypeToString(EventData.Type),
+						EventData.EventName.ToString().c_str(),
+						EventData.SourceEmitterIndex,
+						EventData.SourceParticleIndex);
+				}
+#endif
+
 				Receiver->ProcessEvent(*this, EventData);
 			}
 		}
@@ -450,6 +490,19 @@ void FParticleEmitterInstance::PublishParticleEvents(EParticleEventType EventTyp
 			EventData.SourceEmitterIndex = SourceEmitterIndex;
 			EventData.SourceParticleIndex = ParticleIndex;
 			OutEventQueue->push_back(EventData);
+
+#if defined(_DEBUG)
+			if (OwnerComponent && OwnerComponent->IsEventTraceEnabled())
+			{
+				UE_LOG("[ParticleEvent][Emitter %d] published %s event name=%s particle=%d loc=(%.2f, %.2f, %.2f) vel=(%.2f, %.2f, %.2f)",
+					SourceEmitterIndex,
+					ParticleEventTypeToString(EventType),
+					EventData.EventName.ToString().c_str(),
+					ParticleIndex,
+					EventData.Location.X, EventData.Location.Y, EventData.Location.Z,
+					EventData.Velocity.X, EventData.Velocity.Y, EventData.Velocity.Z);
+			}
+#endif
 		}
 	}
 }
