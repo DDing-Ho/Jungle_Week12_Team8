@@ -11,12 +11,17 @@ struct VS_Input_ParticleSprite
     float instanceRotation : INSTANCEROTATION;
     float4 instanceSize : INSTANCESIZE;
     float4 instanceColor : INSTANCECOLOR;
+    float4 instanceUVRegionA : INSTANCEUVREGIONA;
+    float4 instanceUVRegionB : INSTANCEUVREGIONB;
+    float instanceSubUVLerp : INSTANCESUBUVLERP;
 };
 
 struct PS_Input_ParticleSprite
 {
     float4 position : SV_POSITION;
-    float2 uv : TEXCOORD0;
+    float2 uvA : TEXCOORD0;
+    float2 uvB : TEXCOORD1;
+    float subUVLerp : TEXCOORD2;
     float4 color : COLOR0;
 };
 
@@ -35,14 +40,18 @@ PS_Input_ParticleSprite VS(VS_Input_ParticleSprite input)
     viewPos.xy += rotated;
 
     output.position = mul(viewPos, Projection);
-    output.uv = input.texcoord;
+    output.uvA = input.instanceUVRegionA.xy + input.texcoord * input.instanceUVRegionA.zw;
+    output.uvB = input.instanceUVRegionB.xy + input.texcoord * input.instanceUVRegionB.zw;
+    output.subUVLerp = input.instanceSubUVLerp;
     output.color = input.instanceColor;
     return output;
 }
 
 float4 PS(PS_Input_ParticleSprite input) : SV_TARGET
 {
-    float4 texColor = ParticleTexture.Sample(LinearClampSampler, input.uv);
+    float4 texColorA = ParticleTexture.Sample(LinearClampSampler, input.uvA);
+    float4 texColorB = ParticleTexture.Sample(LinearClampSampler, input.uvB);
+    float4 texColor = lerp(texColorA, texColorB, saturate(input.subUVLerp));
 
     float4 color = texColor * input.color;
 

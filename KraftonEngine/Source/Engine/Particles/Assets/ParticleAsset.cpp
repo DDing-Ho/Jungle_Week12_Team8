@@ -35,7 +35,6 @@ static UParticleModule* CreateModuleByClass(EParticleModuleClass ClassTag, UObje
     case EParticleModuleClass::EventGenerator:       return GUObjectArray.CreateObject<UParticleModuleEventGenerator>(Outer);
     case EParticleModuleClass::EventReceiverSpawn:   return GUObjectArray.CreateObject<UParticleModuleEventReceiverSpawn>(Outer);
     case EParticleModuleClass::EventReceiverKillAll: return GUObjectArray.CreateObject<UParticleModuleEventReceiverKillAll>(Outer);
-    case EParticleModuleClass::SubUV:                return GUObjectArray.CreateObject<UParticleModuleSubUV>(Outer);
     case EParticleModuleClass::Light:                return GUObjectArray.CreateObject<UParticleModuleLight>(Outer);
     case EParticleModuleClass::VectorField:          return GUObjectArray.CreateObject<UParticleModuleVectorField>(Outer);
     case EParticleModuleClass::Camera:               return GUObjectArray.CreateObject<UParticleModuleCamera>(Outer);
@@ -44,6 +43,8 @@ static UParticleModule* CreateModuleByClass(EParticleModuleClass ClassTag, UObje
     case EParticleModuleClass::TypeDataMesh:         return GUObjectArray.CreateObject<UParticleModuleTypeDataMesh>(Outer);
     case EParticleModuleClass::TypeDataBeam:         return GUObjectArray.CreateObject<UParticleModuleTypeDataBeam>(Outer);
     case EParticleModuleClass::TypeDataRibbon:       return GUObjectArray.CreateObject<UParticleModuleTypeDataRibbon>(Outer);
+    case EParticleModuleClass::SubImageIndex:        return GUObjectArray.CreateObject<UParticleModuleSubImageIndex>(Outer);
+    case EParticleModuleClass::SubUVMovie:           return GUObjectArray.CreateObject<UParticleModuleSubUVMovie>(Outer);
     default: return nullptr;
     }
 }
@@ -58,6 +59,27 @@ static UParticleModuleTypeDataBase* CreateTypeDataByEmitterType(EParticleEmitter
     case EParticleEmitterType::PET_Ribbon: return GUObjectArray.CreateObject<UParticleModuleTypeDataRibbon>(Outer);
     default:                               return GUObjectArray.CreateObject<UParticleModuleTypeDataSprite>(Outer);
     }
+}
+
+static void SkipLegacySubUVModule(FArchive& Ar)
+{
+    bool bEnabled = false;
+    bool bUseSeed = false;
+    int32 Seed = 0;
+    int32 HorizontalCount = 1;
+    int32 VerticalCount = 1;
+    int32 StartFrame = 0;
+    int32 EndFrame = 0;
+    bool bUseSubImageIndex = false;
+
+    Ar << bEnabled;
+    Ar << bUseSeed;
+    Ar << Seed;
+    Ar << HorizontalCount;
+    Ar << VerticalCount;
+    Ar << StartFrame;
+    Ar << EndFrame;
+    Ar << bUseSubImageIndex;
 }
 
 // UParticleModule* 하나를 Archive에 저장/복원
@@ -77,6 +99,12 @@ static void SerializeModulePtr(FArchive& Ar, UParticleModule*& Module, UObject* 
         uint8 Tag = 0;
         Ar << Tag;
         EParticleModuleClass Class = static_cast<EParticleModuleClass>(Tag);
+        if (Class == EParticleModuleClass::SubUVLegacy)
+        {
+            SkipLegacySubUVModule(Ar);
+            Module = nullptr;
+            return;
+        }
         Module = CreateModuleByClass(Class, Outer);
         if (Module)
             Module->Serialize(Ar);

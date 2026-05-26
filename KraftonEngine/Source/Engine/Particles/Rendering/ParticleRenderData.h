@@ -52,7 +52,10 @@ struct FDynamicEmitterReplayDataBase
 /** Sprite Emitter 렌더링용 ReplayData */
 struct FDynamicSpriteEmitterReplayData : public FDynamicEmitterReplayDataBase
 {
-    int32 SubImageIndex = 0; // SubUV 프레임 인덱스
+    bool  bUseSubUV = false;        // Texture atlas 사용 여부
+    int32 SubUVHorizontalCount = 1;  // Texture atlas 가로 프레임 수
+    int32 SubUVVerticalCount = 1;    // Texture atlas 세로 프레임 수
+    EParticleSubUVInterpMethod SubUVInterpolationMethod = EParticleSubUVInterpMethod::PSUVIM_None;
 };
 
 /** Mesh Emitter 렌더링용 ReplayData */

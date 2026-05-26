@@ -40,6 +40,12 @@ class UParticleModuleRequired : public UParticleModule
     EParticleSortMode GetSortMode() const { return SortMode; }
     void              SetSortMode(EParticleSortMode InSortMode) { SortMode = InSortMode; }
     int32             GetTranslucencySortPriority() const { return TranslucencySortPriority; }
+    int32             GetSubImagesHorizontal() const;
+    int32             GetSubImagesVertical() const;
+    int32             GetSubImageCount() const;
+    EParticleSubUVInterpMethod GetSubUVInterpolationMethod() const { return InterpolationMethod; }
+    int32             GetRandomImageChanges() const { return RandomImageChanges; }
+    float             GetRandomImageTime() const;
 
     virtual void PostEditProperty(const char* PropertyName) override;
 
@@ -53,6 +59,14 @@ class UParticleModuleRequired : public UParticleModule
     EParticleSortMode    SortMode = EParticleSortMode::PSM_None;         // Particle 정렬 방식
     UPROPERTY(Edit, Category="Particle", DisplayName="Translucency Sort Priority", Speed=1.0)
     int32                TranslucencySortPriority = 0;                   // Translucent Pass 정렬 우선순위
+    UPROPERTY(Edit, Category="SubUV", DisplayName="Sub Images Horizontal", Min=1, Max=1024, Speed=1.0)
+    int32                SubImages_Horizontal = 1;                       // SubUV atlas 가로 프레임 수
+    UPROPERTY(Edit, Category="SubUV", DisplayName="Sub Images Vertical", Min=1, Max=1024, Speed=1.0)
+    int32                SubImages_Vertical = 1;                         // SubUV atlas 세로 프레임 수
+    UPROPERTY(Edit, Category="SubUV", DisplayName="Interpolation Method")
+    EParticleSubUVInterpMethod InterpolationMethod = EParticleSubUVInterpMethod::PSUVIM_None;
+    UPROPERTY(Edit, Category="SubUV", DisplayName="Random Image Changes", Min=0, Max=1024, Speed=1.0)
+    int32                RandomImageChanges = 0;                         // 수명 중 random frame 변경 횟수
 };
 
 // ─────────────────────────────────────────────────────────────────────────────

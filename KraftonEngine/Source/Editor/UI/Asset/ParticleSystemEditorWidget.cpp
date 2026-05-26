@@ -292,7 +292,8 @@ constexpr FParticleModuleAddOption ParticleModuleAddOptions[] =
 	{ EParticleModuleClass::EventGenerator, "Event Generator" },
 	{ EParticleModuleClass::EventReceiverSpawn, "Event Receiver Spawn" },
 	{ EParticleModuleClass::EventReceiverKillAll, "Event Receiver Kill All" },
-	{ EParticleModuleClass::SubUV, "SubUV" },
+	{ EParticleModuleClass::SubImageIndex, "SubImage Index" },
+	{ EParticleModuleClass::SubUVMovie, "SubUV Movie" },
 	{ EParticleModuleClass::Light, "Light" },
 	{ EParticleModuleClass::VectorField, "Vector Field" },
 	{ EParticleModuleClass::Camera, "Camera" },
@@ -610,7 +611,8 @@ void FParticleSystemEditorWidget::Render(float DeltaTime)
 				case EParticleModuleClass::EventGenerator: NewModule = GUObjectArray.CreateObject<UParticleModuleEventGenerator>(SelectedLOD); break;
 				case EParticleModuleClass::EventReceiverSpawn: NewModule = GUObjectArray.CreateObject<UParticleModuleEventReceiverSpawn>(SelectedLOD); break;
 				case EParticleModuleClass::EventReceiverKillAll: NewModule = GUObjectArray.CreateObject<UParticleModuleEventReceiverKillAll>(SelectedLOD); break;
-				case EParticleModuleClass::SubUV: NewModule = GUObjectArray.CreateObject<UParticleModuleSubUV>(SelectedLOD); break;
+				case EParticleModuleClass::SubImageIndex: NewModule = GUObjectArray.CreateObject<UParticleModuleSubImageIndex>(SelectedLOD); break;
+				case EParticleModuleClass::SubUVMovie: NewModule = GUObjectArray.CreateObject<UParticleModuleSubUVMovie>(SelectedLOD); break;
 				case EParticleModuleClass::Light: NewModule = GUObjectArray.CreateObject<UParticleModuleLight>(SelectedLOD); break;
 				case EParticleModuleClass::VectorField: NewModule = GUObjectArray.CreateObject<UParticleModuleVectorField>(SelectedLOD); break;
 				case EParticleModuleClass::Camera: NewModule = GUObjectArray.CreateObject<UParticleModuleCamera>(SelectedLOD); break;
@@ -1239,6 +1241,20 @@ bool FParticleSystemEditorWidget::RenderParticleDistribution(UParticleModule* Mo
 		ImGui::TextUnformatted(Dist ? "RotationRateDist" : "RotationRateDist is null"); ImGui::NextColumn();
 		FloatDistFields(Dist);
 	}
+	else if (UParticleModuleSubImageIndex* SubImageIndex = Cast<UParticleModuleSubImageIndex>(Module))
+	{
+		UDistributionFloat* Dist = SubImageIndex->GetSubImageIndexDist();
+		ImGui::TextUnformatted("Object"); ImGui::NextColumn();
+		ImGui::TextUnformatted(Dist ? "SubImageIndex" : "SubImageIndex is null"); ImGui::NextColumn();
+		FloatDistFields(Dist);
+	}
+	else if (UParticleModuleSubUVMovie* SubUVMovie = Cast<UParticleModuleSubUVMovie>(Module))
+	{
+		UDistributionFloat* Dist = SubUVMovie->GetFrameRateDist();
+		ImGui::TextUnformatted("Object"); ImGui::NextColumn();
+		ImGui::TextUnformatted(Dist ? "FrameRate" : "FrameRate is null"); ImGui::NextColumn();
+		FloatDistFields(Dist);
+	}
 	else
 	{
 		ImGui::TextUnformatted("Object");
@@ -1862,7 +1878,8 @@ bool FParticleSystemEditorWidget::RenderParticleModuleItem(UParticleModule* Modu
 	case EParticleModuleClass::EventGenerator: ModuleName = "Event Generator"; break;
 	case EParticleModuleClass::EventReceiverSpawn: ModuleName = "Event Receiver Spawn"; break;
 	case EParticleModuleClass::EventReceiverKillAll: ModuleName = "Event Receiver Kill All"; break;
-	case EParticleModuleClass::SubUV: ModuleName = "SubUV"; break;
+	case EParticleModuleClass::SubImageIndex: ModuleName = "SubImage Index"; break;
+	case EParticleModuleClass::SubUVMovie: ModuleName = "SubUV Movie"; break;
 	case EParticleModuleClass::Light: ModuleName = "Light"; break;
 	case EParticleModuleClass::VectorField: ModuleName = "Vector Field"; break;
 	case EParticleModuleClass::Camera: ModuleName = "Camera"; break;
@@ -2006,6 +2023,8 @@ bool FParticleSystemEditorWidget::RenderCurveEditorPanel()
 	else if (UParticleModuleVelocity* M = Cast<UParticleModuleVelocity>(SelectedModule))     TryAddVector(M->GetVelocityDist(), "Vel.X","Vel.Y","Vel.Z");
 	else if (UParticleModuleSize* M     = Cast<UParticleModuleSize>(SelectedModule))         TryAddVector(M->GetSizeDist(),     "Size.X","Size.Y","Size.Z");
 	else if (UParticleModuleColor* M    = Cast<UParticleModuleColor>(SelectedModule))        TryAddColor(M->GetColorDist());
+	else if (UParticleModuleSubImageIndex* M = Cast<UParticleModuleSubImageIndex>(SelectedModule)) TryAddFloat(M->GetSubImageIndexDist(), "SubImageIndex");
+	else if (UParticleModuleSubUVMovie* M = Cast<UParticleModuleSubUVMovie>(SelectedModule)) TryAddFloat(M->GetFrameRateDist(), "FrameRate");
 
 	if (!bIsCurveType)
 	{

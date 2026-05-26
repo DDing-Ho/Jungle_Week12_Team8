@@ -33,7 +33,15 @@ struct FBaseParticle
     FVector Size = FVector(1.0f, 1.0f, 1.0f);  // 현재 크기
     FColor  Color = FColor::White(); // 현재 색상
     FColor  BaseColor = FColor::White(); // 현재 색상
-    int32   SubImageIndex = 0;     // SubUV 프레임 인덱스
+    float   SubImageIndex = 0.0f;  // SubUV 원본 프레임 인덱스
+    float   SubUVFrameA = 0.0f;    // 렌더링용 첫 번째 SubUV 프레임
+    float   SubUVFrameB = 0.0f;    // 렌더링용 두 번째 SubUV 프레임
+    float   SubUVLerp = 0.0f;      // FrameA -> FrameB blend 비율
+    float   SubUVRandomLastChangeTime = 0.0f;
+    float   SubUVRandomPreviousFrame = 0.0f;
+    float   SubUVRandomCurrentFrame = 0.0f;
+    float   SubUVMovieTime = 0.0f;
+    float   SubUVMovieStartFrame = 0.0f;
 };
 
 /** ParticleData와 ParticleIndices를 보관하는 메모리 컨테이너 */

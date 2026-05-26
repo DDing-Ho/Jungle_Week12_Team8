@@ -2,6 +2,7 @@
 #include "Particles/Runtime/ParticleRuntimeTypes.h"
 
 #include <algorithm>
+#include <cmath>
 
 // ============================================================
 // FDynamicSpriteEmitterData::GatherRenderData
@@ -37,11 +38,42 @@ void FDynamicSpriteEmitterData::GatherRenderData(
             P->Color.B / 255.f,
             P->Color.A / 255.f);
 
+        FVector4 UVRegionA(0.0f, 0.0f, 1.0f, 1.0f);
+        FVector4 UVRegionB(0.0f, 0.0f, 1.0f, 1.0f);
+        float SubUVLerp = 0.0f;
+        if (Source.bUseSubUV)
+        {
+            const int32 Columns = (std::max)(1, Source.SubUVHorizontalCount);
+            const int32 Rows = (std::max)(1, Source.SubUVVerticalCount);
+            const int32 TotalFrames = Columns * Rows;
+            const float FrameWidth = 1.0f / static_cast<float>(Columns);
+            const float FrameHeight = 1.0f / static_cast<float>(Rows);
+
+            auto FrameToRegion = [&](float InFrame)
+            {
+                const int32 FrameIndex = (std::clamp)(static_cast<int32>(std::floor(InFrame)), 0, TotalFrames - 1);
+                const int32 Column = FrameIndex % Columns;
+                const int32 Row = FrameIndex / Columns;
+                return FVector4(
+                    static_cast<float>(Column) * FrameWidth,
+                    static_cast<float>(Row) * FrameHeight,
+                    FrameWidth,
+                    FrameHeight);
+            };
+
+            UVRegionA = FrameToRegion(P->SubUVFrameA);
+            UVRegionB = FrameToRegion(P->SubUVFrameB);
+            SubUVLerp = (std::clamp)(P->SubUVLerp, 0.0f, 1.0f);
+        }
+
         FSpriteParticleInstanceVertex Instance;
         Instance.Position = Position;
         Instance.Rotation = Rotation;
         Instance.Size = FVector4(P->Size.X * Source.Scale.X, P->Size.Y * Source.Scale.Y, 0.0f, 0.0f);
         Instance.Color = Color;
+        Instance.UVRegionA = UVRegionA;
+        Instance.UVRegionB = UVRegionB;
+        Instance.SubUVLerp = SubUVLerp;
         OutInstances.push_back(Instance);
     };
 

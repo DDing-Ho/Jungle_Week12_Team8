@@ -33,6 +33,9 @@ struct FSpriteParticleInstanceVertex
     float    Rotation;         // billboard rotation in radians
     FVector4 Size;             // xy: width/height, zw: unused
     FVector4 Color;            // rgba: normalized [0,1]
+    FVector4 UVRegionA;        // xy: 첫 번째 atlas frame offset, zw: frame size
+    FVector4 UVRegionB;        // xy: 두 번째 atlas frame offset, zw: frame size
+    float    SubUVLerp;        // UVRegionA -> UVRegionB blend 비율
 };
 
 /** Mesh Particle 인스턴싱용 per-instance 데이터

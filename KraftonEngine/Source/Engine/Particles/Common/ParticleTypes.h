@@ -9,6 +9,7 @@
  * - EParticleModuleUpdatePhase: Spawn / Update 실행 시점
  * - EParticleEventType: Particle Event 종류
  * - EParticleSortMode: Particle 정렬 방식
+ * - EParticleSubUVInterpMethod: SubUV 프레임 선택 / 보간 방식
  * - EDynamicEmitterType: Rendering 전달용 Dynamic Emitter 타입
  */
 
@@ -113,6 +114,17 @@ enum class EParticleSortMode : uint8
     PSM_Age             // Particle 나이 기준 정렬
 };
 
+/** SubUV image selection / interpolation method */
+UENUM()
+enum class EParticleSubUVInterpMethod : uint8
+{
+    PSUVIM_None,         // SubUV 미사용
+    PSUVIM_Linear,       // 순차 프레임, 보간 없음
+    PSUVIM_Linear_Blend, // 순차 프레임, 다음 프레임과 blend
+    PSUVIM_Random,       // random 프레임, 보간 없음
+    PSUVIM_Random_Blend  // random 프레임 변경 시 blend
+};
+
 /** 다형 직렬화 시 모듈 구체 클래스를 식별하는 태그 */
 enum class EParticleModuleClass : uint8
 {
@@ -120,8 +132,10 @@ enum class EParticleModuleClass : uint8
     Rotation, RotationRate, Acceleration, Attractor, Orbit,
     Collision, Kill,
     EventGenerator, EventReceiverSpawn, EventReceiverKillAll,
-    SubUV, Light, VectorField, Camera, Parameter,
+    SubUVLegacy, Light, VectorField, Camera, Parameter,
     TypeDataSprite, TypeDataMesh, TypeDataBeam, TypeDataRibbon,
+    SubImageIndex,
+    SubUVMovie,
     Unknown = 0xFF
 };
 

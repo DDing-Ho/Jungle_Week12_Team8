@@ -4,6 +4,8 @@
 #include "Render/Proxy/ParticleSceneProxy.h"
 #include "Particles/Assets/ParticleSystemAssetManager.h"
 #include "Core/Log.h"
+#include "Profiling/Timer.h"
+#include "Runtime/Engine.h"
 
 #include <algorithm>
 #include <Platform/Paths.h>
@@ -72,6 +74,7 @@ void UParticleSystemComponent::TickComponent(float DeltaTime, ELevelTick TickTyp
 		ResetSystem();
 	}
 
+	const float RawDeltaTime = (GEngine && GEngine->GetTimer()) ? GEngine->GetTimer()->GetRawDeltaTime() : DeltaTime;
 	DeltaTimeTick = DeltaTime * CustomTimeDilation;
 	//AccumLODDistanceCheckTime += DeltaTimeTick;
 
@@ -91,7 +94,7 @@ void UParticleSystemComponent::TickComponent(float DeltaTime, ELevelTick TickTyp
 	// 인스턴스 tick
 	for (auto instance : EmitterInstances) {
 		if (!instance) continue;
-		instance->Tick(DeltaTimeTick, FrameEventQueue);
+		instance->Tick(DeltaTimeTick, FrameEventQueue, RawDeltaTime);
 	}
 
 #if defined(_DEBUG)

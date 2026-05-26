@@ -15,8 +15,10 @@
 #include "Mesh/MeshManager.h"
 #include "Engine/Runtime/Engine.h"
 #include "Object/FUObjectArray.h"
+#include <algorithm>
 #include <chrono>
 #include <cstring>
+#include <cmath>
 
 // ─────────────────────────────────────────────────────────────────────────────
 // UParticleModule (base)
@@ -87,6 +89,34 @@ void UParticleModuleRequired::PostEditProperty(const char* PropertyName)
             LODLevel->SyncTypeDataModuleToRequired();
         }
     }
+
+    SubImages_Horizontal = (std::max)(1, SubImages_Horizontal);
+    SubImages_Vertical = (std::max)(1, SubImages_Vertical);
+    RandomImageChanges = (std::max)(0, RandomImageChanges);
+}
+
+int32 UParticleModuleRequired::GetSubImagesHorizontal() const
+{
+    return (std::max)(1, SubImages_Horizontal);
+}
+
+int32 UParticleModuleRequired::GetSubImagesVertical() const
+{
+    return (std::max)(1, SubImages_Vertical);
+}
+
+int32 UParticleModuleRequired::GetSubImageCount() const
+{
+    return GetSubImagesHorizontal() * GetSubImagesVertical();
+}
+
+float UParticleModuleRequired::GetRandomImageTime() const
+{
+    if (RandomImageChanges <= 0)
+    {
+        return 1.0f;
+    }
+    return 0.99f / static_cast<float>(RandomImageChanges + 1);
 }
 
 void UParticleModuleRequired::Serialize(FArchive& Ar)
@@ -116,6 +146,20 @@ void UParticleModuleRequired::Serialize(FArchive& Ar)
     if (Ar.IsLoading()) SortMode = static_cast<EParticleSortMode>(SortInt);
 
     Ar << TranslucencySortPriority;
+
+    Ar << SubImages_Horizontal;
+    Ar << SubImages_Vertical;
+    int32 InterpInt = static_cast<int32>(InterpolationMethod);
+    Ar << InterpInt;
+    if (Ar.IsLoading()) InterpolationMethod = static_cast<EParticleSubUVInterpMethod>(InterpInt);
+    Ar << RandomImageChanges;
+
+    if (Ar.IsLoading())
+    {
+        SubImages_Horizontal = (std::max)(1, SubImages_Horizontal);
+        SubImages_Vertical = (std::max)(1, SubImages_Vertical);
+        RandomImageChanges = (std::max)(0, RandomImageChanges);
+    }
 }
 
 void UParticleModuleSpawn::Serialize(FArchive& Ar)
@@ -587,14 +631,317 @@ void UParticleModuleEventReceiverKillAll::ProcessEvent(FParticleEmitterInstance&
 // Render Expression Modules
 // ─────────────────────────────────────────────────────────────────────────────
 
-void UParticleModuleSubUV::Serialize(FArchive& Ar)
+void UParticleModuleSubUVBase::Serialize(FArchive& Ar)
 {
     UParticleModule::Serialize(Ar);
-    Ar << HorizontalCount;
-    Ar << VerticalCount;
-    Ar << StartFrame;
-    Ar << EndFrame;
-    Ar << bUseSubImageIndex;
+    Ar << bUseRealTime;
+}
+
+UParticleModuleRequired* UParticleModuleSubUVBase::GetRequiredModule(FParticleEmitterInstance* Owner) const
+{
+    return (Owner && Owner->CurrentLODLevel) ? Owner->CurrentLODLevel->GetRequiredModule() : nullptr;
+}
+
+EParticleSubUVInterpMethod UParticleModuleSubUVBase::GetInterpolationMethod(FParticleEmitterInstance* Owner) const
+{
+    UParticleModuleRequired* Required = GetRequiredModule(Owner);
+    return Required ? Required->GetSubUVInterpolationMethod() : EParticleSubUVInterpMethod::PSUVIM_None;
+}
+
+int32 UParticleModuleSubUVBase::GetSubImageCount(FParticleEmitterInstance* Owner) const
+{
+    UParticleModuleRequired* Required = GetRequiredModule(Owner);
+    return Required ? Required->GetSubImageCount() : 1;
+}
+
+int32 UParticleModuleSubUVBase::ClampFrameIndex(FParticleEmitterInstance* Owner, int32 InFrame) const
+{
+    const int32 FrameCount = (std::max)(1, GetSubImageCount(Owner));
+    return (std::clamp)(InFrame, 0, FrameCount - 1);
+}
+
+int32 UParticleModuleSubUVBase::WrapFrameIndex(FParticleEmitterInstance* Owner, int32 InFrame) const
+{
+    const int32 FrameCount = (std::max)(1, GetSubImageCount(Owner));
+    int32 Wrapped = InFrame % FrameCount;
+    if (Wrapped < 0)
+    {
+        Wrapped += FrameCount;
+    }
+    return Wrapped;
+}
+
+float UParticleModuleSubUVBase::WrapFrameValue(FParticleEmitterInstance* Owner, float InFrame) const
+{
+    const int32 FrameCount = (std::max)(1, GetSubImageCount(Owner));
+    float Wrapped = std::fmod(InFrame, static_cast<float>(FrameCount));
+    if (Wrapped < 0.0f)
+    {
+        Wrapped += static_cast<float>(FrameCount);
+    }
+    return Wrapped;
+}
+
+float UParticleModuleSubUVBase::GetDeltaTime(FParticleEmitterInstance* Owner, float DeltaTime) const
+{
+    if (bUseRealTime && Owner)
+    {
+        return Owner->GetRealDeltaTime();
+    }
+    return DeltaTime;
+}
+
+void UParticleModuleSubUVBase::SetParticleSubUVFrames(FBaseParticle& Particle, float FrameA, float FrameB, float Lerp) const
+{
+    Particle.SubUVFrameA = FrameA;
+    Particle.SubUVFrameB = FrameB;
+    Particle.SubUVLerp = (std::clamp)(Lerp, 0.0f, 1.0f);
+}
+
+void UParticleModuleSubUVBase::SetParticleSequentialSubUV(FParticleEmitterInstance* Owner, FBaseParticle& Particle, float ImageIndex, bool bBlend, bool bLoop) const
+{
+    const int32 FrameCount = (std::max)(1, GetSubImageCount(Owner));
+    const float FrameValue = bLoop
+        ? WrapFrameValue(Owner, ImageIndex)
+        : (std::clamp)(ImageIndex, 0.0f, static_cast<float>(FrameCount - 1));
+
+    const float BaseFrame = std::floor(FrameValue);
+    const float Lerp = bBlend ? (FrameValue - BaseFrame) : 0.0f;
+    const int32 FrameA = bLoop
+        ? WrapFrameIndex(Owner, static_cast<int32>(BaseFrame))
+        : ClampFrameIndex(Owner, static_cast<int32>(BaseFrame));
+    const int32 FrameB = bBlend
+        ? (bLoop ? WrapFrameIndex(Owner, FrameA + 1) : ClampFrameIndex(Owner, FrameA + 1))
+        : FrameA;
+
+    Particle.SubImageIndex = FrameValue;
+    SetParticleSubUVFrames(Particle, static_cast<float>(FrameA), static_cast<float>(FrameB), Lerp);
+}
+
+float UParticleModuleSubUVBase::SelectRandomFrame(FParticleEmitterInstance* Owner) const
+{
+    const int32 FrameCount = (std::max)(1, GetSubImageCount(Owner));
+    const int32 Frame = (std::min)(FrameCount - 1, static_cast<int32>(ModuleStream.GetFraction() * static_cast<float>(FrameCount)));
+    return static_cast<float>((std::max)(0, Frame));
+}
+
+void UParticleModuleSubImageIndex::InitializeDefaultSubImageIndexDistribution()
+{
+    if (!SubImageIndexDist)
+    {
+        SubImageIndexDist = GUObjectArray.CreateObject<UDistributionFloat>(this);
+        SubImageIndexDist->Type = EDistributionType::Constant;
+        SubImageIndexDist->Min = 0.0f;
+        SubImageIndexDist->Max = 0.0f;
+    }
+}
+
+void UParticleModuleSubImageIndex::Serialize(FArchive& Ar)
+{
+    UParticleModuleSubUVBase::Serialize(Ar);
+    InitializeDefaultSubImageIndexDistribution();
+    SubImageIndexDist->Serialize(Ar);
+    if (Ar.IsLoading())
+    {
+        RawSubImageIndex = SubImageIndexDist->BuildRaw();
+    }
+}
+
+void UParticleModuleSubImageIndex::CacheModuleValues()
+{
+    InitializeDefaultSubImageIndexDistribution();
+    RawSubImageIndex = SubImageIndexDist->BuildRaw();
+}
+
+void UParticleModuleSubImageIndex::InitializeRandomSubImage(FParticleEmitterInstance* Owner, FBaseParticle& Particle)
+{
+    const float Frame = SelectRandomFrame(Owner);
+    Particle.SubUVRandomLastChangeTime = Particle.RelativeTime;
+    Particle.SubUVRandomPreviousFrame = Frame;
+    Particle.SubUVRandomCurrentFrame = Frame;
+    Particle.SubImageIndex = Frame;
+    SetParticleSubUVFrames(Particle, Frame, Frame, 0.0f);
+}
+
+void UParticleModuleSubImageIndex::ApplyRandomSubImage(FParticleEmitterInstance* Owner, FBaseParticle& Particle)
+{
+    UParticleModuleRequired* Required = GetRequiredModule(Owner);
+    if (!Required)
+    {
+        SetParticleSubUVFrames(Particle, 0.0f, 0.0f, 0.0f);
+        return;
+    }
+
+    const EParticleSubUVInterpMethod InterpMethod = Required->GetSubUVInterpolationMethod();
+    const bool bBlend = InterpMethod == EParticleSubUVInterpMethod::PSUVIM_Random_Blend;
+    const int32 ChangeCount = Required->GetRandomImageChanges();
+    const float RandomImageTime = Required->GetRandomImageTime();
+
+    if (ChangeCount > 0 && RandomImageTime > 0.0f
+        && (Particle.RelativeTime - Particle.SubUVRandomLastChangeTime) >= RandomImageTime)
+    {
+        Particle.SubUVRandomPreviousFrame = Particle.SubUVRandomCurrentFrame;
+        Particle.SubUVRandomCurrentFrame = SelectRandomFrame(Owner);
+        Particle.SubUVRandomLastChangeTime = Particle.RelativeTime;
+    }
+
+    const float Alpha = bBlend && ChangeCount > 0 && RandomImageTime > 0.0f
+        ? (std::clamp)((Particle.RelativeTime - Particle.SubUVRandomLastChangeTime) / RandomImageTime, 0.0f, 1.0f)
+        : 0.0f;
+
+    Particle.SubImageIndex = Particle.SubUVRandomCurrentFrame;
+    SetParticleSubUVFrames(Particle,
+        Particle.SubUVRandomPreviousFrame,
+        Particle.SubUVRandomCurrentFrame,
+        Alpha);
+}
+
+void UParticleModuleSubImageIndex::ApplySubImageIndex(FParticleEmitterInstance* Owner, FBaseParticle& Particle)
+{
+    const EParticleSubUVInterpMethod InterpMethod = GetInterpolationMethod(Owner);
+    if (InterpMethod == EParticleSubUVInterpMethod::PSUVIM_None)
+    {
+        return;
+    }
+
+    if (InterpMethod == EParticleSubUVInterpMethod::PSUVIM_Random
+        || InterpMethod == EParticleSubUVInterpMethod::PSUVIM_Random_Blend)
+    {
+        ApplyRandomSubImage(Owner, Particle);
+        return;
+    }
+
+    const bool bBlend = InterpMethod == EParticleSubUVInterpMethod::PSUVIM_Linear_Blend;
+    const float T = (std::clamp)(Particle.RelativeTime, 0.0f, 1.0f);
+    const float ImageIndex = RawSubImageIndex.GetValue(T, nullptr);
+    SetParticleSequentialSubUV(Owner, Particle, ImageIndex, bBlend, false);
+}
+
+void UParticleModuleSubImageIndex::Spawn(FParticleEmitterInstance* Owner, FBaseParticle& Particle, float SpawnTime)
+{
+    if (!bEnabled) return;
+
+    const EParticleSubUVInterpMethod InterpMethod = GetInterpolationMethod(Owner);
+    if (InterpMethod == EParticleSubUVInterpMethod::PSUVIM_Random
+        || InterpMethod == EParticleSubUVInterpMethod::PSUVIM_Random_Blend)
+    {
+        InitializeRandomSubImage(Owner, Particle);
+        return;
+    }
+
+    ApplySubImageIndex(Owner, Particle);
+}
+
+void UParticleModuleSubImageIndex::Update(FParticleEmitterInstance* Owner, float DeltaTime)
+{
+    if (!bEnabled) return;
+
+    uint8*  ParticleData    = Owner->ParticleData;
+    uint16* ParticleIndices = Owner->ParticleIndices;
+    int32   ParticleStride  = Owner->ParticleStride;
+    int32   ActiveParticles = Owner->ActiveParticles;
+
+    BEGIN_UPDATE_LOOP
+        ApplySubImageIndex(Owner, Particle);
+    END_UPDATE_LOOP
+}
+
+void UParticleModuleSubUVMovie::InitializeDefaultFrameRateDistribution()
+{
+    if (!FrameRateDist)
+    {
+        FrameRateDist = GUObjectArray.CreateObject<UDistributionFloat>(this);
+        FrameRateDist->Type = EDistributionType::Constant;
+        FrameRateDist->Min = 30.0f;
+        FrameRateDist->Max = 30.0f;
+    }
+}
+
+void UParticleModuleSubUVMovie::Serialize(FArchive& Ar)
+{
+    UParticleModuleSubUVBase::Serialize(Ar);
+    InitializeDefaultFrameRateDistribution();
+    FrameRateDist->Serialize(Ar);
+    Ar << StartingFrame;
+    Ar << bUseEmitterTime;
+    if (Ar.IsLoading())
+    {
+        RawFrameRate = FrameRateDist->BuildRaw();
+        StartingFrame = (std::max)(0, StartingFrame);
+    }
+}
+
+void UParticleModuleSubUVMovie::CacheModuleValues()
+{
+    InitializeDefaultFrameRateDistribution();
+    RawFrameRate = FrameRateDist->BuildRaw();
+    StartingFrame = (std::max)(0, StartingFrame);
+}
+
+int32 UParticleModuleSubUVMovie::ResolveStartingFrame(FParticleEmitterInstance* Owner)
+{
+    const int32 FrameCount = (std::max)(1, GetSubImageCount(Owner));
+    if (StartingFrame == 0)
+    {
+        return static_cast<int32>(SelectRandomFrame(Owner));
+    }
+    return (std::clamp)(StartingFrame - 1, 0, FrameCount - 1);
+}
+
+void UParticleModuleSubUVMovie::ApplyMovieFrame(FParticleEmitterInstance* Owner, FBaseParticle& Particle, float DeltaTime)
+{
+    const EParticleSubUVInterpMethod InterpMethod = GetInterpolationMethod(Owner);
+    if (InterpMethod == EParticleSubUVInterpMethod::PSUVIM_None)
+    {
+        return;
+    }
+
+    Particle.SubUVMovieTime += GetDeltaTime(Owner, DeltaTime);
+
+    const float EvalT = bUseEmitterTime && Owner
+        ? Owner->GetEmitterTime()
+        : (std::clamp)(Particle.RelativeTime, 0.0f, 1.0f);
+    const float FrameRate = RawFrameRate.GetValue(EvalT, nullptr);
+    const float ImageIndex = Particle.SubUVMovieStartFrame + Particle.SubUVMovieTime * FrameRate;
+    const bool bBlend = InterpMethod == EParticleSubUVInterpMethod::PSUVIM_Linear_Blend;
+    SetParticleSequentialSubUV(Owner, Particle, ImageIndex, bBlend, true);
+}
+
+void UParticleModuleSubUVMovie::Spawn(FParticleEmitterInstance* Owner, FBaseParticle& Particle, float SpawnTime)
+{
+    if (!bEnabled) return;
+
+    const EParticleSubUVInterpMethod InterpMethod = GetInterpolationMethod(Owner);
+    if (InterpMethod != EParticleSubUVInterpMethod::PSUVIM_Linear
+        && InterpMethod != EParticleSubUVInterpMethod::PSUVIM_Linear_Blend)
+    {
+        return;
+    }
+
+    Particle.SubUVMovieStartFrame = static_cast<float>(ResolveStartingFrame(Owner));
+    Particle.SubUVMovieTime = (std::max)(0.0f, SpawnTime);
+    ApplyMovieFrame(Owner, Particle, 0.0f);
+}
+
+void UParticleModuleSubUVMovie::Update(FParticleEmitterInstance* Owner, float DeltaTime)
+{
+    if (!bEnabled) return;
+
+    const EParticleSubUVInterpMethod InterpMethod = GetInterpolationMethod(Owner);
+    if (InterpMethod != EParticleSubUVInterpMethod::PSUVIM_Linear
+        && InterpMethod != EParticleSubUVInterpMethod::PSUVIM_Linear_Blend)
+    {
+        return;
+    }
+
+    uint8*  ParticleData    = Owner->ParticleData;
+    uint16* ParticleIndices = Owner->ParticleIndices;
+    int32   ParticleStride  = Owner->ParticleStride;
+    int32   ActiveParticles = Owner->ActiveParticles;
+
+    BEGIN_UPDATE_LOOP
+        ApplyMovieFrame(Owner, Particle, DeltaTime);
+    END_UPDATE_LOOP
 }
 
 void UParticleModuleLight::Serialize(FArchive& Ar)

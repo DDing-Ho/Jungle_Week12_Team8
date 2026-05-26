@@ -1,6 +1,7 @@
 ﻿#include "ParticleEmitterInstance.h"
 #include "Particles/Common/ParticleHelper.h"
 #include "Particles/Modules/ParticleEventModules.h"
+#include "Particles/Modules/ParticleRenderExpressionModules.h"
 #include "Core/EngineTypes.h"
 #include "Component/ParticleSystemComponent.h"
 #include "Math/Vector.h"
@@ -75,6 +76,7 @@ void FParticleEmitterInstance::Init(UParticleSystemComponent* InComponent, UPart
 	LoopCount = 0;
 	EmitterTime = 0.0f;
 	LastDeltaTime = 0.0f;
+	RealDeltaTime = 0.0f;
 
 	// 각 모듈의 RandomSeedInfo를 바탕으로 모듈 전용 스트림 초기화
 	for (UParticleModule* Module : CurrentLODLevel->GetModules())
@@ -84,12 +86,14 @@ void FParticleEmitterInstance::Init(UParticleSystemComponent* InComponent, UPart
 	}
 }
 
-void FParticleEmitterInstance::Tick(float DeltaTime, TArray<FParticleEventData>& OutEventQueue)
+void FParticleEmitterInstance::Tick(float DeltaTime, TArray<FParticleEventData>& OutEventQueue, float InRealDeltaTime)
 {
 	if (!CurrentLODLevel)
 		return;
 
 	if(!bEnabled) return;
+
+	RealDeltaTime = InRealDeltaTime >= 0.0f ? InRealDeltaTime : DeltaTime;
 
 	// 이미터 시간 갱신
 	EmitterTime += DeltaTime;
@@ -172,6 +176,7 @@ void FParticleEmitterInstance::Reset()
 {
 	EmitterTime = 0;
 	LastDeltaTime = 0;
+	RealDeltaTime = 0;
 	LoopCount = 0;
 	ParticleCounter = 0;
 	ActiveParticles = 0;
@@ -510,6 +515,20 @@ FDynamicEmitterDataBase* FParticleSpriteEmitterInstance::CreateDynamicEmitterDat
 		Source.Material = RequiredModule->GetMaterial();
 		Source.SortMode = RequiredModule->GetSortMode();
 		Source.TranslucencySortPriority = RequiredModule->GetTranslucencySortPriority();
+		Source.SubUVInterpolationMethod = RequiredModule->GetSubUVInterpolationMethod();
+		Source.SubUVHorizontalCount = RequiredModule->GetSubImagesHorizontal();
+		Source.SubUVVerticalCount = RequiredModule->GetSubImagesVertical();
+	}
+
+	for (UParticleModule* Module : CurrentLODLevel->GetModules())
+	{
+		UParticleModuleSubUVBase* SubUVModule = Cast<UParticleModuleSubUVBase>(Module);
+		if (SubUVModule && SubUVModule->IsEnabled())
+		{
+			Source.bUseSubUV = RequiredModule
+				&& RequiredModule->GetSubUVInterpolationMethod() != EParticleSubUVInterpMethod::PSUVIM_None;
+			break;
+		}
 	}
 
 	Source.DataContainer.Allocate(ParticleStride, ActiveParticles);
@@ -544,9 +563,9 @@ void FParticleMeshEmitterInstance::Init(UParticleSystemComponent* InComponent, U
 	}
 }
 
-void FParticleMeshEmitterInstance::Tick(float DeltaTime, TArray<FParticleEventData>& OutEventQueue)
+void FParticleMeshEmitterInstance::Tick(float DeltaTime, TArray<FParticleEventData>& OutEventQueue, float InRealDeltaTime)
 {
-	FParticleEmitterInstance::Tick(DeltaTime, OutEventQueue);
+	FParticleEmitterInstance::Tick(DeltaTime, OutEventQueue, InRealDeltaTime);
 
 	//MeshRotation및 payload계산
 }
