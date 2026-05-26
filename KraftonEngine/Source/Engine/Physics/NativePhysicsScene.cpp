@@ -447,6 +447,17 @@ bool FNativePhysicsScene::Raycast(const FVector& Start, const FVector& Dir, floa
 		OutHit.HitComponent = Comp;
 		OutHit.HitActor = Comp->GetOwner();
 		OutHit.WorldHitLocation = Start + Dir * tMin;
+
+		// 박스의 어느 면을 때렸는지 찾아서 반사/마찰/충돌 이벤트에 쓸 법선을 만듦
+		FVector Normal = FVector::ZeroVector;
+		if (tMin == tzMin)
+			Normal.Z = (Dir.Z > 0.0f) ? -1.0f : 1.0f;
+		else if (tMin == tyMin)
+			Normal.Y = (Dir.Y > 0.0f) ? -1.0f : 1.0f;
+		else
+			Normal.X = (Dir.X > 0.0f) ? -1.0f : 1.0f;
+		OutHit.ImpactNormal = Normal; // 맞은 표면의 normal
+		OutHit.WorldNormal  = Normal; // 밀어낼 방향
 	}
 
 	return bFound;
