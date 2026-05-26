@@ -8,10 +8,9 @@
 
 #pragma once
 
+#include "Core/EngineTypes.h"
 #include "ParticleModules.h"
 #include "ParticleKillModules.generated.h"
-
-struct FBoundingBox;
 
 /** 조건 기반 Particle 제거를 처리하는 모듈 */
 UCLASS()
@@ -24,6 +23,7 @@ class UParticleModuleKill : public UParticleModule
     virtual EParticleModuleUpdatePhase GetUpdatePhase() const override { return EParticleModuleUpdatePhase::PMUP_SpawnAndUpdate; }
     virtual EParticleModuleClass       GetModuleClass() const override { return EParticleModuleClass::Kill; }
     virtual void Serialize(FArchive& Ar) override;
+    virtual void PostEditProperty(const char* PropertyName) override;
     virtual void Update(
         FParticleEmitterInstance* Owner,
         float DeltaTime,
@@ -35,6 +35,7 @@ class UParticleModuleKill : public UParticleModule
     bool  bUseKillBox = false;    // Box 기준 제거 사용 여부
     UPROPERTY(Edit, Category="Particle", DisplayName="Use Kill Height")
     bool  bUseKillHeight = false; // Height 기준 제거 사용 여부
+    UPROPERTY(Edit, Category="Particle", DisplayName="Kill Box")
     FBoundingBox  KillBox;        // Particle 제거 기준 Box (KillBox 내부 진입 시 제거)
     UPROPERTY(Edit, Category="Particle", DisplayName="Kill Height", Speed=0.1)
     float KillHeight = 0.0f;      // 이 높이 이하로 내려간 Particle 제거

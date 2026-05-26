@@ -56,9 +56,14 @@ struct FLinearColor
 // ============================================================
 // FBoundingBox — AABB (Axis-Aligned Bounding Box)
 // ============================================================
+USTRUCT()
 struct FBoundingBox
 {
+	GENERATED_BODY(FBoundingBox)
+
+	UPROPERTY(Edit, Category="Bounds")
 	FVector Min;
+	UPROPERTY(Edit, Category="Bounds")
 	FVector Max;
 
 	FBoundingBox()

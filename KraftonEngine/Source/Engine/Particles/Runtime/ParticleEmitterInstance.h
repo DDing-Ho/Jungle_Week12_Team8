@@ -40,10 +40,11 @@ struct FParticleEmitterInstance
     
 	virtual void Init(UParticleSystemComponent *InComponent, UParticleEmitter *InTemplate);                                                     // Instance 초기화
     virtual void Tick(float DeltaTime, TArray<FParticleEventData>& OutEventQueue, float RealDeltaTime = -1.0f);                                 // 매 프레임 갱신
-    void ProcessEvents(const TArray<FParticleEventData>& EventQueue);                                                                           // EventQueue 처리
+    void ProcessEvents(TArray<FParticleEventData>& EventQueue);                                                                                 // EventQueue 처리
     void SpawnParticles(int32 Count, float StartTime, float Increment, const FVector &InitialLocation, const FVector &InitialVelocity, TArray<FParticleEventData>* OutEventQueue = nullptr); // Particle 생성
     void KillParticle(int32 Index);                                                                                                     // 단일 Particle 제거
-    void KillAllParticles();                                                                                                            // 전체 Particle 제거
+    void KillParticleWithEvents(int32 Index, TArray<FParticleEventData>* OutEventQueue = nullptr);                                      // Death Event와 함께 단일 Particle 제거
+    void KillAllParticles(TArray<FParticleEventData>* OutEventQueue = nullptr);                                                           // 전체 Particle 제거
 	void Reset();
 	void ResetParticleParameters(float DeltaTime);												// 전체 초기화 아님, 틱 중에 초기화되어야하는 파라미터 초기화
 
@@ -60,7 +61,7 @@ struct FParticleEmitterInstance
   private:
     void KillExpiredParticles(TArray<FParticleEventData>& OutEventQueue);                                   // 수명 종료 Particle 제거
     bool HasReceiverFor(const FParticleEventData& Event) const;
-    void ProcessReceivedEvents();
+    void ProcessReceivedEvents(TArray<FParticleEventData>* OutEventQueue);
     int32 ResolveEmitterIndex() const;
 	
 	FBaseParticle& GetParticle(int32 index);

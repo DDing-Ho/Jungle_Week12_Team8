@@ -245,6 +245,35 @@ namespace
 	constexpr int32 AccelerationModuleDragOffset = AccelerationModuleConstAccelerationOffset + sizeof(FVector);
 	constexpr int32 AccelerationModulePayloadSize = AccelerationModuleDragOffset + sizeof(float);
 
+    struct FParticleColorPayload
+    {
+        float RandomFactor = 0.5f;
+    };
+
+    struct FParticleSizePayload
+    {
+        FVector RandomFactors = FVector(0.5f, 0.5f, 0.5f);
+        FVector MirrorRandomFactors = FVector(0.5f, 0.5f, 0.5f);
+    };
+
+    constexpr int32 ColorModulePayloadSize = sizeof(FParticleColorPayload);
+    constexpr int32 SizeModulePayloadSize = sizeof(FParticleSizePayload);
+
+    FColor ToParticleColor(const FLinearColor& InColor)
+    {
+        const auto ToChannel = [](float Value) -> uint32
+        {
+            const float ScaledValue = std::clamp(Value * 255.0f, 0.0f, 255.0f);
+            return static_cast<uint32>(ScaledValue);
+        };
+
+        return FColor(
+            ToChannel(InColor.R),
+            ToChannel(InColor.G),
+            ToChannel(InColor.B),
+            ToChannel(InColor.A));
+    }
+
 	uint8* GetWritableModuleData(FBaseParticle& Particle, int32 ModuleOffset, int32 RequiredBytes)
 	{
 		if (ModuleOffset == INDEX_NONE || ModuleOffset < 0 || RequiredBytes <= 0)
@@ -257,6 +286,26 @@ namespace
 	{
 		return GetWritableModuleData(const_cast<FBaseParticle&>(Particle), ModuleOffset, RequiredBytes);
 	}
+
+    FParticleColorPayload* GetColorPayload(FBaseParticle& Particle, int32 ModuleOffset)
+    {
+        return reinterpret_cast<FParticleColorPayload*>(GetWritableModuleData(Particle, ModuleOffset, ColorModulePayloadSize));
+    }
+
+    const FParticleColorPayload* GetColorPayload(const FBaseParticle& Particle, int32 ModuleOffset)
+    {
+        return reinterpret_cast<const FParticleColorPayload*>(GetReadableModuleData(Particle, ModuleOffset, ColorModulePayloadSize));
+    }
+
+    FParticleSizePayload* GetSizePayload(FBaseParticle& Particle, int32 ModuleOffset)
+    {
+        return reinterpret_cast<FParticleSizePayload*>(GetWritableModuleData(Particle, ModuleOffset, SizeModulePayloadSize));
+    }
+
+    const FParticleSizePayload* GetSizePayload(const FBaseParticle& Particle, int32 ModuleOffset)
+    {
+        return reinterpret_cast<const FParticleSizePayload*>(GetReadableModuleData(Particle, ModuleOffset, SizeModulePayloadSize));
+    }
 }
 
 void UParticleModuleLifetime::Serialize(FArchive& Ar)
@@ -376,6 +425,11 @@ void UParticleModuleVelocity::Spawn(FParticleEmitterInstance* Owner, FBasePartic
 
 // ── Color ─────────────────────────────────────────────────────────────────────
 
+uint32 UParticleModuleColor::RequiredBytes(UParticleModuleTypeDataBase* TypeData) const
+{
+    return ColorModulePayloadSize;
+}
+
 void UParticleModuleColor::Serialize(FArchive& Ar)
 {
     UParticleModule::Serialize(Ar);
@@ -391,7 +445,6 @@ void UParticleModuleColor::Serialize(FArchive& Ar)
     if (Ar.IsLoading())
         RawColor = ColorDist->BuildRaw();
 }
-
 void UParticleModuleColor::CacheModuleValues()
 {
     if (!ColorDist)
@@ -407,13 +460,15 @@ void UParticleModuleColor::CacheModuleValues()
 void UParticleModuleColor::Spawn(FParticleEmitterInstance* Owner, FBaseParticle& Particle, float SpawnTime, int32 ModuleOffset)
 {
     if (!bEnabled) return;
-    const FLinearColor C = RawColor.GetValue(0.f, &ModuleStream);
-    Particle.BaseColor = FColor(
-        static_cast<uint32>(C.R * 255.f),
-        static_cast<uint32>(C.G * 255.f),
-        static_cast<uint32>(C.B * 255.f),
-        static_cast<uint32>(C.A * 255.f)
-    );
+    FParticleColorPayload* Payload = GetColorPayload(Particle, ModuleOffset);
+    const float RandomFactor = ModuleStream.GetFraction();
+    if (Payload)
+    {
+        Payload->RandomFactor = RandomFactor;
+    }
+
+    const FLinearColor C = RawColor.GetValue(0.f, Payload ? Payload->RandomFactor : RandomFactor);
+    Particle.BaseColor = ToParticleColor(C);
     Particle.Color = Particle.BaseColor;
 }
 
@@ -431,17 +486,20 @@ void UParticleModuleColor::Update(
     int32   ActiveParticles = Owner->ActiveParticles;
 
     BEGIN_PARTICLE_UPDATE_LOOP
-        const FLinearColor C = RawColor.GetValue(Particle.RelativeTime, nullptr);
-        Particle.Color = FColor(
-            static_cast<uint32>(C.R * 255.f),
-            static_cast<uint32>(C.G * 255.f),
-            static_cast<uint32>(C.B * 255.f),
-            static_cast<uint32>(C.A * 255.f)
-        );
+        const FParticleColorPayload* Payload = GetColorPayload(Particle, ModuleOffset);
+        const FLinearColor C = Payload
+            ? RawColor.GetValue(Particle.RelativeTime, Payload->RandomFactor)
+            : RawColor.GetValue(Particle.RelativeTime, nullptr);
+        Particle.Color = ToParticleColor(C);
     END_PARTICLE_UPDATE_LOOP
 }
 
 // ── Size ──────────────────────────────────────────────────────────────────────
+
+uint32 UParticleModuleSize::RequiredBytes(UParticleModuleTypeDataBase* TypeData) const
+{
+    return SizeModulePayloadSize;
+}
 
 void UParticleModuleSize::Serialize(FArchive& Ar)
 {
@@ -475,11 +533,29 @@ void UParticleModuleSize::CacheModuleValues()
     if (SizeDist)
         RawSize = SizeDist->BuildRaw();
 }
-
 void UParticleModuleSize::Spawn(FParticleEmitterInstance* Owner, FBaseParticle& Particle, float SpawnTime, int32 ModuleOffset)
 {
     if (!bEnabled) return;
-    const FVector S  = RawSize.GetValue(0.f, &ModuleStream);
+    FParticleSizePayload* Payload = GetSizePayload(Particle, ModuleOffset);
+    const FVector RandomFactors(
+        ModuleStream.GetFraction(),
+        ModuleStream.GetFraction(),
+        ModuleStream.GetFraction());
+    const FVector MirrorRandomFactors(
+        ModuleStream.GetFraction(),
+        ModuleStream.GetFraction(),
+        ModuleStream.GetFraction());
+
+    if (Payload)
+    {
+        Payload->RandomFactors = RandomFactors;
+        Payload->MirrorRandomFactors = MirrorRandomFactors;
+    }
+
+    const FVector S = RawSize.GetValue(
+        0.f,
+        Payload ? Payload->RandomFactors : RandomFactors,
+        Payload ? Payload->MirrorRandomFactors : MirrorRandomFactors);
     Particle.BaseSize = S;
     Particle.Size     = S;
 }
@@ -498,7 +574,10 @@ void UParticleModuleSize::Update(
     int32   ActiveParticles = Owner->ActiveParticles;
 
     BEGIN_PARTICLE_UPDATE_LOOP
-        Particle.Size = RawSize.GetValue(Particle.RelativeTime, nullptr);
+        const FParticleSizePayload* Payload = GetSizePayload(Particle, ModuleOffset);
+        Particle.Size = Payload
+            ? RawSize.GetValue(Particle.RelativeTime, Payload->RandomFactors, Payload->MirrorRandomFactors)
+            : RawSize.GetValue(Particle.RelativeTime, nullptr);
     END_PARTICLE_UPDATE_LOOP
 }
 
@@ -956,7 +1035,7 @@ void UParticleModuleCollision::Update(
                 // ------------------------------------------------
                 // 충돌 횟수 초과 시 파티클 제거
                 // ------------------------------------------------
-                Owner->KillParticle(Index);
+                Owner->KillParticleWithEvents(Index, OutEventQueue);
                 continue;
 
             case EParticleCollisionCompletionOption::EPCC_Freeze:
@@ -1095,8 +1174,18 @@ void UParticleModuleKill::Serialize(FArchive& Ar)
     UParticleModule::Serialize(Ar);
     Ar << bUseKillBox;
     Ar << bUseKillHeight;
-    Ar << KillBox;
+    Ar << KillBox.Min;
+    Ar << KillBox.Max;
     Ar << KillHeight;
+}
+
+void UParticleModuleKill::PostEditProperty(const char* PropertyName)
+{
+    UParticleModule::PostEditProperty(PropertyName);
+
+    if (KillBox.Min.X > KillBox.Max.X) std::swap(KillBox.Min.X, KillBox.Max.X);
+    if (KillBox.Min.Y > KillBox.Max.Y) std::swap(KillBox.Min.Y, KillBox.Max.Y);
+    if (KillBox.Min.Z > KillBox.Max.Z) std::swap(KillBox.Min.Z, KillBox.Max.Z);
 }
 
 void UParticleModuleKill::Update(
@@ -1135,7 +1224,7 @@ void UParticleModuleKill::Update(
         }
 
         if (bKill)
-            Owner->KillParticle(Index);
+            Owner->KillParticleWithEvents(Index, OutEventQueue);
     }
 }
 
@@ -1179,7 +1268,10 @@ bool UParticleModuleEventReceiverBase::MatchesEvent(const FParticleEventData& Ev
     return true;
 }
 
-void UParticleModuleEventReceiverSpawn::ProcessEvent(FParticleEmitterInstance& OwnerEmitter, const FParticleEventData& Event)
+void UParticleModuleEventReceiverSpawn::ProcessEvent(
+    FParticleEmitterInstance& OwnerEmitter,
+    const FParticleEventData& Event,
+    TArray<FParticleEventData>* OutEventQueue)
 {
     if (!MatchesEvent(Event))
         return;
@@ -1188,7 +1280,7 @@ void UParticleModuleEventReceiverSpawn::ProcessEvent(FParticleEmitterInstance& O
     if (Count <= 0)
         return;
 
-    OwnerEmitter.SpawnParticles(Count, 0.0f, 0.0f, Event.Location, Event.Velocity);
+    OwnerEmitter.SpawnParticles(Count, 0.0f, 0.0f, Event.Location, Event.Velocity, OutEventQueue);
 }
 
 void UParticleModuleEventReceiverKillAll::Serialize(FArchive& Ar)
@@ -1196,12 +1288,15 @@ void UParticleModuleEventReceiverKillAll::Serialize(FArchive& Ar)
     UParticleModuleEventReceiverBase::Serialize(Ar);
 }
 
-void UParticleModuleEventReceiverKillAll::ProcessEvent(FParticleEmitterInstance& OwnerEmitter, const FParticleEventData& Event)
+void UParticleModuleEventReceiverKillAll::ProcessEvent(
+    FParticleEmitterInstance& OwnerEmitter,
+    const FParticleEventData& Event,
+    TArray<FParticleEventData>* OutEventQueue)
 {
     if (!MatchesEvent(Event))
         return;
 
-    OwnerEmitter.KillAllParticles();
+    OwnerEmitter.KillAllParticles(OutEventQueue);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

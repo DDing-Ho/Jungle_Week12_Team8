@@ -17,9 +17,14 @@ struct FParticleEventData;
 struct FParticleEmitterInstance;
 
 /** Generator가 발행하는 단일 Event 선언 */
+USTRUCT()
 struct FParticleEventGeneratorEntry
 {
+    GENERATED_BODY(FParticleEventGeneratorEntry)
+
+    UPROPERTY(Edit, Category="Particle", DisplayName="Event Type")
     EParticleEventType Type = EParticleEventType::PEET_Custom;
+    UPROPERTY(Edit, Category="Particle", DisplayName="Event Name")
     FName              EventName;
 };
 
@@ -37,15 +42,21 @@ inline FArchive& operator<<(FArchive& Ar, FParticleEventGeneratorEntry& Entry)
 }
 
 /** Event Receiver 모듈의 공통 기반 클래스 */
+UCLASS()
 class UParticleModuleEventReceiverBase : public UParticleModule
 {
   public:
+    GENERATED_BODY(UParticleModuleEventReceiverBase)
+
     virtual EParticleModuleType        GetModuleType() const override { return EParticleModuleType::PMT_Event; }
     virtual EParticleModuleUpdatePhase GetUpdatePhase() const override { return EParticleModuleUpdatePhase::PMUP_Update; }
     virtual void Serialize(FArchive& Ar) override;
 
     bool MatchesEvent(const FParticleEventData& Event) const;
-    virtual void ProcessEvent(FParticleEmitterInstance& OwnerEmitter, const FParticleEventData& Event) {}
+    virtual void ProcessEvent(
+        FParticleEmitterInstance& OwnerEmitter,
+        const FParticleEventData& Event,
+        TArray<FParticleEventData>* OutEventQueue = nullptr) {}
 
   protected:
     UPROPERTY(Edit, Category="Particle", DisplayName="Listen Event Type")
@@ -69,6 +80,7 @@ class UParticleModuleEventGenerator : public UParticleModule
     const TArray<FParticleEventGeneratorEntry>& GetGeneratedEvents() const { return GeneratedEvents; }
 
   private:
+    UPROPERTY(Edit, Category="Particle", DisplayName="Generated Events")
     TArray<FParticleEventGeneratorEntry> GeneratedEvents; // 생성할 Event 선언 목록
 };
 
@@ -81,7 +93,10 @@ class UParticleModuleEventReceiverSpawn : public UParticleModuleEventReceiverBas
 
     virtual EParticleModuleClass GetModuleClass() const override { return EParticleModuleClass::EventReceiverSpawn; }
     virtual void Serialize(FArchive& Ar) override;
-    virtual void ProcessEvent(FParticleEmitterInstance& OwnerEmitter, const FParticleEventData& Event) override;
+    virtual void ProcessEvent(
+        FParticleEmitterInstance& OwnerEmitter,
+        const FParticleEventData& Event,
+        TArray<FParticleEventData>* OutEventQueue = nullptr) override;
 
   private:
     UPROPERTY(Edit, Category="Particle", DisplayName="Spawn Count", Min=0, Max=100000, Speed=1.0)
@@ -97,5 +112,8 @@ class UParticleModuleEventReceiverKillAll : public UParticleModuleEventReceiverB
 
     virtual EParticleModuleClass GetModuleClass() const override { return EParticleModuleClass::EventReceiverKillAll; }
     virtual void Serialize(FArchive& Ar) override;
-    virtual void ProcessEvent(FParticleEmitterInstance& OwnerEmitter, const FParticleEventData& Event) override;
+    virtual void ProcessEvent(
+        FParticleEmitterInstance& OwnerEmitter,
+        const FParticleEventData& Event,
+        TArray<FParticleEventData>* OutEventQueue = nullptr) override;
 };

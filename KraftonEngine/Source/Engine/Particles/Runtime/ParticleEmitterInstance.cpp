@@ -184,9 +184,28 @@ void FParticleEmitterInstance::KillParticle(int32 Index)
 	ActiveParticles--;
 }
 
-void FParticleEmitterInstance::KillAllParticles()
+void FParticleEmitterInstance::KillParticleWithEvents(int32 Index, TArray<FParticleEventData>* OutEventQueue)
 {
-	ActiveParticles = 0;
+	if (Index < 0 || Index >= ActiveParticles)
+		return;
+
+	if (OutEventQueue && ParticleData && ParticleIndices && ParticleStride > 0)
+	{
+		const int32 RealIndex = ParticleIndices[Index];
+		const FBaseParticle& Particle =
+			*reinterpret_cast<const FBaseParticle*>(ParticleData + ParticleStride * RealIndex);
+		PublishParticleEvents(EParticleEventType::PEET_Death, Particle, Index, OutEventQueue);
+	}
+
+	KillParticle(Index);
+}
+
+void FParticleEmitterInstance::KillAllParticles(TArray<FParticleEventData>* OutEventQueue)
+{
+	for (int32 Index = ActiveParticles - 1; Index >= 0; --Index)
+	{
+		KillParticleWithEvents(Index, OutEventQueue);
+	}
 }
 
 void FParticleEmitterInstance::Reset()
@@ -351,13 +370,12 @@ void FParticleEmitterInstance::KillExpiredParticles(TArray<FParticleEventData>& 
 	BEGIN_PARTICLE_UPDATE_LOOP
 	if (Particle.Lifetime > 0.0f && Particle.RelativeTime >= 1.0f)
 	{
-		PublishParticleEvents(EParticleEventType::PEET_Death, Particle, Index, &OutEventQueue);
-		KillParticle(Index);
+		KillParticleWithEvents(Index, &OutEventQueue);
 	}
 	END_PARTICLE_UPDATE_LOOP
 }
 
-void FParticleEmitterInstance::ProcessEvents(const TArray<FParticleEventData>& EventQueue)
+void FParticleEmitterInstance::ProcessEvents(TArray<FParticleEventData>& EventQueue)
 {
 	ReceivedEvents.clear();
 
@@ -382,7 +400,7 @@ void FParticleEmitterInstance::ProcessEvents(const TArray<FParticleEventData>& E
 	}
 #endif
 
-	ProcessReceivedEvents();
+	ProcessReceivedEvents(&EventQueue);
 }
 
 bool FParticleEmitterInstance::HasReceiverFor(const FParticleEventData& Event) const
@@ -408,7 +426,7 @@ bool FParticleEmitterInstance::HasReceiverFor(const FParticleEventData& Event) c
 	return false;
 }
 
-void FParticleEmitterInstance::ProcessReceivedEvents()
+void FParticleEmitterInstance::ProcessReceivedEvents(TArray<FParticleEventData>* OutEventQueue)
 {
 	if (!CurrentLODLevel || ReceivedEvents.empty())
 		return;
@@ -440,7 +458,7 @@ void FParticleEmitterInstance::ProcessReceivedEvents()
 				}
 #endif
 
-				Receiver->ProcessEvent(*this, EventData);
+				Receiver->ProcessEvent(*this, EventData, OutEventQueue);
 			}
 		}
 	}
