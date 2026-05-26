@@ -934,13 +934,13 @@ void FParticleSystemEditorWidget::Render(float DeltaTime)
 	}
 	ImGui::SameLine();
 	ImGui::BeginGroup();
-	if (ImGui::ArrowButton("##ParticleEditorLODLeft", ImGuiDir_Left) && TotalLODCount > 0)
+	if (ImGui::ArrowButton("##ParticleEditorLODLeft", ImGuiDir_Up) && TotalLODCount > 0)
 	{
 		EditedLODIndex = (std::max)(0, EditedLODIndex - 1);
 		SyncEditedLODSelection();
 	}
 	ImGui::SameLine();
-	if (ImGui::ArrowButton("##ParticleEditorLODRight", ImGuiDir_Right) && TotalLODCount > 0)
+	if (ImGui::ArrowButton("##ParticleEditorLODRight", ImGuiDir_Down) && TotalLODCount > 0)
 	{
 		EditedLODIndex = (std::min)(TotalLODCount - 1, EditedLODIndex + 1);
 		SyncEditedLODSelection();
