@@ -167,7 +167,10 @@ struct FHitResult
 
 	float Distance = 3.402823466e+38F; // FLT_MAX
 	float PenetrationDepth = 0.0f;
-	FVector WorldHitLocation = { 0, 0, 0 };
+	FVector WorldHitLocation = { 0, 0, 0 }; // 실제 표면 접촉점
+	FVector ShapeLocation    = { 0, 0, 0 }; // query shape 중심의 충돌 당시 위치
+	                                         //   Raycast    : WorldHitLocation과 동일
+	                                         //   SphereSweep: 구 중심 위치 (= WorldHitLocation + ImpactNormal * Radius)
 	FVector WorldNormal = { 0, 0, 0 };
 	FVector ImpactNormal = { 0, 0, 0 };
 	int FaceIndex = -1;
