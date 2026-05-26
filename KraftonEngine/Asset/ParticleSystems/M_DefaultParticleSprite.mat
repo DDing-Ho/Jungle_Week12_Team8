@@ -1,0 +1,16 @@
+{
+  "BlendMode" : "Translucent",
+  "BlendState" : "AlphaBlend",
+  "DepthStencilState" : "Default",
+  "Origin" : "Editor",
+  "Parameters" : {
+
+  },
+  "PathFileName" : "Asset/ParticleSystems/M_DefaultParticleSprite.mat",
+  "RasterizerState" : "SolidNoCull",
+  "RenderPass" : "AlphaBlend",
+  "ShaderPath" : "Shaders/Particles/ParticleSprite.hlsl",
+  "Textures" : {
+    "ParticleTexture" : "Asset/Particle/OrientParticle.PNG"
+  }
+}
