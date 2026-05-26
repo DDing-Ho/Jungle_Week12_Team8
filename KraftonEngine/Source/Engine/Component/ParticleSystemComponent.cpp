@@ -3,9 +3,114 @@
 #include "Particles/Rendering/ParticleRenderData.h"
 #include "Render/Proxy/ParticleSceneProxy.h"
 #include "Particles/Assets/ParticleSystemAssetManager.h"
+#include "Math/Matrix.h"
+#include "Mesh/StaticMesh.h"
+#include "Mesh/StaticMeshAsset.h"
 
 #include <algorithm>
+#include <cmath>
 #include <Platform/Paths.h>
+
+namespace
+{
+	void ExpandBounds(FBoundingBox& Bounds, const FVector& Min, const FVector& Max)
+	{
+		Bounds.Expand(Min);
+		Bounds.Expand(Max);
+	}
+
+	void ExpandSpriteParticleBounds(FBoundingBox& Bounds, const FBaseParticle& Particle)
+	{
+		const float HalfWidth = std::abs(Particle.Size.X) * 0.5f;
+		const float HalfHeight = std::abs(Particle.Size.Y) * 0.5f;
+		const float Radius = std::sqrt(HalfWidth * HalfWidth + HalfHeight * HalfHeight);
+		const FVector Extent(Radius, Radius, Radius);
+
+		ExpandBounds(Bounds, Particle.Location - Extent, Particle.Location + Extent);
+	}
+
+	bool ExpandMeshParticleBounds(FBoundingBox& Bounds, const FBaseParticle& Particle, UStaticMesh* Mesh)
+	{
+		if (!Mesh)
+		{
+			return false;
+		}
+
+		FStaticMesh* Asset = Mesh->GetStaticMeshAsset();
+		if (!Asset)
+		{
+			return false;
+		}
+
+		if (!Asset->bBoundsValid)
+		{
+			Asset->CacheBounds();
+		}
+		if (!Asset->bBoundsValid)
+		{
+			return false;
+		}
+
+		const float Rotation = Particle.RotationRate * Particle.RelativeTime * Particle.Lifetime;
+		const FMatrix ParticleTransform =
+			FMatrix::MakeScaleMatrix(Particle.Size)
+			* FMatrix::MakeRotationZ(Rotation)
+			* FMatrix::MakeTranslationMatrix(Particle.Location);
+
+		FBoundingBox LocalBounds(
+			Asset->BoundsCenter - Asset->BoundsExtent,
+			Asset->BoundsCenter + Asset->BoundsExtent);
+
+		FVector Corners[8];
+		LocalBounds.GetCorners(Corners);
+		for (const FVector& Corner : Corners)
+		{
+			Bounds.Expand(ParticleTransform.TransformPositionWithW(Corner));
+		}
+		return true;
+	}
+
+	UParticleModuleTypeDataBase* GetEmitterTypeData(const FParticleEmitterInstance* Instance)
+	{
+		return Instance && Instance->CurrentLODLevel
+			? Instance->CurrentLODLevel->GetTypeDataModule()
+			: nullptr;
+	}
+
+	void ExpandEmitterBounds(FBoundingBox& Bounds, const FParticleEmitterInstance* Instance)
+	{
+		if (!Instance ||
+			Instance->ActiveParticles <= 0 ||
+			!Instance->ParticleData ||
+			!Instance->ParticleIndices ||
+			Instance->ParticleStride <= 0)
+		{
+			return;
+		}
+
+		UParticleModuleTypeDataBase* TypeData = GetEmitterTypeData(Instance);
+		UParticleModuleTypeDataMesh* MeshTypeData = Cast<UParticleModuleTypeDataMesh>(TypeData);
+		UStaticMesh* Mesh = MeshTypeData ? MeshTypeData->GetMesh() : nullptr;
+
+		for (int32 ParticleIndex = 0; ParticleIndex < Instance->ActiveParticles; ++ParticleIndex)
+		{
+			const uint16 RealIndex = Instance->ParticleIndices[ParticleIndex];
+			const uint8* ParticleBase = Instance->ParticleData + Instance->ParticleStride * RealIndex;
+			const FBaseParticle* Particle = reinterpret_cast<const FBaseParticle*>(ParticleBase);
+			if (!Particle)
+			{
+				continue;
+			}
+
+			if (Mesh && ExpandMeshParticleBounds(Bounds, *Particle, Mesh))
+			{
+				continue;
+			}
+
+			ExpandSpriteParticleBounds(Bounds, *Particle);
+		}
+	}
+}
 
 UParticleSystemComponent::UParticleSystemComponent()
 {
@@ -94,6 +199,8 @@ void UParticleSystemComponent::TickComponent(float DeltaTime, ELevelTick TickTyp
 		TotalActiveParticles += instance->ActiveParticles;
 	}
 
+	MarkWorldBoundsDirty();
+
 	// RenderData 수집
 	BuildRenderData();
 	MarkProxyDirty(EDirtyFlag::Mesh);
@@ -102,6 +209,26 @@ void UParticleSystemComponent::TickComponent(float DeltaTime, ELevelTick TickTyp
 FPrimitiveSceneProxy* UParticleSystemComponent::CreateSceneProxy()
 {
 	return new FParticleSceneProxy(this);
+}
+
+void UParticleSystemComponent::UpdateWorldAABB() const
+{
+	FBoundingBox ParticleBounds;
+	for (const FParticleEmitterInstance* Instance : EmitterInstances)
+	{
+		ExpandEmitterBounds(ParticleBounds, Instance);
+	}
+
+	if (!ParticleBounds.IsValid())
+	{
+		UPrimitiveComponent::UpdateWorldAABB();
+		return;
+	}
+
+	WorldAABBMinLocation = ParticleBounds.Min;
+	WorldAABBMaxLocation = ParticleBounds.Max;
+	bWorldAABBDirty = false;
+	bHasValidWorldAABB = true;
 }
 
 void UParticleSystemComponent::SetTemplate(UParticleSystem* InTemplate)
@@ -126,6 +253,7 @@ void UParticleSystemComponent::SetTemplate(UParticleSystem* InTemplate)
 		ActivateSystem();
 	}
 
+	MarkWorldBoundsDirty();
 	MarkProxyDirty(EDirtyFlag::Mesh);
 }
 
@@ -154,6 +282,7 @@ void UParticleSystemComponent::SetLODLevel(int32 InLODLevel)
 	}
 
 	MarkProxyDirty(EDirtyFlag::Mesh);
+	MarkWorldBoundsDirty();
 }
 
 FParticleEmitterInstance* UParticleSystemComponent::CreateEmitterInstanceForEmitter(UParticleEmitter* Emitter) const
@@ -242,6 +371,7 @@ void UParticleSystemComponent::ResetSystem()
 		instance->Reset();
 	}
 	ClearRenderData();
+	MarkWorldBoundsDirty();
 	MarkProxyDirty(EDirtyFlag::Mesh);
 }
 
@@ -258,6 +388,7 @@ void UParticleSystemComponent::ClearEmitterInstances()
 	EmitterInstances.clear();
 	TotalActiveParticles = 0;
 	ClearRenderData();
+	MarkWorldBoundsDirty();
 	MarkProxyDirty(EDirtyFlag::Mesh);
 }
 

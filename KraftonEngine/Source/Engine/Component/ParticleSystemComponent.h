@@ -34,6 +34,7 @@ class UParticleSystemComponent : public UPrimitiveComponent
 
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction& ThisTickFunction) override;// Component 매 프레임 갱신
 	FPrimitiveSceneProxy* CreateSceneProxy() override;
+	void UpdateWorldAABB() const override;
 
     UParticleSystem *GetTemplate() const { return Template; }
     void             SetTemplate(UParticleSystem *InTemplate);
