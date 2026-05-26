@@ -215,9 +215,14 @@
     <PostBuildEvent>
       <Command>xcopy /Y "$(ProjectDir)ThirdParty\RmlUi\Debug\*.dll" "$(OutDir)"
 xcopy /Y "$(ProjectDir)ThirdParty\fmod\lib\fmodL.dll" "$(OutDir)"
-xcopy /Y "$(ProjectDir)packages\NVIDIA.PhysX.4.1.229882250\installed\x64-windows\debug\bin\*.dll" "$(OutDir)"
+if exist "$(ProjectDir)packages\NVIDIA.PhysX.4.1.229882250\installed\x64-windows\debug\bin\" (xcopy /Y "$(ProjectDir)packages\NVIDIA.PhysX.4.1.229882250\installed\x64-windows\debug\bin\*.dll" "$(OutDir)")
 xcopy /Y "$(ProjectDir)ThirdParty\lua\bin\lua51.dll" "$(OutDir)"
-xcopy /Y "$(ProjectDir)ThirdParty\fbx\lib\x64\debug\libfbxsdk.dll" "$(OutDir)"</Command>
+xcopy /Y "$(ProjectDir)ThirdParty\fbx\lib\x64\debug\libfbxsdk.dll" "$(OutDir)"
+if exist "$(SolutionDir)ThirdParty\RmlUi\$(Configuration)\*.dll" (
+  xcopy /Y /I "$(SolutionDir)ThirdParty\RmlUi\$(Configuration)\*.dll" "$(SolutionDir)Bin\$(Configuration)\"
+)
+call "$(SolutionDir)Scripts\PostBuildSymbolStore.bat" "$(TargetDir)" "$(Configuration)_$(Platform)" "$(ProjectDir)."
+</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
