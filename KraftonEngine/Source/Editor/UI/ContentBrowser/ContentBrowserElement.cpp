@@ -87,6 +87,13 @@ static FString GetLowerExtensionFromPath(const FString& Path)
 	return Extension;
 }
 
+static void RevealPathInExplorer(const std::filesystem::path& Path)
+{
+	const std::filesystem::path NormalizedPath = Path.lexically_normal();
+	const std::wstring ExplorerArgs = L"/select,\"" + NormalizedPath.wstring() + L"\"";
+	ShellExecuteW(nullptr, L"open", L"explorer.exe", ExplorerArgs.c_str(), nullptr, SW_SHOWNORMAL);
+}
+
 bool ContentBrowserElement::RenderSelectSpace(ContentBrowserContext& Context)
 {
 	FString Name = FPaths::ToUtf8(ContentItem.Name);
@@ -206,6 +213,19 @@ void ContentBrowserElement::Render(ContentBrowserContext& Context)
 		ImGui::SetDragDropPayload(GetDragItemType(), &ContentItem, sizeof(ContentItem));
 		OnDrag(Context);
 		ImGui::EndDragDropSource();
+	}
+}
+
+void ContentBrowserElement::RenderContextMenu(ContentBrowserContext& Context)
+{
+	if (ImGui::MenuItem("Open"))
+	{
+		OnDoubleLeftClicked(Context);
+	}
+
+	if (ImGui::MenuItem("Reveal in Explorer"))
+	{
+		RevealPathInExplorer(ContentItem.Path);
 	}
 }
 
@@ -344,6 +364,8 @@ void SceneElement::OnDoubleLeftClicked(ContentBrowserContext& Context)
 
 void ObjectElement::RenderContextMenu(ContentBrowserContext& Context)
 {
+	ContentBrowserElement::RenderContextMenu(Context);
+
 	FString Extension = FPaths::ToUtf8(ContentItem.Path.extension());
 	std::transform(Extension.begin(), Extension.end(), Extension.begin(), ::tolower);
 
@@ -351,6 +373,7 @@ void ObjectElement::RenderContextMenu(ContentBrowserContext& Context)
 
 	if (Extension == ".uasset" && FMeshManager::IsStaticMeshPackage(PackagePath))
 	{
+		ImGui::Separator();
 		if (ImGui::MenuItem("Reimport"))
 		{
 			UStaticMesh* Reimported = nullptr;
@@ -432,6 +455,8 @@ void CameraShakeElement::OnDoubleLeftClicked(ContentBrowserContext& Context)
 
 void MeshElement::RenderContextMenu(ContentBrowserContext& Context)
 {
+	ContentBrowserElement::RenderContextMenu(Context);
+
 	FString Extension = FPaths::ToUtf8(ContentItem.Path.extension());
 	std::transform(Extension.begin(), Extension.end(), Extension.begin(), ::tolower);
 
@@ -439,6 +464,7 @@ void MeshElement::RenderContextMenu(ContentBrowserContext& Context)
 
 	if (Extension == ".uasset" && FMeshManager::IsSkeletalMeshPackage(PackagePath))
 	{
+		ImGui::Separator();
 		if (ImGui::MenuItem("Reimport"))
 		{
 			if (Context.EditorEngine)
@@ -492,7 +518,7 @@ void AnimSequenceElement::OnDoubleLeftClicked(ContentBrowserContext& Context)
 
 void AnimSequenceElement::RenderContextMenu(ContentBrowserContext& Context)
 {
-	(void)Context;
+	ContentBrowserElement::RenderContextMenu(Context);
 
 	FString Extension = FPaths::ToUtf8(ContentItem.Path.extension());
 	std::transform(Extension.begin(), Extension.end(), Extension.begin(), ::tolower);
@@ -500,6 +526,7 @@ void AnimSequenceElement::RenderContextMenu(ContentBrowserContext& Context)
 	FString PackagePath = FPaths::ToUtf8(ContentItem.Path.lexically_relative(FPaths::RootDir()).generic_wstring());
 	if (Extension == ".uasset" && FAnimSequenceManager::Get().IsAnimSequencePackage(PackagePath))
 	{
+		ImGui::Separator();
 		if (ImGui::MenuItem("Reimport"))
 		{
 			FAssetImportMetadata Metadata;
