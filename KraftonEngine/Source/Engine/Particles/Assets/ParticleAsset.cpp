@@ -252,6 +252,7 @@ void UParticleEmitter::CacheEmitterModuleInfo()
 	if (HighTypeData)
 	{
 		// TODO : Mesh, Beam 처리	
+		ParticleSize += HighTypeData->RequiredBytes(HighTypeData);
 	}
 
 	auto& Modules = HightestLODLevel->GetModules();

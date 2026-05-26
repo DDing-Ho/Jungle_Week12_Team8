@@ -451,3 +451,89 @@ FDynamicEmitterDataBase* FParticleMeshEmitterInstance::CreateDynamicEmitterData(
 
 	return Data;
 }
+
+void FParticleBeamEmitterInstance::Init(UParticleSystemComponent* InComponent, UParticleEmitter* InTemplate)
+{
+	FParticleEmitterInstance::Init(InComponent, InTemplate);
+
+	BeamTypeData = nullptr;
+	if (CurrentLODLevel)
+	{
+		BeamTypeData = Cast<UParticleModuleTypeDataBeam>(CurrentLODLevel->GetTypeDataModule());
+	}
+}
+
+FDynamicEmitterDataBase* FParticleBeamEmitterInstance::CreateDynamicEmitterData()
+{
+	if (ActiveParticles <= 0)
+		return nullptr;
+
+	if (!ParticleData || !ParticleIndices)
+		return nullptr;
+
+	if (!CurrentLODLevel)
+		return nullptr;
+
+	if (!BeamTypeData)
+	{
+		UE_LOG("BeamTypeData is null, cannot create Beam Emitter Data.");
+		return nullptr;
+	}
+
+	FDynamicBeamEmitterData* Data = new FDynamicBeamEmitterData();
+	FDynamicBeamEmitterReplayData& Source = Data->Source;
+
+	Source.eEmitterType = EDynamicEmitterType::DET_Beam;
+	Source.ActiveParticleCount = ActiveParticles;
+	Source.ParticleStride = ParticleStride;
+	Source.Scale = FVector(1.0f, 1.0f, 1.0f);
+	Source.Source = BeamTypeData->GetSource();
+	Source.Target = BeamTypeData->GetTarget();
+	Source.Width = BeamTypeData->GetWidth();
+	Source.TextureTiling = BeamTypeData->GetTextureTiling();
+	Source.PayloadOffset = PayloadOffset;
+
+	UParticleModuleRequired* RequiredModule = CurrentLODLevel->GetRequiredModule();
+	Source.RequiredModule = RequiredModule;
+
+	if (RequiredModule)
+	{
+		Source.Material = RequiredModule->GetMaterial();
+		Source.SortMode = RequiredModule->GetSortMode();
+		Source.TranslucencySortPriority = RequiredModule->GetTranslucencySortPriority();
+	}
+
+	Source.DataContainer.Allocate(ParticleStride, ActiveParticles);
+
+	for (int32 i = 0; i < ActiveParticles; ++i)
+	{
+		uint16 SrcIndex = ParticleIndices[i];
+
+		memcpy(
+			Source.DataContainer.ParticleData + ParticleStride * i,
+			ParticleData + ParticleStride * SrcIndex,
+			ParticleStride
+		);
+
+		Source.DataContainer.ParticleIndices[i] = i;
+	}
+
+	return Data;
+}
+
+void FParticleBeamEmitterInstance::PreSpawn(FBaseParticle& Particle, const FVector& InitialLocation, const FVector& InitialVelocity)
+{
+	FParticleEmitterInstance::PreSpawn(Particle, InitialLocation, InitialVelocity);
+
+	FBeamParticlePayload* Payload =
+		reinterpret_cast<FBeamParticlePayload*>(
+			reinterpret_cast<uint8*>(&Particle) + PayloadOffset);
+
+	if (!Payload || !BeamTypeData)
+		return;
+
+	Payload->Source = BeamTypeData->GetSource();
+	Payload->Target = BeamTypeData->GetTarget();
+	Payload->Width = BeamTypeData->GetWidth();
+	Payload->TextureTiling = BeamTypeData->GetTextureTiling();
+}

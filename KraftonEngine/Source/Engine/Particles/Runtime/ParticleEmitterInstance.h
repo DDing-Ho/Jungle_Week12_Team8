@@ -46,14 +46,14 @@ struct FParticleEmitterInstance
 	void Reset();
 	void ResetParticleParameters(float DeltaTime);												// 전체 초기화 아님, 틱 중에 초기화되어야하는 파라미터 초기화
 
+	virtual void PreSpawn(FBaseParticle& Particle, const FVector& InitialLocation, const FVector& InitialVelocity); // Spawn 기본값 설정
+	virtual void PostSpawn(FBaseParticle& Particle, float SpawnTime);
 	void Tick_SpawnParticles(float DeltaTime);
     int32 GetActiveParticleCount() const { return ActiveParticles; }
 
     virtual FDynamicEmitterDataBase *CreateDynamicEmitterData(); // 렌더링 데이터 생성
 
-  private:
-    void PreSpawn(FBaseParticle &Particle, const FVector &InitialLocation, const FVector &InitialVelocity); // Spawn 기본값 설정
-    void PostSpawn(FBaseParticle &Particle, float SpawnTime);                                               // Spawn 이후 보정
+  private:                                     // Spawn 이후 보정
     void KillExpiredParticles();                                                                            // 수명 종료 Particle 제거
     void ProcessEvents();                                                                                   // Pending Event 처리
 	
@@ -89,4 +89,14 @@ public:
 private:
 	UParticleModuleTypeDataMesh* MeshTypeData = nullptr;
 	TArray<UMaterial*> CurrentMaterials;
+};
+
+struct FParticleBeamEmitterInstance : FParticleEmitterInstance
+{
+	void Init(UParticleSystemComponent* InComponent, UParticleEmitter* InTemplate) override;
+	FDynamicEmitterDataBase* CreateDynamicEmitterData() override;
+	void PreSpawn(FBaseParticle& Particle, const FVector& InitialLocation, const FVector& InitialVelocity) override;
+
+private:
+	UParticleModuleTypeDataBeam* BeamTypeData = nullptr;
 };

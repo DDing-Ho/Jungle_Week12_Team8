@@ -185,6 +185,8 @@ FParticleEmitterInstance* UParticleSystemComponent::CreateEmitterInstanceForEmit
 		return new FParticleMeshEmitterInstance();
 
 	case EParticleEmitterType::PET_Beam:
+		return new FParticleBeamEmitterInstance();
+
 	case EParticleEmitterType::PET_Ribbon:
 	default:
 		return new FParticleEmitterInstance();

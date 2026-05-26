@@ -67,6 +67,8 @@ struct FDynamicBeamEmitterReplayData : public FDynamicEmitterReplayDataBase
     FVector Source;     // Beam 시작점
     FVector Target;     // Beam 끝점
     float Width = 1.0f; // Beam 두께
+    float TextureTiling = 1.0f; // Beam Texture 반복 비율
+    int32 PayloadOffset = sizeof(FBaseParticle); // FBeamParticlePayload 위치
 };
 
 /** Ribbon Emitter 렌더링용 ReplayData */

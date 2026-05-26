@@ -168,3 +168,4 @@ CMakeLists.txt
 # 환경설정
 # ============================================================
 *.env
+/.github/copilot-instructions.md

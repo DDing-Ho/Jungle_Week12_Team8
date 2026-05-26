@@ -63,6 +63,14 @@ class UParticleModuleTypeDataMesh : public UParticleModuleTypeDataBase
     FString      MeshPath;            // Serialize 시 경로 저장용
 };
 
+struct FBeamParticlePayload
+{
+    FVector Source = FVector::ZeroVector;
+    FVector Target = FVector::ZeroVector;
+    float   Width = 1.0f;
+    float   TextureTiling = 1.0f;
+};
+
 /** Beam Emitter TypeData */
 UCLASS()
 class UParticleModuleTypeDataBeam : public UParticleModuleTypeDataBase
@@ -72,7 +80,17 @@ class UParticleModuleTypeDataBeam : public UParticleModuleTypeDataBase
 
     virtual EParticleEmitterType GetEmitterType() const override { return EParticleEmitterType::PET_Beam; }
     virtual EParticleModuleClass GetModuleClass() const override { return EParticleModuleClass::TypeDataBeam; }
-    virtual void Serialize(FArchive& Ar) override;
+	virtual uint32 RequiredBytes(UParticleModuleTypeDataBase* /*TypeData*/) const override { return sizeof(FBeamParticlePayload); }
+	virtual void Serialize(FArchive& Ar) override;
+
+	const FVector& GetSource() const { return Source; }
+	void    SetSource(const FVector& InSource) { Source = InSource; }
+	const FVector& GetTarget() const { return Target; }
+	void    SetTarget(const FVector& InTarget) { Target = InTarget; }
+	float   GetWidth() const { return Width; }
+	void    SetWidth(float InWidth) { Width = InWidth; }
+	float   GetTextureTiling() const { return TextureTiling; }
+	void    SetTextureTiling(float InTextureTiling) { TextureTiling = InTextureTiling; }
 
   private:
     UPROPERTY(Edit, Category="Particle", DisplayName="Source")
@@ -95,6 +113,13 @@ class UParticleModuleTypeDataRibbon : public UParticleModuleTypeDataBase
     virtual EParticleEmitterType GetEmitterType() const override { return EParticleEmitterType::PET_Ribbon; }
     virtual EParticleModuleClass GetModuleClass() const override { return EParticleModuleClass::TypeDataRibbon; }
     virtual void Serialize(FArchive& Ar) override;
+
+	float GetWidth() const { return Width; }
+	void  SetWidth(float InWidth) { Width = InWidth; }
+	float GetLifetime() const { return Lifetime; }
+	void  SetLifetime(float InLifetime) { Lifetime = InLifetime; }
+	float GetTextureTiling() const { return TextureTiling; }
+	void  SetTextureTiling(float InTextureTiling) { TextureTiling = InTextureTiling; }
 
   private:
     UPROPERTY(Edit, Category="Particle", DisplayName="Width", Min=0.0, Max=100000.0, Speed=0.1)
