@@ -458,9 +458,9 @@ void UParticleModuleRotationRate::Update(FParticleEmitterInstance* Owner, float 
     int32   ParticleStride  = Owner->ParticleStride;
     int32   ActiveParticles = Owner->ActiveParticles;
 
-    BEGIN_UPDATE_LOOP
+    BEGIN_PARTICLE_UPDATE_LOOP
         Particle.RotationRate = RawRotationRate.GetValue(Particle.RelativeTime, nullptr);
-    END_UPDATE_LOOP
+    END_PARTICLE_UPDATE_LOOP
 }
 
 void UParticleModuleAcceleration::Serialize(FArchive& Ar)
@@ -519,21 +519,59 @@ void UParticleModuleEventGenerator::Serialize(FArchive& Ar)
     Ar << GeneratedEvents;
 }
 
-void UParticleModuleEventReceiverSpawn::Serialize(FArchive& Ar)
+void UParticleModuleEventReceiverBase::Serialize(FArchive& Ar)
 {
     UParticleModule::Serialize(Ar);
+
     int32 EventTypeInt = static_cast<int32>(ListenEventType);
     Ar << EventTypeInt;
-    if (Ar.IsLoading()) ListenEventType = static_cast<EParticleEventType>(EventTypeInt);
+    if (Ar.IsLoading())
+        ListenEventType = static_cast<EParticleEventType>(EventTypeInt);
+
+    Ar << ListenEventName;
+}
+
+void UParticleModuleEventReceiverSpawn::Serialize(FArchive& Ar)
+{
+    UParticleModuleEventReceiverBase::Serialize(Ar);
     Ar << SpawnCount;
+}
+
+bool UParticleModuleEventReceiverBase::MatchesEvent(const FParticleEventData& Event) const
+{
+    if (Event.Type != ListenEventType)
+        return false;
+
+    // ListenEventName이 비어 있으면 해당 Type의 Event를 모두 받는 wildcard로 취급한다.
+    if (ListenEventName.IsValid() && Event.EventName != ListenEventName)
+        return false;
+
+    return true;
+}
+
+void UParticleModuleEventReceiverSpawn::ProcessEvent(FParticleEmitterInstance& OwnerEmitter, const FParticleEventData& Event)
+{
+    if (!MatchesEvent(Event))
+        return;
+
+    const int32 Count = std::max(0, SpawnCount);
+    if (Count <= 0)
+        return;
+
+    OwnerEmitter.SpawnParticles(Count, 0.0f, 0.0f, Event.Location, Event.Velocity);
 }
 
 void UParticleModuleEventReceiverKillAll::Serialize(FArchive& Ar)
 {
-    UParticleModule::Serialize(Ar);
-    int32 EventTypeInt = static_cast<int32>(ListenEventType);
-    Ar << EventTypeInt;
-    if (Ar.IsLoading()) ListenEventType = static_cast<EParticleEventType>(EventTypeInt);
+    UParticleModuleEventReceiverBase::Serialize(Ar);
+}
+
+void UParticleModuleEventReceiverKillAll::ProcessEvent(FParticleEmitterInstance& OwnerEmitter, const FParticleEventData& Event)
+{
+    if (!MatchesEvent(Event))
+        return;
+
+    OwnerEmitter.KillAllParticles();
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
