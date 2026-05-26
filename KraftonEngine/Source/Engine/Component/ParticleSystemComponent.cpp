@@ -19,7 +19,7 @@ UParticleSystemComponent::UParticleSystemComponent()
 	TotalActiveParticles = 0;
 
 	EmitterMaterials.clear();
-	CollisionEvents.clear();
+	FrameEventQueue.clear();
 	EmitterRenderData.clear();
 }
 
@@ -84,13 +84,18 @@ void UParticleSystemComponent::TickComponent(float DeltaTime, ELevelTick TickTyp
 	//}
 
 	//이벤트 버퍼 정리
-	CollisionEvents.clear();
+	FrameEventQueue.clear();
 	TotalActiveParticles = 0;
 
 	// 인스턴스 tick
 	for (auto instance : EmitterInstances) {
 		if (!instance) continue;
-		instance->Tick(DeltaTimeTick);
+		instance->Tick(DeltaTimeTick, FrameEventQueue);
+	}
+
+	for (auto instance : EmitterInstances) {
+		if (!instance) continue;
+		instance->ProcessEvents(FrameEventQueue);
 		TotalActiveParticles += instance->ActiveParticles;
 	}
 
@@ -237,6 +242,8 @@ void UParticleSystemComponent::ResetSystem()
 	for (FParticleEmitterInstance* instance : EmitterInstances) {
 		instance->Reset();
 	}
+	FrameEventQueue.clear();
+	TotalActiveParticles = 0;
 	ClearRenderData();
 	MarkProxyDirty(EDirtyFlag::Mesh);
 }
@@ -252,6 +259,7 @@ void UParticleSystemComponent::ClearEmitterInstances()
 	}
 
 	EmitterInstances.clear();
+	FrameEventQueue.clear();
 	TotalActiveParticles = 0;
 	ClearRenderData();
 	MarkProxyDirty(EDirtyFlag::Mesh);

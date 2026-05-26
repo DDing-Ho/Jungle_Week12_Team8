@@ -14,8 +14,8 @@
 #include "Component/PrimitiveComponent.h"
 #include "ParticleSystemComponent.generated.h"
 
-struct FParticleEventCollideData;
-struct FParticleDynamicData;
+struct FParticleEmitterInstance;
+struct FDynamicEmitterDataBase;
 
 /** 월드에 배치되어 ParticleSystem을 재생하고 렌더 데이터를 관리하는 Component */
 UCLASS()
@@ -40,7 +40,6 @@ class UParticleSystemComponent : public UPrimitiveComponent
 
     const TArray<FParticleEmitterInstance *> &GetEmitterInstances() const { return EmitterInstances; }
     const TArray<FDynamicEmitterDataBase *>  &GetEmitterRenderData() const { return EmitterRenderData; }
-    const TArray<FParticleEventCollideData>  &GetCollisionEvents() const { return CollisionEvents; }
 
     bool IsActive() const { return bIsActive; }
 
@@ -61,13 +60,13 @@ private:
 
   private:
     TArray<FParticleEmitterInstance *>	EmitterInstances;        // Runtime Emitter Instance 목록
+    TArray<FParticleEventData>			FrameEventQueue;         // 이번 프레임 Event 목록
 	
 	UPROPERTY(Edit, Category = "ParticleSystemComponent", DisplayName = "Template", Type = SoftObject, Class = UParticleSystem)
 	TSoftObjectPtr<UParticleSystem> TemplateAsset;
 
 	UParticleSystem					   *Template = nullptr;      // 재생할 ParticleSystem Asset
     TArray<FDynamicEmitterDataBase *>	EmitterRenderData;       // 렌더 패스 전달용 데이터
-    TArray<FParticleEventCollideData>	CollisionEvents;         // 이번 프레임 Collision Event 목록
 
 	TArray<UMaterial*>					EmitterMaterials;
 
