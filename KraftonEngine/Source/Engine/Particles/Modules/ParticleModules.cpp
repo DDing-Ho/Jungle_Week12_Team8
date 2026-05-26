@@ -318,7 +318,7 @@ void UParticleModuleColor::Update(FParticleEmitterInstance* Owner, float DeltaTi
     int32   ParticleStride  = Owner->ParticleStride;
     int32   ActiveParticles = Owner->ActiveParticles;
 
-    BEGIN_UPDATE_LOOP
+    BEGIN_PARTICLE_UPDATE_LOOP
         const FLinearColor C = RawColor.GetValue(Particle.RelativeTime, nullptr);
         Particle.Color = FColor(
             static_cast<uint32>(C.R * 255.f),
@@ -326,7 +326,7 @@ void UParticleModuleColor::Update(FParticleEmitterInstance* Owner, float DeltaTi
             static_cast<uint32>(C.B * 255.f),
             static_cast<uint32>(C.A * 255.f)
         );
-    END_UPDATE_LOOP
+    END_PARTICLE_UPDATE_LOOP
 }
 
 // ── Size ──────────────────────────────────────────────────────────────────────
@@ -381,9 +381,9 @@ void UParticleModuleSize::Update(FParticleEmitterInstance* Owner, float DeltaTim
     int32   ParticleStride  = Owner->ParticleStride;
     int32   ActiveParticles = Owner->ActiveParticles;
 
-    BEGIN_UPDATE_LOOP
+    BEGIN_PARTICLE_UPDATE_LOOP
         Particle.Size = RawSize.GetValue(Particle.RelativeTime, nullptr);
-    END_UPDATE_LOOP
+    END_PARTICLE_UPDATE_LOOP
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
