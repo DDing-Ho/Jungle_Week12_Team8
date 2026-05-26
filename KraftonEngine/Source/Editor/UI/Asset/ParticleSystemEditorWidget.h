@@ -9,6 +9,7 @@ struct ImVec2;
 class UParticleSystem;
 class UParticleEmitter;
 class UParticleModule;
+class UParticleSystemComponent;
 class UObject;
 class FProperty;
 
@@ -31,6 +32,8 @@ public:
 
 private:
 	void RenderPreviewViewport(const ImVec2& Size);
+	UParticleSystemComponent* GetPreviewParticleComponent() const;
+	void ReplayPreviewParticleSystem();
 	bool RenderDetailsPanel();
 	bool RenderEditableProperties(UObject* Object);
 	bool RenderParticleProperty(const FProperty& Prop, void* Container);
@@ -44,6 +47,13 @@ private:
 	bool RenderCurveEditorPanel();
 
 private:
+	enum class ECurveTangentHandle : uint8
+	{
+		None,
+		Arrive,
+		Leave,
+	};
+
 	SWindow ViewportWindow;
 	FParticleSystemEditorViewportClient ViewportClient;
 
@@ -53,10 +63,26 @@ private:
 
 	float LeftPanelRatio = 0.4f;
 	float LeftTopPanelRatio = 0.6f;
-	float RightTopPanelRatio = 0.6f;
+	float RightTopPanelRatio = 0.4f;
 
 	int32 SelectedEmitterIndex = -1;
 	UParticleModule* SelectedModule = nullptr;
+
+	// Curve editor panel state
+	float            CurveViewMinT     = 0.0f;
+	float            CurveViewMaxT     = 1.0f;
+	float            CurveViewMinV     = -10.0f;
+	float            CurveViewMaxV     = 10.0f;
+	int32            CurveSelectedKey  = -1;
+	int32            CurveSelCurve     = 0;   // 0 = MinCurve, 1 = MaxCurve
+	bool             bCurveDragKey     = false;
+	ECurveTangentHandle CurveDraggingTangentHandle = ECurveTangentHandle::None;
+	bool             bCurvePan         = false;
+	bool             bCurveCtxSuppress = false;
+	float            CurveCtxTime      = 0.0f;
+	float            CurveCtxValue     = 0.0f;
+	int32            CurveChannelIdx   = 0;
+	UParticleModule* CurvePrevModule   = nullptr;
 
 	bool bPendingClose = false;
 };
