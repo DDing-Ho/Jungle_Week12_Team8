@@ -14,8 +14,8 @@
 #include "Component/PrimitiveComponent.h"
 #include "ParticleSystemComponent.generated.h"
 
-struct FParticleEventCollideData;
-struct FParticleDynamicData;
+struct FParticleEmitterInstance;
+struct FDynamicEmitterDataBase;
 
 /** 월드에 배치되어 ParticleSystem을 재생하고 렌더 데이터를 관리하는 Component */
 UCLASS()
@@ -40,9 +40,17 @@ class UParticleSystemComponent : public UPrimitiveComponent
 
     const TArray<FParticleEmitterInstance *> &GetEmitterInstances() const { return EmitterInstances; }
     const TArray<FDynamicEmitterDataBase *>  &GetEmitterRenderData() const { return EmitterRenderData; }
-    const TArray<FParticleEventCollideData>  &GetCollisionEvents() const { return CollisionEvents; }
+    const TArray<FParticleEventData>         &GetFrameEventQueue() const { return FrameEventQueue; }
 
     bool IsActive() const { return bIsActive; }
+    bool IsEventTraceEnabled() const
+    {
+#if defined(_DEBUG)
+        return bDebugEventTrace;
+#else
+        return false;
+#endif
+    }
 
     void SetParticleVisible(bool bInVisible) { bParticleVisible = bInVisible; }
     bool IsParticleVisible() const { return bParticleVisible; }
@@ -62,18 +70,21 @@ private:
 
   private:
     TArray<FParticleEmitterInstance *>	EmitterInstances;        // Runtime Emitter Instance 목록
+    TArray<FParticleEventData>			FrameEventQueue;         // 이번 프레임 Event 목록
 	
 	UPROPERTY(Edit, Category = "ParticleSystemComponent", DisplayName = "Template", Type = SoftObject, Class = UParticleSystem)
 	TSoftObjectPtr<UParticleSystem> TemplateAsset;
 
 	UParticleSystem					   *Template = nullptr;      // 재생할 ParticleSystem Asset
     TArray<FDynamicEmitterDataBase *>	EmitterRenderData;       // 렌더 패스 전달용 데이터
-    TArray<FParticleEventCollideData>	CollisionEvents;         // 이번 프레임 Collision Event 목록
 
 	TArray<UMaterial*>					EmitterMaterials;
 
 	UPROPERTY(Edit, Category = "ParticleSystemComponent", DisplayName = "EmitterDelay")
 	float EmitterDelay;				// Emitter시작 지연 시간
+
+	UPROPERTY(Edit, Category = "ParticleSystemComponent", DisplayName = "Debug Event Trace")
+	bool bDebugEventTrace = false; // Event Trace 로그 출력 여부
 
 	bool bIsActive = false;			// 재생 상태
 	bool bParticleVisible = true;	// ShowFlag 표시 여부

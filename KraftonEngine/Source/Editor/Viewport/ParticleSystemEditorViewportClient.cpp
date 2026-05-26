@@ -13,6 +13,26 @@
 
 void FParticleSystemEditorViewportClient::Initialize(ID3D11Device* Device, uint32 Width, uint32 Height)
 {
+	RenderOptions = FViewportRenderOptions();
+
+	RenderOptions.ShowFlags.bStaticMesh = true;
+	RenderOptions.ShowFlags.bSkeletalMesh = false;
+	RenderOptions.ShowFlags.bGrid = false;
+	RenderOptions.ShowFlags.bWorldAxis = true;
+	RenderOptions.ShowFlags.bGizmo = false;
+	RenderOptions.ShowFlags.bBillboardText = false;
+	RenderOptions.ShowFlags.bBoundingVolume = false;
+	RenderOptions.ShowFlags.bDebugDraw = false;
+	RenderOptions.ShowFlags.bOctree = false;
+	RenderOptions.ShowFlags.bFog = false;
+	RenderOptions.ShowFlags.bFXAA = false;
+	RenderOptions.ShowFlags.bGammaCorrection = true;
+	RenderOptions.ShowFlags.bViewLightCulling = false;
+	RenderOptions.ShowFlags.bVisualize25DCulling = false;
+	RenderOptions.ShowFlags.bShowShadowFrustum = false;
+	RenderOptions.ShowFlags.bCollision = true;
+	RenderOptions.ShowFlags.bShowCollisionShape = false;
+
 	Viewport = new FViewport();
 	Viewport->Initialize(Device, Width, Height);
 	Viewport->SetClient(this);

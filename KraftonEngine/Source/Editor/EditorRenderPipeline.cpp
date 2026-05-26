@@ -394,6 +394,7 @@ void FEditorRenderPipeline::RenderPreviewViewport(IEditorPreviewViewportClient* 
 	Builder.BeginCollect(Frame);
 
 	Collector.Collect(World, Frame, Output);
+	Collector.CollectGrid(Frame.RenderOptions.GridSpacing, Frame.RenderOptions.GridHalfLineCount, Scene);
 	Builder.BuildCommands(Frame, &Scene, Output);
 
 	Renderer.Render(Frame, World, Scene);

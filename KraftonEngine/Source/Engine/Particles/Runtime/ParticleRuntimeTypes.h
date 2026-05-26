@@ -5,6 +5,7 @@
  * 포함 타입:
  * - FBaseParticle: Particle 1개의 Runtime 상태
  * - FParticleDataContainer: ParticleData / ParticleIndices 메모리 컨테이너
+ * - FParticleEventData: 공용 Particle Event Payload
  * - FParticleEventCollideData: Particle Collision Event 데이터
  */
 
@@ -91,6 +92,18 @@ inline uint8* FParticleDataContainer::GetParticleData(int32 ParticleIndex) const
 
     return ParticleData + ParticleStride * ParticleIndex;
 }
+
+/** Component EventQueue를 통해 전달되는 공용 Particle Event Payload */
+struct FParticleEventData
+{
+    EParticleEventType Type = EParticleEventType::PEET_Custom; // Event 종류
+    FName              EventName;                              // 이벤트 이름 태그 (2차 판별용)
+    FVector            Location = FVector::ZeroVector;         // Event 발생 위치
+    FVector            Velocity = FVector::ZeroVector;         // Event 발생 당시 속도
+    FVector            Normal = FVector::ZeroVector;           // 방향성 Event 부가 정보
+    int32              SourceEmitterIndex = INDEX_NONE;        // Event를 발생시킨 Emitter 인덱스
+    int32              SourceParticleIndex = INDEX_NONE;       // Event를 발생시킨 Particle 인덱스
+};
 
 /** Particle Collision Event 데이터 */
 struct FParticleEventCollideData

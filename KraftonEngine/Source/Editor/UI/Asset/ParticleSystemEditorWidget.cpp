@@ -16,11 +16,13 @@
 #include "Engine/Viewport/Viewport.h"
 #include "Editor/Slate/SlateApplication.h"
 #include "Editor/UI/ContentBrowser/ContentItem.h"
+#include "Editor/Settings/EditorSettings.h"
 #include "Materials/Material.h"
 #include "Materials/MaterialManager.h"
 #include "Object/FUObjectArray.h"
 #include "Platform/Paths.h"
 #include "Texture/Texture2D.h"
+#include "UI/Toolbar/ViewportToolbar.h"
 
 #include <imgui.h>
 #include <imgui_internal.h>
@@ -827,41 +829,51 @@ void FParticleSystemEditorWidget::Render(float DeltaTime)
 
 void FParticleSystemEditorWidget::RenderPreviewViewport(const ImVec2& Size)
 {
-	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ParticleEditorZeroSpacing);
-	ImGui::PushStyleVar(ImGuiStyleVar_ChildBorderSize, 0.0f);
-	ImGui::BeginChild("Viewport", Size, false, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
-	ImGui::BeginGroup();
+	ImGui::PushStyleColor(ImGuiCol_ChildBg, ParticlePanelBodyColor);
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ParticlePanelContentPadding);
+	ImGui::BeginChild("Viewport", Size, true, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+
+	ImDrawList* DrawList = ImGui::GetWindowDrawList();
+	const ImVec2 HeaderMin = ImGui::GetCursorScreenPos();
+	const float Width = ImGui::GetContentRegionAvail().x;
+	DrawList->AddRectFilled(HeaderMin, ImVec2(HeaderMin.x + Width, HeaderMin.y + ParticlePanelHeaderHeight), ImGui::GetColorU32(ParticlePanelHeaderColor));
+	DrawList->AddRectFilled(HeaderMin, ImVec2(HeaderMin.x + ParticlePanelAccentWidth, HeaderMin.y + ParticlePanelHeaderHeight), ImGui::GetColorU32(ParticlePanelAccentColor));
+	DrawList->AddText(ImVec2(HeaderMin.x + ParticlePanelTitleOffsetX, HeaderMin.y + ParticlePanelTitleOffsetY), ImGui::GetColorU32(ImGuiCol_Text), "Viewport");
+	ImGui::Dummy(ImVec2(Width, ParticlePanelHeaderHeight + ParticlePanelItemSpacing.y));
+
+	const ImVec2 ViewportPos = ImGui::GetCursorScreenPos();
+	const ImVec2 ViewportSize = ImGui::GetContentRegionAvail();
+	ViewportClient.SetViewportRect(ViewportPos.x, ViewportPos.y, ViewportSize.x, ViewportSize.y);
+
+	FViewport* VP = ViewportClient.GetViewport();
+	if (VP && ViewportSize.x > 0.0f && ViewportSize.y > 0.0f)
 	{
-		ImVec2 ViewportPos = ImGui::GetCursorScreenPos();
-		ViewportClient.SetViewportRect(ViewportPos.x, ViewportPos.y, Size.x, Size.y);
+		VP->RequestResize(static_cast<uint32>(ViewportSize.x), static_cast<uint32>(ViewportSize.y));
+		ViewportWindow.SetRect({ViewportPos.x, ViewportPos.y, ViewportSize.x, ViewportSize.y});
 
-		FViewport* VP = ViewportClient.GetViewport();
-		if (VP && Size.x > 0.0f && Size.y > 0.0f)
+		if (VP->GetSRV())
 		{
-			VP->RequestResize(static_cast<uint32>(Size.x), static_cast<uint32>(Size.y));
-			ViewportWindow.SetRect({ViewportPos.x, ViewportPos.y, Size.x, Size.y});
-
-			if (VP->GetSRV())
-			{
-				ImGui::Image((ImTextureID)VP->GetSRV(), Size);
-			}
-
-			ImDrawList* DrawList = ImGui::GetWindowDrawList();
-			DrawList->AddRectFilled(
-				ViewportPos,
-				ImVec2(ViewportPos.x + Size.x, ViewportPos.y + ParticlePanelHeaderHeight),
-				ImGui::GetColorU32(ParticlePanelHeaderColor));
-			DrawList->AddRectFilled(
-				ViewportPos,
-				ImVec2(ViewportPos.x + ParticlePanelAccentWidth, ViewportPos.y + ParticlePanelHeaderHeight),
-				ImGui::GetColorU32(ParticlePanelAccentColor));
-			DrawList->AddText(ImVec2(ViewportPos.x + ParticlePanelTitleOffsetX, ViewportPos.y + ParticleViewportTitleOffsetY), ImGui::GetColorU32(ImGuiCol_Text), "Viewport");
-
+			ImGui::Image((ImTextureID)VP->GetSRV(), ViewportSize);
 		}
+
+		FViewportToolbarContext Context;
+		Context.Renderer = &GEngine->GetRenderer();
+		Context.Settings = &FEditorSettings::Get().MeshEditorViewportSettings;
+		Context.RenderOptions = &ViewportClient.GetRenderOptions();
+		Context.ToolbarLeft = ViewportPos.x;
+		Context.ToolbarTop = ViewportPos.y;
+		Context.ToolbarWidth = ViewportSize.x;
+		Context.bReservePlayStopSpace = false;
+		Context.bShowAddActor = false;
+		Context.bShowGizmoControls = false;
+		Context.bShowCameraControls = false;
+
+		FViewportToolbar::Render(Context);
 	}
-	ImGui::EndGroup();
+
 	ImGui::EndChild();
-	ImGui::PopStyleVar(2);
+	ImGui::PopStyleVar();
+	ImGui::PopStyleColor();
 }
 
 UParticleSystemComponent* FParticleSystemEditorWidget::GetPreviewParticleComponent() const

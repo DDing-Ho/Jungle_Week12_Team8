@@ -9,6 +9,7 @@
 #pragma once
 
 #include "../Rendering/ParticleRenderData.h"
+#include "ParticleRuntimeTypes.h"
 #include "Core/CoreTypes.h"
 #include "Math/Vector.h"
 
@@ -35,27 +36,31 @@ struct FParticleEmitterInstance
     int32  MaxActiveParticles = 0;                 // 최대 활성 Particle 수
     float  SpawnFraction = 0.0f;                   // SpawnRate 소수점 이월값
 
-    TArray<FParticleEventData> PendingEvents; // 이번 프레임 처리 대기 Event 목록
+    TArray<FParticleEventData>  ReceivedEvents; // 이 Emitter가 받을 Event 목록
 	TArray<bool> BurstFired;
     
 	virtual void Init(UParticleSystemComponent *InComponent, UParticleEmitter *InTemplate);                                                     // Instance 초기화
-    virtual void Tick(float DeltaTime);                                                                                                         // 매 프레임 갱신
-    void SpawnParticles(int32 Count, float StartTime, float Increment, const FVector &InitialLocation, const FVector &InitialVelocity); // Particle 생성
+    virtual void Tick(float DeltaTime, TArray<FParticleEventData>& OutEventQueue);                                                             // 매 프레임 갱신
+    void ProcessEvents(const TArray<FParticleEventData>& EventQueue);                                                                           // EventQueue 처리
+    void SpawnParticles(int32 Count, float StartTime, float Increment, const FVector &InitialLocation, const FVector &InitialVelocity, TArray<FParticleEventData>* OutEventQueue = nullptr); // Particle 생성
     void KillParticle(int32 Index);                                                                                                     // 단일 Particle 제거
     void KillAllParticles();                                                                                                            // 전체 Particle 제거
 	void Reset();
 	void ResetParticleParameters(float DeltaTime);												// 전체 초기화 아님, 틱 중에 초기화되어야하는 파라미터 초기화
 
-	virtual void PreSpawn(FBaseParticle& Particle, const FVector& InitialLocation, const FVector& InitialVelocity); // Spawn 기본값 설정
-	virtual void PostSpawn(FBaseParticle& Particle, float SpawnTime);
-	void Tick_SpawnParticles(float DeltaTime);
+    virtual void PreSpawn(FBaseParticle& Particle, const FVector& InitialLocation, const FVector& InitialVelocity); // Spawn 기본값 설정
+    virtual void PostSpawn(FBaseParticle& Particle, float SpawnTime);
+	void Tick_SpawnParticles(float DeltaTime, TArray<FParticleEventData>* OutEventQueue);
     int32 GetActiveParticleCount() const { return ActiveParticles; }
 
     virtual FDynamicEmitterDataBase *CreateDynamicEmitterData(); // 렌더링 데이터 생성
 
-  private:                                     // Spawn 이후 보정
-    void KillExpiredParticles();                                                                            // 수명 종료 Particle 제거
-    void ProcessEvents();                                                                                   // Pending Event 처리
+  private:
+    void KillExpiredParticles(TArray<FParticleEventData>& OutEventQueue);                                   // 수명 종료 Particle 제거
+    bool HasReceiverFor(const FParticleEventData& Event) const;
+    void ProcessReceivedEvents();
+    void PublishParticleEvents(EParticleEventType EventType, const FBaseParticle& Particle, int32 ParticleIndex, TArray<FParticleEventData>* OutEventQueue, const FVector& EventNormal = FVector::ZeroVector);
+    int32 ResolveEmitterIndex() const;
 	
 	FBaseParticle& GetParticle(int32 index);
 
@@ -83,7 +88,7 @@ struct FParticleMeshEmitterInstance : public FParticleEmitterInstance
 {
 public:
 	void Init(UParticleSystemComponent* InComponent, UParticleEmitter* InTemplate) override;
-	void Tick(float DeltaTime) override;
+	void Tick(float DeltaTime, TArray<FParticleEventData>& OutEventQueue) override;
 	FDynamicEmitterDataBase* CreateDynamicEmitterData() override;
 
 private:

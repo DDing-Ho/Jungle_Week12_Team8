@@ -1,5 +1,6 @@
 ﻿#include "ParticleEmitterInstance.h"
 #include "Particles/Common/ParticleHelper.h"
+#include "Particles/Modules/ParticleEventModules.h"
 #include "Core/EngineTypes.h"
 #include "Component/ParticleSystemComponent.h"
 #include "Math/Vector.h"
@@ -7,6 +8,24 @@
 
 #include <utility>
 #include <Core/Log.h>
+
+namespace
+{
+#if defined(_DEBUG)
+	const char* ParticleEventTypeToString(EParticleEventType EventType)
+	{
+		switch (EventType)
+		{
+		case EParticleEventType::PEET_Spawn:     return "Spawn";
+		case EParticleEventType::PEET_Death:     return "Death";
+		case EParticleEventType::PEET_Collision: return "Collision";
+		case EParticleEventType::PEET_Burst:     return "Burst";
+		case EParticleEventType::PEET_Custom:    return "Custom";
+		default:                                 return "Unknown";
+		}
+	}
+#endif
+}
 
 FParticleEmitterInstance::~FParticleEmitterInstance()
 {
@@ -65,7 +84,7 @@ void FParticleEmitterInstance::Init(UParticleSystemComponent* InComponent, UPart
 	}
 }
 
-void FParticleEmitterInstance::Tick(float DeltaTime)
+void FParticleEmitterInstance::Tick(float DeltaTime, TArray<FParticleEventData>& OutEventQueue)
 {
 	if (!CurrentLODLevel)
 		return;
@@ -76,7 +95,7 @@ void FParticleEmitterInstance::Tick(float DeltaTime)
 	EmitterTime += DeltaTime;
 
 	//life타임 없는 애들 삭제 하는 로직
-	KillExpiredParticles();
+	KillExpiredParticles(OutEventQueue);
 
 	ResetParticleParameters(DeltaTime);
 
@@ -88,21 +107,19 @@ void FParticleEmitterInstance::Tick(float DeltaTime)
 	}
 
 	//시간되었으면 spawn하는 로직
-	Tick_SpawnParticles(DeltaTime);
+	Tick_SpawnParticles(DeltaTime, &OutEventQueue);
 
 	if(!bFirstTime){
-		//if (ActiveParticles > 0) UpdateBoundingBox(DeltaTime); 
+		//if (ActiveParticles > 0) UpdateBoundingBox(DeltaTime);
 		// 원래는 해당 로직 안에서 파티클 이동 진행
-		BEGIN_UPDATE_LOOP
+		BEGIN_PARTICLE_UPDATE_LOOP
 			Particle.Location += Particle.Velocity * DeltaTime;
-		END_UPDATE_LOOP
+		END_PARTICLE_UPDATE_LOOP
 	}
-
-	ProcessEvents();
 }
 
 //StartTime : 현재 프레임에서 첫 번째 파티클이 태어날 때까지 프레임 단위 시간
-void FParticleEmitterInstance::SpawnParticles(int32 Count, float StartTime, float Increment, const FVector& InitialLocation, const FVector& InitialVelocity)
+void FParticleEmitterInstance::SpawnParticles(int32 Count, float StartTime, float Increment, const FVector& InitialLocation, const FVector& InitialVelocity, TArray<FParticleEventData>* OutEventQueue)
 {
 	for (int32 i = 0; i < Count; ++i)
 	{
@@ -124,7 +141,7 @@ void FParticleEmitterInstance::SpawnParticles(int32 Count, float StartTime, floa
 			}
 		}
 
-		PostSpawn(Particle, SpawnTime);
+		PostSpawn(Particle, SpawnTime, OutEventQueue);
 	}
 }
 
@@ -195,7 +212,7 @@ void FParticleEmitterInstance::ResetParticleParameters(float DeltaTime)
 	}
 }
 
-void FParticleEmitterInstance::Tick_SpawnParticles(float DeltaTime)
+void FParticleEmitterInstance::Tick_SpawnParticles(float DeltaTime, TArray<FParticleEventData>* OutEventQueue)
 {
 	if (!CurrentLODLevel || !bEnabled)
 		return;
@@ -245,7 +262,8 @@ void FParticleEmitterInstance::Tick_SpawnParticles(float DeltaTime)
 			StartTime,
 			Increment,
 			InitialLocation,
-			FVector::ZeroVector
+			FVector::ZeroVector,
+			OutEventQueue
 		);
 	}
 
@@ -282,7 +300,7 @@ void FParticleEmitterInstance::PreSpawn(FBaseParticle& Particle, const FVector& 
 	}
 }
 
-void FParticleEmitterInstance::PostSpawn(FBaseParticle& Particle, float SpawnTime)
+void FParticleEmitterInstance::PostSpawn(FBaseParticle& Particle, float SpawnTime, TArray<FParticleEventData>* OutEventQueue)
 {
 	/*if (CurrentLODLevel->GetRequiredModule()->bUseLocalSpace == false)
 	{
@@ -296,26 +314,171 @@ void FParticleEmitterInstance::PostSpawn(FBaseParticle& Particle, float SpawnTim
 
 	++ActiveParticles;
 	++ParticleCounter;
+	PublishParticleEvents(EParticleEventType::PEET_Spawn, Particle, ActiveParticles - 1, OutEventQueue);
 }
 
-void FParticleEmitterInstance::KillExpiredParticles()
+void FParticleEmitterInstance::KillExpiredParticles(TArray<FParticleEventData>& OutEventQueue)
 {
-	BEGIN_UPDATE_LOOP
+	BEGIN_PARTICLE_UPDATE_LOOP
 	if (Particle.Lifetime > 0.0f && Particle.RelativeTime >= 1.0f)
 	{
+		PublishParticleEvents(EParticleEventType::PEET_Death, Particle, Index, &OutEventQueue);
 		KillParticle(Index);
 	}
-	END_UPDATE_LOOP
+	END_PARTICLE_UPDATE_LOOP
 }
 
-void FParticleEmitterInstance::ProcessEvents()
+void FParticleEmitterInstance::ProcessEvents(const TArray<FParticleEventData>& EventQueue)
 {
-	
+	ReceivedEvents.clear();
+
+	if (!CurrentLODLevel || EventQueue.empty())
+		return;
+
+	for (const FParticleEventData& EventData : EventQueue)
+	{
+		if (HasReceiverFor(EventData))
+		{
+			ReceivedEvents.push_back(EventData);
+		}
+	}
+
+#if defined(_DEBUG)
+	if (OwnerComponent && OwnerComponent->IsEventTraceEnabled() && !ReceivedEvents.empty())
+	{
+		UE_LOG("[ParticleEvent][Emitter %d] received %zu / %zu event(s).",
+			ResolveEmitterIndex(),
+			ReceivedEvents.size(),
+			EventQueue.size());
+	}
+#endif
+
+	ProcessReceivedEvents();
+}
+
+bool FParticleEmitterInstance::HasReceiverFor(const FParticleEventData& Event) const
+{
+	if (!CurrentLODLevel)
+		return false;
+
+	for (UParticleModule* Module : CurrentLODLevel->GetUpdateModules())
+	{
+		if (!Module || !Module->IsEnabled())
+			continue;
+
+		const EParticleModuleClass ModClass = Module->GetModuleClass();
+		if (ModClass != EParticleModuleClass::EventReceiverSpawn &&
+			ModClass != EParticleModuleClass::EventReceiverKillAll)
+			continue;
+
+		const UParticleModuleEventReceiverBase* Receiver = static_cast<const UParticleModuleEventReceiverBase*>(Module);
+		if (Receiver->MatchesEvent(Event))
+			return true;
+	}
+
+	return false;
+}
+
+void FParticleEmitterInstance::ProcessReceivedEvents()
+{
+	if (!CurrentLODLevel || ReceivedEvents.empty())
+		return;
+
+	for (UParticleModule* Module : CurrentLODLevel->GetUpdateModules())
+	{
+		if (!Module || !Module->IsEnabled())
+			continue;
+
+		const EParticleModuleClass ModClass = Module->GetModuleClass();
+		if (ModClass != EParticleModuleClass::EventReceiverSpawn &&
+			ModClass != EParticleModuleClass::EventReceiverKillAll)
+			continue;
+
+		UParticleModuleEventReceiverBase* Receiver = static_cast<UParticleModuleEventReceiverBase*>(Module);
+		for (const FParticleEventData& EventData : ReceivedEvents)
+		{
+			if (Receiver->MatchesEvent(EventData))
+			{
+#if defined(_DEBUG)
+				if (OwnerComponent && OwnerComponent->IsEventTraceEnabled())
+				{
+					UE_LOG("[ParticleEvent][Emitter %d] handling %s event name=%s sourceEmitter=%d sourceParticle=%d",
+						ResolveEmitterIndex(),
+						ParticleEventTypeToString(EventData.Type),
+						EventData.EventName.ToString().c_str(),
+						EventData.SourceEmitterIndex,
+						EventData.SourceParticleIndex);
+				}
+#endif
+
+				Receiver->ProcessEvent(*this, EventData);
+			}
+		}
+	}
 }
 
 FBaseParticle& FParticleEmitterInstance::GetParticle(int32 index)
 {
 	return *reinterpret_cast<FBaseParticle*>(ParticleData + ParticleStride * ParticleIndices[index]);
+}
+
+void FParticleEmitterInstance::PublishParticleEvents(EParticleEventType EventType, const FBaseParticle& Particle, int32 ParticleIndex, TArray<FParticleEventData>* OutEventQueue, const FVector& EventNormal)
+{
+	if (!CurrentLODLevel || !OutEventQueue)
+		return;
+
+	const int32 SourceEmitterIndex = ResolveEmitterIndex();
+
+	for (UParticleModule* Module : CurrentLODLevel->GetModules())
+	{
+		if (!Module || !Module->IsEnabled() || Module->GetModuleClass() != EParticleModuleClass::EventGenerator)
+			continue;
+
+		UParticleModuleEventGenerator* GeneratorModule = static_cast<UParticleModuleEventGenerator*>(Module);
+		for (const FParticleEventGeneratorEntry& GeneratedEvent : GeneratorModule->GetGeneratedEvents())
+		{
+			if (GeneratedEvent.Type != EventType)
+				continue;
+
+			FParticleEventData EventData;
+			EventData.Type = EventType;
+			EventData.EventName = GeneratedEvent.EventName;
+			EventData.Location = Particle.Location;
+			EventData.Velocity = Particle.Velocity;
+			EventData.Normal = EventNormal;
+			EventData.SourceEmitterIndex = SourceEmitterIndex;
+			EventData.SourceParticleIndex = ParticleIndex;
+			OutEventQueue->push_back(EventData);
+
+#if defined(_DEBUG)
+			if (OwnerComponent && OwnerComponent->IsEventTraceEnabled())
+			{
+				UE_LOG("[ParticleEvent][Emitter %d] published %s event name=%s particle=%d loc=(%.2f, %.2f, %.2f) vel=(%.2f, %.2f, %.2f)",
+					SourceEmitterIndex,
+					ParticleEventTypeToString(EventType),
+					EventData.EventName.ToString().c_str(),
+					ParticleIndex,
+					EventData.Location.X, EventData.Location.Y, EventData.Location.Z,
+					EventData.Velocity.X, EventData.Velocity.Y, EventData.Velocity.Z);
+			}
+#endif
+		}
+	}
+}
+
+int32 FParticleEmitterInstance::ResolveEmitterIndex() const
+{
+	if (!OwnerComponent)
+		return INDEX_NONE;
+
+	const TArray<FParticleEmitterInstance*>& Instances = OwnerComponent->GetEmitterInstances();
+	for (int32 Index = 0; Index < static_cast<int32>(Instances.size()); ++Index)
+	{
+		if (Instances[Index] == this)
+			return Index;
+	}
+
+	return INDEX_NONE;
 }
 
 // Sprite Paticle============================================================
@@ -381,9 +544,9 @@ void FParticleMeshEmitterInstance::Init(UParticleSystemComponent* InComponent, U
 	}
 }
 
-void FParticleMeshEmitterInstance::Tick(float DeltaTime)
+void FParticleMeshEmitterInstance::Tick(float DeltaTime, TArray<FParticleEventData>& OutEventQueue)
 {
-	FParticleEmitterInstance::Tick(DeltaTime);
+	FParticleEmitterInstance::Tick(DeltaTime, OutEventQueue);
 
 	//MeshRotation및 payload계산
 }

@@ -22,6 +22,8 @@ using uint64 = unsigned __int64;
 
 using FString = std::string;
 
+constexpr int32 INDEX_NONE = -1;
+
 template <typename T>
 using TArray = std::vector<T>;
 

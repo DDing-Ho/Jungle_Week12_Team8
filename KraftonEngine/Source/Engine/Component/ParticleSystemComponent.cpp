@@ -3,6 +3,7 @@
 #include "Particles/Rendering/ParticleRenderData.h"
 #include "Render/Proxy/ParticleSceneProxy.h"
 #include "Particles/Assets/ParticleSystemAssetManager.h"
+#include "Core/Log.h"
 
 #include <algorithm>
 #include <Platform/Paths.h>
@@ -19,7 +20,7 @@ UParticleSystemComponent::UParticleSystemComponent()
 	TotalActiveParticles = 0;
 
 	EmitterMaterials.clear();
-	CollisionEvents.clear();
+	FrameEventQueue.clear();
 	EmitterRenderData.clear();
 }
 
@@ -84,15 +85,34 @@ void UParticleSystemComponent::TickComponent(float DeltaTime, ELevelTick TickTyp
 	//}
 
 	//이벤트 버퍼 정리
-	CollisionEvents.clear();
+	FrameEventQueue.clear();
 	TotalActiveParticles = 0;
 
 	// 인스턴스 tick
 	for (auto instance : EmitterInstances) {
 		if (!instance) continue;
-		instance->Tick(DeltaTimeTick);
+		instance->Tick(DeltaTimeTick, FrameEventQueue);
+	}
+
+#if defined(_DEBUG)
+	if (bDebugEventTrace && !FrameEventQueue.empty())
+	{
+		UE_LOG("[ParticleEvent][Component %p] queued %zu event(s) this frame.", this, FrameEventQueue.size());
+	}
+#endif
+
+	for (auto instance : EmitterInstances) {
+		if (!instance) continue;
+		instance->ProcessEvents(FrameEventQueue);
 		TotalActiveParticles += instance->ActiveParticles;
 	}
+
+#if defined(_DEBUG)
+	if (bDebugEventTrace && !FrameEventQueue.empty())
+	{
+		UE_LOG("[ParticleEvent][Component %p] finished dispatch. activeParticles=%d", this, TotalActiveParticles);
+	}
+#endif
 
 	// RenderData 수집
 	BuildRenderData();
@@ -243,6 +263,8 @@ void UParticleSystemComponent::ResetSystem()
 	for (FParticleEmitterInstance* instance : EmitterInstances) {
 		instance->Reset();
 	}
+	FrameEventQueue.clear();
+	TotalActiveParticles = 0;
 	ClearRenderData();
 	MarkProxyDirty(EDirtyFlag::Mesh);
 }
@@ -258,6 +280,7 @@ void UParticleSystemComponent::ClearEmitterInstances()
 	}
 
 	EmitterInstances.clear();
+	FrameEventQueue.clear();
 	TotalActiveParticles = 0;
 	ClearRenderData();
 	MarkProxyDirty(EDirtyFlag::Mesh);
