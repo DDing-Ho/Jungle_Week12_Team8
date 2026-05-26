@@ -30,6 +30,7 @@ struct FMaterialAssetListItem
 {
 	FString DisplayName;
 	FString FullPath;
+	FString ShaderPath;
 };
 
 class FMaterialManager : public TSingleton<FMaterialManager>
@@ -39,6 +40,7 @@ class FMaterialManager : public TSingleton<FMaterialManager>
     TMap<FString, FMaterialTemplate*> TemplateCache;    // 셰이더 경로 → Template (공유)
 	TMap<FString, UMaterial*> MaterialCache;	//MatFilePath
 	TArray<FMaterialAssetListItem> AvailableMaterialFiles;
+	TArray<FMaterialAssetListItem> AvailableParticleMaterialFiles;
 
 	ID3D11Device* Device = nullptr;
 
@@ -58,6 +60,7 @@ public:
 
 	void ScanMaterialAssets();
 	const TArray<FMaterialAssetListItem>& GetAvailableMaterialFiles() const { return AvailableMaterialFiles; }
+	const TArray<FMaterialAssetListItem>& GetAvailableParticleMaterialFiles() const { return AvailableParticleMaterialFiles; }
 
 	void Release();
 private:

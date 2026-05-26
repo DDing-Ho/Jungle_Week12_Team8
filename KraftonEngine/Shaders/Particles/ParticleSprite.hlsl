@@ -42,8 +42,7 @@ PS_Input_ParticleSprite VS(VS_Input_ParticleSprite input)
 
 float4 PS(PS_Input_ParticleSprite input) : SV_TARGET
 {
-    //float4 texColor = ParticleTexture.Sample(LinearClampSampler, input.uv);
-    float4 texColor = float4(1.f, 1.f, 1.f, 1.f);
+    float4 texColor = ParticleTexture.Sample(LinearClampSampler, input.uv);
 
     float4 color = texColor * input.color;
 

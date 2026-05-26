@@ -39,11 +39,18 @@ namespace
 		}
 		return Stem;
 	}
+
+	bool IsParticleMaterialShaderPath(const FString& ShaderPath)
+	{
+		static constexpr const char* ParticleShaderPrefix = "Shaders/Particles/";
+		return ShaderPath.rfind(ParticleShaderPrefix, 0) == 0;
+	}
 }
 
 void FMaterialManager::ScanMaterialAssets()
 {
 	AvailableMaterialFiles.clear();
+	AvailableParticleMaterialFiles.clear();
 
 	const std::filesystem::path MaterialRoot = FPaths::RootDir() + L"Asset/";
 
@@ -65,9 +72,21 @@ void FMaterialManager::ScanMaterialAssets()
 		if (Ext != L".mat") continue;
 		if (Path.stem() == L"None") continue; // Fallback 머티리얼은 목록에서 제외
 
+		const FString RelativePath = FPaths::ToUtf8(Path.lexically_relative(ProjectRoot).generic_wstring());
+		json::JSON JsonData = ReadJsonFile(RelativePath);
+
 		FMaterialAssetListItem Item;
 		Item.DisplayName = FPaths::ToUtf8(Path.stem().wstring());
-		Item.FullPath = FPaths::ToUtf8(Path.lexically_relative(ProjectRoot).generic_wstring());
+		Item.FullPath = RelativePath;
+		if (!JsonData.IsNull() && JsonData.hasKey(MatKeys::ShaderPath))
+		{
+			Item.ShaderPath = JsonData[MatKeys::ShaderPath].ToString().c_str();
+		}
+
+		if (IsParticleMaterialShaderPath(Item.ShaderPath))
+		{
+			AvailableParticleMaterialFiles.push_back(Item);
+		}
 		AvailableMaterialFiles.push_back(std::move(Item));
 	}
 }

@@ -34,6 +34,8 @@ class UParticleModuleRequired : public UParticleModule
 
     UMaterial *GetMaterial() const { return Material; }
     void       SetMaterial(UMaterial *InMaterial);
+    const FString& GetMaterialPath() const { return MaterialSlot.Path; }
+    void       SetMaterialPath(const FString& InMaterialPath);
 
     EParticleSortMode GetSortMode() const { return SortMode; }
     void              SetSortMode(EParticleSortMode InSortMode) { SortMode = InSortMode; }

@@ -49,6 +49,16 @@ constexpr FParticleModuleStyleColors ParticleRequiredModuleColors = { ImVec4(0.7
 constexpr FParticleModuleStyleColors ParticleSpawnModuleColors = { ImVec4(0.784f, 0.392f, 0.392f, 1.0f), ImVec4(1.0f, 0.196f, 0.196f, 1.0f) };
 constexpr FParticleModuleStyleColors ParticleNormalModuleColors = { ImVec4(0.157f, 0.157f, 0.192f, 1.0f), ImVec4(1.0f, 0.392f, 0.0f, 1.0f) };
 
+static bool IsParticleMaterialPath(const FString& MaterialPath)
+{
+	const TArray<FMaterialAssetListItem>& MatFiles = FMaterialManager::Get().GetAvailableParticleMaterialFiles();
+	return std::any_of(MatFiles.begin(), MatFiles.end(),
+		[&MaterialPath](const FMaterialAssetListItem& Item)
+		{
+			return Item.FullPath == MaterialPath;
+		});
+}
+
 constexpr FParticleModuleAddOption ParticleModuleAddOptions[] =
 {
 	{ EParticleModuleClass::Spawn, "Spawn" },
@@ -1067,7 +1077,7 @@ bool FParticleSystemEditorWidget::RenderParticleProperty(const FProperty& Prop, 
 				ImGui::SetItemDefaultFocus();
 			}
 
-			const TArray<FMaterialAssetListItem>& MatFiles = FMaterialManager::Get().GetAvailableMaterialFiles();
+			const TArray<FMaterialAssetListItem>& MatFiles = FMaterialManager::Get().GetAvailableParticleMaterialFiles();
 			for (const FMaterialAssetListItem& Item : MatFiles)
 			{
 				bool bSelected = (Slot->Path == Item.FullPath);
@@ -1089,8 +1099,12 @@ bool FParticleSystemEditorWidget::RenderParticleProperty(const FProperty& Prop, 
 			if (const ImGuiPayload* Payload = ImGui::AcceptDragDropPayload("MaterialContentItem"))
 			{
 				FContentItem ContentItem = *reinterpret_cast<const FContentItem*>(Payload->Data);
-				Slot->Path = FPaths::ToUtf8(ContentItem.Path.lexically_relative(FPaths::RootDir()).generic_wstring());
-				bChanged = true;
+				const FString DroppedPath = FPaths::ToUtf8(ContentItem.Path.lexically_relative(FPaths::RootDir()).generic_wstring());
+				if (IsParticleMaterialPath(DroppedPath))
+				{
+					Slot->Path = DroppedPath;
+					bChanged = true;
+				}
 			}
 			ImGui::EndDragDropTarget();
 		}
