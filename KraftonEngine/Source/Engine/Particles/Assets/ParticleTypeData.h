@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @file ParticleTypeData.h
  * @brief Emitter 렌더링 타입을 결정하는 TypeData 정의.
  *
@@ -70,9 +70,13 @@ class UParticleModuleTypeDataBeam : public UParticleModuleTypeDataBase
     virtual void Serialize(FArchive& Ar) override;
 
   private:
+    UPROPERTY(Edit, Category="Particle", DisplayName="Source")
     FVector Source = FVector::ZeroVector; // Beam 시작점
+    UPROPERTY(Edit, Category="Particle", DisplayName="Target")
     FVector Target = FVector::ZeroVector; // Beam 끝점
+    UPROPERTY(Edit, Category="Particle", DisplayName="Width", Min=0.0, Max=100000.0, Speed=0.1)
     float   Width = 1.0f;                 // Beam 두께
+    UPROPERTY(Edit, Category="Particle", DisplayName="Texture Tiling", Min=0.0, Max=100000.0, Speed=0.1)
     float   TextureTiling = 1.0f;         // Beam Texture 반복 비율
 };
 
@@ -88,7 +92,10 @@ class UParticleModuleTypeDataRibbon : public UParticleModuleTypeDataBase
     virtual void Serialize(FArchive& Ar) override;
 
   private:
+    UPROPERTY(Edit, Category="Particle", DisplayName="Width", Min=0.0, Max=100000.0, Speed=0.1)
     float Width = 1.0f;         // Ribbon 폭
+    UPROPERTY(Edit, Category="Particle", DisplayName="Lifetime", Min=0.0, Max=100000.0, Speed=0.1)
     float Lifetime = 1.0f;      // Ribbon Trail 유지 시간
+    UPROPERTY(Edit, Category="Particle", DisplayName="Texture Tiling", Min=0.0, Max=100000.0, Speed=0.1)
     float TextureTiling = 1.0f; // Ribbon Texture 반복 비율
 };

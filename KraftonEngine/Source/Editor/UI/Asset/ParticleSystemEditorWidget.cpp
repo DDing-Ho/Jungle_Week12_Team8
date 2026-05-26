@@ -3,17 +3,26 @@
 #include "Engine/Particles/Assets/ParticleAsset.h"
 #include "Engine/Particles/Assets/ParticleSystemAssetManager.h"
 #include "Engine/Particles/Modules/ParticleCoreModules.h"
+#include "Engine/Particles/Modules/ParticleMotionModules.h"
+#include "Engine/Particles/Modules/ParticleRenderExpressionModules.h"
+#include "Core/Property/FEnumProperty.h"
+#include "Core/Property/FStructProperty.h"
+#include "Core/Property/PropertyTypes.h"
 #include "Engine/GameFramework/WorldContext.h"
 #include "Engine/Runtime/Engine.h"
 #include "Engine/Component/ParticleSystemComponent.h"
 #include "Engine/Viewport/Viewport.h"
 #include "Editor/Slate/SlateApplication.h"
+#include "Editor/UI/ContentBrowser/ContentItem.h"
+#include "Materials/MaterialManager.h"
 #include "Object/FUObjectArray.h"
+#include "Platform/Paths.h"
 
 #include <imgui.h>
 #include <imgui_internal.h>
 
 #include <algorithm>
+#include <cstdio>
 
 // 바닥 시각화
 #include "Mesh/StaticMesh.h"
@@ -29,10 +38,41 @@ struct FParticleModuleStyleColors
 	ImVec4 Selected;
 };
 
+struct FParticleModuleAddOption
+{
+	EParticleModuleClass Class;
+	const char* Name;
+};
+
 constexpr FParticleModuleStyleColors ParticleTypeDataModuleColors = { ImVec4(0.078f, 0.078f, 0.098f, 1.0f), ImVec4(1.0f, 0.39f, 0.0f, 1.0f) };
 constexpr FParticleModuleStyleColors ParticleRequiredModuleColors = { ImVec4(0.784f, 0.784f, 0.392f, 1.0f), ImVec4(1.0f, 0.882f, 0.196f, 1.0f) };
 constexpr FParticleModuleStyleColors ParticleSpawnModuleColors = { ImVec4(0.784f, 0.392f, 0.392f, 1.0f), ImVec4(1.0f, 0.196f, 0.196f, 1.0f) };
 constexpr FParticleModuleStyleColors ParticleNormalModuleColors = { ImVec4(0.157f, 0.157f, 0.192f, 1.0f), ImVec4(1.0f, 0.392f, 0.0f, 1.0f) };
+
+constexpr FParticleModuleAddOption ParticleModuleAddOptions[] =
+{
+	{ EParticleModuleClass::Spawn, "Spawn" },
+	{ EParticleModuleClass::Lifetime, "Lifetime" },
+	{ EParticleModuleClass::Location, "Location" },
+	{ EParticleModuleClass::Velocity, "Velocity" },
+	{ EParticleModuleClass::Color, "Color" },
+	{ EParticleModuleClass::Size, "Size" },
+	{ EParticleModuleClass::Rotation, "Rotation" },
+	{ EParticleModuleClass::RotationRate, "Rotation Rate" },
+	{ EParticleModuleClass::Acceleration, "Acceleration" },
+	{ EParticleModuleClass::Attractor, "Attractor" },
+	{ EParticleModuleClass::Orbit, "Orbit" },
+	{ EParticleModuleClass::Collision, "Collision" },
+	{ EParticleModuleClass::Kill, "Kill" },
+	{ EParticleModuleClass::EventGenerator, "Event Generator" },
+	{ EParticleModuleClass::EventReceiverSpawn, "Event Receiver Spawn" },
+	{ EParticleModuleClass::EventReceiverKillAll, "Event Receiver Kill All" },
+	{ EParticleModuleClass::SubUV, "SubUV" },
+	{ EParticleModuleClass::Light, "Light" },
+	{ EParticleModuleClass::VectorField, "Vector Field" },
+	{ EParticleModuleClass::Camera, "Camera" },
+	{ EParticleModuleClass::Parameter, "Parameter" },
+};
 
 constexpr ImVec4 ParticlePanelAccentColor = ImVec4(0.0f, 0.71f, 0.86f, 1.0f);
 
@@ -251,10 +291,7 @@ void FParticleSystemEditorWidget::Render(float DeltaTime)
 	}
 	ImGui::SameLine();
 	const bool bCanRemoveEmitter = SelectedEmitterIndex >= 0 && SelectedEmitterIndex < static_cast<int32>(Asset->GetEmitters().size());
-	if (!bCanRemoveEmitter)
-	{
-		ImGui::BeginDisabled();
-	}
+	ImGui::BeginDisabled(!bCanRemoveEmitter);
 	if (ImGui::Button("Remove Emitter"))
 	{
 		Asset->RemoveEmitter(SelectedEmitterIndex);
@@ -269,10 +306,118 @@ void FParticleSystemEditorWidget::Render(float DeltaTime)
 		SelectedModule = nullptr;
 		MarkDirty();
 	}
-	if (!bCanRemoveEmitter)
+	ImGui::EndDisabled();
+	ImGui::SameLine();
+
+	UParticleEmitter* SelectedEmitter = bCanRemoveEmitter ? Asset->GetEmitter(SelectedEmitterIndex) : nullptr;
+	UParticleLODLevel* SelectedLOD = SelectedEmitter ? SelectedEmitter->GetLODLevel(0) : nullptr;
+	ImGui::BeginDisabled(!SelectedEmitter);
+	if (ImGui::Button("Add Module"))
 	{
-		ImGui::EndDisabled();
+		ImGui::OpenPopup("##AddModulePopup");
 	}
+	ImGui::EndDisabled();
+	if (SelectedEmitter && ImGui::BeginPopup("##AddModulePopup"))
+	{
+		for (const FParticleModuleAddOption& Option : ParticleModuleAddOptions)
+		{
+			bool bAlreadyExists = false;
+			for (UParticleModule* Module : SelectedLOD->GetModules())
+			{
+				if (Module && Module->GetModuleClass() == Option.Class)
+				{
+					bAlreadyExists = true;
+					break;
+				}
+			}
+			if (bAlreadyExists)
+			{
+				continue;
+			}
+
+			if (ImGui::Selectable(Option.Name, false))
+			{
+				UParticleModule* NewModule = nullptr;
+				switch (Option.Class)
+				{
+				case EParticleModuleClass::Spawn: NewModule = GUObjectArray.CreateObject<UParticleModuleSpawn>(SelectedLOD); break;
+				case EParticleModuleClass::Lifetime: NewModule = GUObjectArray.CreateObject<UParticleModuleLifetime>(SelectedLOD); break;
+				case EParticleModuleClass::Location: NewModule = GUObjectArray.CreateObject<UParticleModuleLocation>(SelectedLOD); break;
+				case EParticleModuleClass::Velocity: NewModule = GUObjectArray.CreateObject<UParticleModuleVelocity>(SelectedLOD); break;
+				case EParticleModuleClass::Color: NewModule = GUObjectArray.CreateObject<UParticleModuleColor>(SelectedLOD); break;
+				case EParticleModuleClass::Size: NewModule = GUObjectArray.CreateObject<UParticleModuleSize>(SelectedLOD); break;
+				case EParticleModuleClass::Rotation: NewModule = GUObjectArray.CreateObject<UParticleModuleRotation>(SelectedLOD); break;
+				case EParticleModuleClass::RotationRate: NewModule = GUObjectArray.CreateObject<UParticleModuleRotationRate>(SelectedLOD); break;
+				case EParticleModuleClass::Acceleration: NewModule = GUObjectArray.CreateObject<UParticleModuleAcceleration>(SelectedLOD); break;
+				case EParticleModuleClass::Attractor: NewModule = GUObjectArray.CreateObject<UParticleModuleAttractor>(SelectedLOD); break;
+				case EParticleModuleClass::Orbit: NewModule = GUObjectArray.CreateObject<UParticleModuleOrbit>(SelectedLOD); break;
+				case EParticleModuleClass::Collision: NewModule = GUObjectArray.CreateObject<UParticleModuleCollision>(SelectedLOD); break;
+				case EParticleModuleClass::Kill: NewModule = GUObjectArray.CreateObject<UParticleModuleKill>(SelectedLOD); break;
+				case EParticleModuleClass::EventGenerator: NewModule = GUObjectArray.CreateObject<UParticleModuleEventGenerator>(SelectedLOD); break;
+				case EParticleModuleClass::EventReceiverSpawn: NewModule = GUObjectArray.CreateObject<UParticleModuleEventReceiverSpawn>(SelectedLOD); break;
+				case EParticleModuleClass::EventReceiverKillAll: NewModule = GUObjectArray.CreateObject<UParticleModuleEventReceiverKillAll>(SelectedLOD); break;
+				case EParticleModuleClass::SubUV: NewModule = GUObjectArray.CreateObject<UParticleModuleSubUV>(SelectedLOD); break;
+				case EParticleModuleClass::Light: NewModule = GUObjectArray.CreateObject<UParticleModuleLight>(SelectedLOD); break;
+				case EParticleModuleClass::VectorField: NewModule = GUObjectArray.CreateObject<UParticleModuleVectorField>(SelectedLOD); break;
+				case EParticleModuleClass::Camera: NewModule = GUObjectArray.CreateObject<UParticleModuleCamera>(SelectedLOD); break;
+				case EParticleModuleClass::Parameter: NewModule = GUObjectArray.CreateObject<UParticleModuleParameter>(SelectedLOD); break;
+				default: break;
+				}
+
+				if (NewModule)
+				{
+					SelectedLOD->AddModule(NewModule);
+					SelectedLOD->CacheModules();
+					Asset->CacheSystemModuleInfo();
+
+					if (UParticleSystemComponent* PreviewComponent = ViewportClient.GetPreviewComponent())
+					{
+						PreviewComponent->SetTemplate(Asset);
+					}
+
+					SelectedModule = NewModule;
+					MarkDirty();
+				}
+			}
+		}
+		ImGui::EndPopup();
+	}
+	ImGui::SameLine();
+
+	bool bCanRemoveModule = false;
+	int32 SelectedModuleIndex = -1;
+	if (SelectedModule)
+	{
+		const TArray<UParticleModule*>& Modules = SelectedLOD->GetModules();
+		for (int32 ModuleIndex = 0; ModuleIndex < static_cast<int32>(Modules.size()); ++ModuleIndex)
+		{
+			if (Modules[ModuleIndex] == SelectedModule)
+			{
+				SelectedModuleIndex = ModuleIndex;
+				bCanRemoveModule = true;
+				break;
+			}
+		}
+	}
+	ImGui::BeginDisabled(!bCanRemoveModule);
+	if (ImGui::Button("Remove Module"))
+	{
+		UParticleModule* RemovedModule = SelectedModule;
+		SelectedModule = nullptr;
+		SelectedLOD->RemoveModule(SelectedModuleIndex);
+		GUObjectArray.RemoveObject(RemovedModule);
+		GUObjectArray.DestroyObject(RemovedModule);
+		SelectedLOD->CacheModules();
+		Asset->CacheSystemModuleInfo();
+
+		if (UParticleSystemComponent* PreviewComponent = ViewportClient.GetPreviewComponent())
+		{
+			PreviewComponent->SetTemplate(Asset);
+		}
+
+		MarkDirty();
+	}
+	ImGui::EndDisabled();
 
 	struct FPanelLayout
 	{
@@ -472,92 +617,619 @@ bool FParticleSystemEditorWidget::RenderDetailsPanel()
 
 	UParticleSystem* Asset = Cast<UParticleSystem>(EditedObject);
 
-	ImGui::Columns(2, "##ParticleDetailsColumns", false);
-	ImGui::SetColumnWidth(0, ParticleDetailsColumnWidth);
-
+	UObject* DetailsObject = Asset;
 	if (SelectedModule)
 	{
-		const char* ModuleName = "Unknown";
-		switch (SelectedModule->GetModuleClass())
-		{
-		case EParticleModuleClass::Required: ModuleName = "Required"; break;
-		case EParticleModuleClass::Spawn: ModuleName = "Spawn"; break;
-		case EParticleModuleClass::Lifetime: ModuleName = "Lifetime"; break;
-		case EParticleModuleClass::Location: ModuleName = "Location"; break;
-		case EParticleModuleClass::Velocity: ModuleName = "Velocity"; break;
-		case EParticleModuleClass::Color: ModuleName = "Color"; break;
-		case EParticleModuleClass::Size: ModuleName = "Size"; break;
-		case EParticleModuleClass::TypeDataSprite: ModuleName = "TypeData Sprite"; break;
-		case EParticleModuleClass::TypeDataMesh: ModuleName = "TypeData Mesh"; break;
-		case EParticleModuleClass::TypeDataBeam: ModuleName = "TypeData Beam"; break;
-		case EParticleModuleClass::TypeDataRibbon: ModuleName = "TypeData Ribbon"; break;
-		default: break;
-		}
-		ImGui::TextUnformatted("Selection"); ImGui::NextColumn(); ImGui::TextUnformatted("Module"); ImGui::NextColumn();
-		ImGui::TextUnformatted("Module"); ImGui::NextColumn(); ImGui::TextUnformatted(ModuleName); ImGui::NextColumn();
-		ImGui::TextUnformatted("Enabled"); ImGui::NextColumn(); ImGui::TextUnformatted(SelectedModule->IsEnabled() ? "true" : "false"); ImGui::NextColumn();
-		ImGui::TextUnformatted("Update Phase"); ImGui::NextColumn();
-		switch (SelectedModule->GetUpdatePhase())
-		{
-		case EParticleModuleUpdatePhase::PMUP_Spawn: ImGui::TextUnformatted("Spawn"); break;
-		case EParticleModuleUpdatePhase::PMUP_Update: ImGui::TextUnformatted("Update"); break;
-		case EParticleModuleUpdatePhase::PMUP_SpawnAndUpdate: ImGui::TextUnformatted("Spawn and Update"); break;
-		}
-		ImGui::NextColumn();
-		if (UParticleModuleSpawn* SpawnModule = Cast<UParticleModuleSpawn>(SelectedModule))
-		{
-			ImGui::TextUnformatted("Spawn Rate"); ImGui::NextColumn(); ImGui::Text("%.2f", SpawnModule->GetSpawnRate()); ImGui::NextColumn();
-			ImGui::TextUnformatted("Burst Count"); ImGui::NextColumn(); ImGui::Text("%d", SpawnModule->GetBurstCount()); ImGui::NextColumn();
-		}
-		else if (UParticleModuleRequired* RequiredModule = Cast<UParticleModuleRequired>(SelectedModule))
-		{
-			ImGui::TextUnformatted("Emitter Type"); ImGui::NextColumn();
-			switch (RequiredModule->GetEmitterType())
-			{
-			case EParticleEmitterType::PET_Sprite: ImGui::TextUnformatted("Sprite"); break;
-			case EParticleEmitterType::PET_Mesh: ImGui::TextUnformatted("Mesh"); break;
-			case EParticleEmitterType::PET_Beam: ImGui::TextUnformatted("Beam"); break;
-			case EParticleEmitterType::PET_Ribbon: ImGui::TextUnformatted("Ribbon"); break;
-			}
-			ImGui::NextColumn();
-			ImGui::TextUnformatted("Sort Mode"); ImGui::NextColumn();
-			switch (RequiredModule->GetSortMode())
-			{
-			case EParticleSortMode::PSM_None: ImGui::TextUnformatted("None"); break;
-			case EParticleSortMode::PSM_DistanceToView: ImGui::TextUnformatted("Distance To View"); break;
-			case EParticleSortMode::PSM_Age: ImGui::TextUnformatted("Age"); break;
-			}
-			ImGui::NextColumn();
-		}
+		DetailsObject = SelectedModule;
 	}
 	else if (SelectedEmitterIndex >= 0 && SelectedEmitterIndex < static_cast<int32>(Asset->GetEmitters().size()))
 	{
-		UParticleEmitter* Emitter = Asset->GetEmitter(SelectedEmitterIndex);
-		const FString EmitterName = Emitter->GetEmitterName().ToString();
-		ImGui::TextUnformatted("Selection"); ImGui::NextColumn(); ImGui::TextUnformatted("Emitter"); ImGui::NextColumn();
-		ImGui::TextUnformatted("Name"); ImGui::NextColumn(); ImGui::TextUnformatted(EmitterName.empty() ? "Particle Emitter" : EmitterName.c_str()); ImGui::NextColumn();
-		ImGui::TextUnformatted("Render Mode"); ImGui::NextColumn();
-		switch (Emitter->GetEmitterRenderMode())
+		DetailsObject = Asset->GetEmitter(SelectedEmitterIndex);
+	}
+
+	bool bChanged = RenderEditableProperties(DetailsObject);
+
+	if (SelectedModule)
+	{
+		bChanged |= RenderParticleDistribution(SelectedModule);
+	}
+
+	return bChanged;
+}
+
+bool FParticleSystemEditorWidget::RenderParticleDistribution(UParticleModule* Module)
+{
+	if (!Module)
+	{
+		return false;
+	}
+
+	bool bChanged = false;
+	auto DrawType = [&bChanged](EDistributionType& Type)
+	{
+		ImGui::PushID("DistributionType");
+		const char* Names[] = { "Constant", "Uniform", "ConstantCurve", "UniformCurve" };
+		int32 Current = static_cast<int32>(Type);
+		if (Current < 0 || Current >= 4)
 		{
-		case EParticleEmitterRenderMode::ERM_Normal: ImGui::TextUnformatted("Normal"); break;
-		case EParticleEmitterRenderMode::ERM_Point: ImGui::TextUnformatted("Point"); break;
-		case EParticleEmitterRenderMode::ERM_Cross: ImGui::TextUnformatted("Cross"); break;
-		case EParticleEmitterRenderMode::ERM_None: ImGui::TextUnformatted("None"); break;
+			Current = 0;
+		}
+		ImGui::TextUnformatted("Type");
+		ImGui::NextColumn();
+		ImGui::SetNextItemWidth(-1.0f);
+		if (ImGui::Combo("##DistributionType", &Current, Names, 4))
+		{
+			Type = static_cast<EDistributionType>(Current);
+			bChanged = true;
 		}
 		ImGui::NextColumn();
-		ImGui::TextUnformatted("Initial Allocation"); ImGui::NextColumn(); ImGui::Text("%d", Emitter->GetInitialAllocationCount()); ImGui::NextColumn();
-		ImGui::TextUnformatted("Max Active"); ImGui::NextColumn(); ImGui::Text("%d", Emitter->GetMaxActiveParticles()); ImGui::NextColumn();
+		ImGui::PopID();
+	};
+	auto DrawFloat = [&bChanged](const char* Name, float& Value)
+	{
+		ImGui::PushID(Name);
+		ImGui::TextUnformatted(Name);
+		ImGui::NextColumn();
+		ImGui::SetNextItemWidth(-1.0f);
+		bChanged |= ImGui::DragFloat("##Value", &Value, 0.01f, 0.0f, 0.0f, "%.4f");
+		ImGui::NextColumn();
+		ImGui::PopID();
+	};
+	auto DrawVector = [&bChanged](const char* Name, FVector& Value)
+	{
+		ImGui::PushID(Name);
+		ImGui::TextUnformatted(Name);
+		ImGui::NextColumn();
+		ImGui::SetNextItemWidth(-1.0f);
+		bChanged |= ImGui::DragFloat3("##Value", &Value.X, 0.01f, 0.0f, 0.0f, "%.4f");
+		ImGui::NextColumn();
+		ImGui::PopID();
+	};
+	auto DrawColor = [&bChanged](const char* Name, FLinearColor& Value)
+	{
+		ImGui::PushID(Name);
+		float Color[4] = { Value.R, Value.G, Value.B, Value.A };
+		ImGui::TextUnformatted(Name);
+		ImGui::NextColumn();
+		ImGui::SetNextItemWidth(-1.0f);
+		if (ImGui::DragFloat4("##Value", Color, 0.01f, 0.0f, 0.0f, "%.4f"))
+		{
+			Value = FLinearColor(Color[0], Color[1], Color[2], Color[3]);
+			bChanged = true;
+		}
+		ImGui::NextColumn();
+		ImGui::PopID();
+	};
+	auto DrawBool = [&bChanged](const char* Name, bool& Value)
+	{
+		ImGui::PushID(Name);
+		ImGui::TextUnformatted(Name);
+		ImGui::NextColumn();
+		bChanged |= ImGui::Checkbox("##Value", &Value);
+		ImGui::NextColumn();
+		ImGui::PopID();
+	};
+	auto DrawFloatCurve = [&bChanged](const char* Name, FParticleFloatCurve& Curve)
+	{
+		ImGui::PushID(Name);
+		ImGui::TextUnformatted(Name);
+		ImGui::NextColumn();
+		const char* Modes[] = { "Linear", "Constant", "CurveAuto", "CurveUser", "CurveBreak" };
+		int32 Mode = static_cast<int32>(Curve.InterpMode);
+		ImGui::SetNextItemWidth(-1.0f);
+		if (ImGui::Combo("##InterpMode", &Mode, Modes, 5))
+		{
+			Curve.InterpMode = static_cast<EParticleCurveInterpMode>(Mode);
+			if (Curve.InterpMode == EParticleCurveInterpMode::CurveAuto)
+			{
+				Curve.ComputeAutoTangents();
+			}
+			bChanged = true;
+		}
+		ImGui::NextColumn();
+
+		ImGui::TextUnformatted("Key Count");
+		ImGui::NextColumn();
+		ImGui::Text("%d", static_cast<int32>(Curve.Keys.size()));
+		ImGui::SameLine();
+		if (ImGui::Button("Add Key"))
+		{
+			const float Time = Curve.Keys.empty() ? 0.0f : Curve.Keys.back().Time + 0.1f;
+			const float Value = Curve.Keys.empty() ? 0.0f : Curve.Keys.back().Value;
+			Curve.Keys.push_back({ Time, Value, 0.0f, 0.0f });
+			if (Curve.InterpMode == EParticleCurveInterpMode::CurveAuto)
+			{
+				Curve.ComputeAutoTangents();
+			}
+			bChanged = true;
+		}
+		ImGui::NextColumn();
+
+		for (int32 KeyIndex = 0; KeyIndex < static_cast<int32>(Curve.Keys.size()); ++KeyIndex)
+		{
+			FFloatCurveKey& Key = Curve.Keys[KeyIndex];
+			ImGui::PushID(KeyIndex);
+			char Label[64];
+			snprintf(Label, sizeof(Label), "Key %d T/V/AT/LT", KeyIndex);
+			ImGui::TextUnformatted(Label);
+			ImGui::NextColumn();
+			float Values[4] = { Key.Time, Key.Value, Key.ArriveTangent, Key.LeaveTangent };
+			ImGui::SetNextItemWidth(-1.0f);
+			if (ImGui::DragFloat4("##Key", Values, 0.01f, 0.0f, 0.0f, "%.3f"))
+			{
+				Key.Time = Values[0];
+				Key.Value = Values[1];
+				Key.ArriveTangent = Values[2];
+				Key.LeaveTangent = Values[3];
+				if (Curve.InterpMode == EParticleCurveInterpMode::CurveUser)
+				{
+					Key.ArriveTangent = Key.LeaveTangent;
+				}
+				if (Curve.InterpMode == EParticleCurveInterpMode::CurveAuto)
+				{
+					Curve.ComputeAutoTangents();
+				}
+				bChanged = true;
+			}
+			ImGui::SameLine();
+			if (ImGui::Button("Remove"))
+			{
+				Curve.Keys.erase(Curve.Keys.begin() + KeyIndex);
+				if (Curve.InterpMode == EParticleCurveInterpMode::CurveAuto)
+				{
+					Curve.ComputeAutoTangents();
+				}
+				bChanged = true;
+				ImGui::PopID();
+				ImGui::NextColumn();
+				break;
+			}
+			ImGui::NextColumn();
+			ImGui::PopID();
+		}
+		ImGui::PopID();
+	};
+
+	ImGui::Separator();
+	ImGui::TextUnformatted("Distribution");
+	ImGui::Columns(2, "##ParticleDistributionEditRows", false);
+	ImGui::SetColumnWidth(0, ParticleDetailsColumnWidth);
+
+	if (UParticleModuleLifetime* Lifetime = Cast<UParticleModuleLifetime>(Module))
+	{
+		UDistributionFloat* Dist = Lifetime->GetLifetimeDist();
+		ImGui::TextUnformatted("Object");
+		ImGui::NextColumn();
+		ImGui::TextUnformatted(Dist ? "LifetimeDist" : "LifetimeDist is null");
+		ImGui::NextColumn();
+		if (Dist)
+		{
+			DrawType(Dist->Type);
+			DrawFloat("Min", Dist->Min);
+			DrawFloat("Max", Dist->Max);
+			DrawFloatCurve("MinCurve", Dist->MinCurve);
+			DrawFloatCurve("MaxCurve", Dist->MaxCurve);
+		}
+	}
+	else if (UParticleModuleLocation* Location = Cast<UParticleModuleLocation>(Module))
+	{
+		UDistributionVector* Dist = Location->GetLocationDist();
+		ImGui::TextUnformatted("Object");
+		ImGui::NextColumn();
+		ImGui::TextUnformatted(Dist ? "LocationDist" : "LocationDist is null");
+		ImGui::NextColumn();
+		if (Dist)
+		{
+			DrawType(Dist->Type);
+			DrawVector("Min", Dist->Min);
+			DrawVector("Max", Dist->Max);
+			DrawBool("bLockAxes", Dist->bLockAxes);
+			DrawFloatCurve("MinCurve.X", Dist->MinCurve.X);
+			DrawFloatCurve("MinCurve.Y", Dist->MinCurve.Y);
+			DrawFloatCurve("MinCurve.Z", Dist->MinCurve.Z);
+			DrawFloatCurve("MaxCurve.X", Dist->MaxCurve.X);
+			DrawFloatCurve("MaxCurve.Y", Dist->MaxCurve.Y);
+			DrawFloatCurve("MaxCurve.Z", Dist->MaxCurve.Z);
+		}
+	}
+	else if (UParticleModuleVelocity* Velocity = Cast<UParticleModuleVelocity>(Module))
+	{
+		UDistributionVector* Dist = Velocity->GetVelocityDist();
+		ImGui::TextUnformatted("Object");
+		ImGui::NextColumn();
+		ImGui::TextUnformatted(Dist ? "VelocityDist" : "VelocityDist is null");
+		ImGui::NextColumn();
+		if (Dist)
+		{
+			DrawType(Dist->Type);
+			DrawVector("Min", Dist->Min);
+			DrawVector("Max", Dist->Max);
+			DrawBool("bLockAxes", Dist->bLockAxes);
+			DrawFloatCurve("MinCurve.X", Dist->MinCurve.X);
+			DrawFloatCurve("MinCurve.Y", Dist->MinCurve.Y);
+			DrawFloatCurve("MinCurve.Z", Dist->MinCurve.Z);
+			DrawFloatCurve("MaxCurve.X", Dist->MaxCurve.X);
+			DrawFloatCurve("MaxCurve.Y", Dist->MaxCurve.Y);
+			DrawFloatCurve("MaxCurve.Z", Dist->MaxCurve.Z);
+		}
+	}
+	else if (UParticleModuleColor* Color = Cast<UParticleModuleColor>(Module))
+	{
+		UDistributionLinearColor* Dist = Color->GetColorDist();
+		ImGui::TextUnformatted("Object");
+		ImGui::NextColumn();
+		ImGui::TextUnformatted(Dist ? "ColorDist" : "ColorDist is null");
+		ImGui::NextColumn();
+		if (Dist)
+		{
+			DrawType(Dist->Type);
+			DrawColor("Min", Dist->Min);
+			DrawColor("Max", Dist->Max);
+			DrawFloatCurve("MinCurve.R", Dist->MinCurve.R);
+			DrawFloatCurve("MinCurve.G", Dist->MinCurve.G);
+			DrawFloatCurve("MinCurve.B", Dist->MinCurve.B);
+			DrawFloatCurve("MinCurve.A", Dist->MinCurve.A);
+			DrawFloatCurve("MaxCurve.R", Dist->MaxCurve.R);
+			DrawFloatCurve("MaxCurve.G", Dist->MaxCurve.G);
+			DrawFloatCurve("MaxCurve.B", Dist->MaxCurve.B);
+			DrawFloatCurve("MaxCurve.A", Dist->MaxCurve.A);
+		}
+	}
+	else if (UParticleModuleSize* Size = Cast<UParticleModuleSize>(Module))
+	{
+		UDistributionVector* Dist = Size->GetSizeDist();
+		ImGui::TextUnformatted("Object");
+		ImGui::NextColumn();
+		ImGui::TextUnformatted(Dist ? "SizeDist" : "SizeDist is null");
+		ImGui::NextColumn();
+		if (Dist)
+		{
+			DrawType(Dist->Type);
+			DrawVector("Min", Dist->Min);
+			DrawVector("Max", Dist->Max);
+			DrawBool("bLockAxes", Dist->bLockAxes);
+			DrawFloatCurve("MinCurve.X", Dist->MinCurve.X);
+			DrawFloatCurve("MinCurve.Y", Dist->MinCurve.Y);
+			DrawFloatCurve("MinCurve.Z", Dist->MinCurve.Z);
+			DrawFloatCurve("MaxCurve.X", Dist->MaxCurve.X);
+			DrawFloatCurve("MaxCurve.Y", Dist->MaxCurve.Y);
+			DrawFloatCurve("MaxCurve.Z", Dist->MaxCurve.Z);
+		}
+	}
+	else if (UParticleModuleRotation* Rotation = Cast<UParticleModuleRotation>(Module))
+	{
+		UDistributionFloat* Dist = Rotation->GetRotationDist();
+		ImGui::TextUnformatted("Object");
+		ImGui::NextColumn();
+		ImGui::TextUnformatted(Dist ? "RotationDist" : "RotationDist is null");
+		ImGui::NextColumn();
+		if (Dist)
+		{
+			DrawType(Dist->Type);
+			DrawFloat("Min", Dist->Min);
+			DrawFloat("Max", Dist->Max);
+			DrawFloatCurve("MinCurve", Dist->MinCurve);
+			DrawFloatCurve("MaxCurve", Dist->MaxCurve);
+		}
+	}
+	else if (UParticleModuleRotationRate* RotationRate = Cast<UParticleModuleRotationRate>(Module))
+	{
+		UDistributionFloat* Dist = RotationRate->GetRotationRateDist();
+		ImGui::TextUnformatted("Object");
+		ImGui::NextColumn();
+		ImGui::TextUnformatted(Dist ? "RotationRateDist" : "RotationRateDist is null");
+		ImGui::NextColumn();
+		if (Dist)
+		{
+			DrawType(Dist->Type);
+			DrawFloat("Min", Dist->Min);
+			DrawFloat("Max", Dist->Max);
+			DrawFloatCurve("MinCurve", Dist->MinCurve);
+			DrawFloatCurve("MaxCurve", Dist->MaxCurve);
+		}
 	}
 	else
 	{
-		ImGui::TextUnformatted("Selection"); ImGui::NextColumn(); ImGui::TextUnformatted("Particle System"); ImGui::NextColumn();
-		ImGui::TextUnformatted("Source Path"); ImGui::NextColumn(); ImGui::TextUnformatted(Asset->GetSourcePath().empty() ? "Unsaved particle system" : Asset->GetSourcePath().c_str()); ImGui::NextColumn();
-		ImGui::TextUnformatted("Emitters"); ImGui::NextColumn(); ImGui::Text("%d", static_cast<int32>(Asset->GetEmitters().size())); ImGui::NextColumn();
-		ImGui::TextUnformatted("LOD Distances"); ImGui::NextColumn(); ImGui::Text("%d", static_cast<int32>(Asset->LODDistances.size())); ImGui::NextColumn();
+		ImGui::TextUnformatted("Object");
+		ImGui::NextColumn();
+		ImGui::TextUnformatted("No distribution variables");
+		ImGui::NextColumn();
 	}
 
 	ImGui::Columns(1);
-	return false;
+	if (bChanged)
+	{
+		HandleEditedParticleProperty(Module, nullptr);
+	}
+	return bChanged;
+}
+
+bool FParticleSystemEditorWidget::RenderEditableProperties(UObject* Object)
+{
+	if (!Object)
+	{
+		return false;
+	}
+
+	TArray<const FProperty*> Props;
+	Object->GetEditableProperties(Props);
+	if (Props.empty())
+	{
+		ImGui::TextDisabled("No editable properties.");
+		return false;
+	}
+
+	bool bChanged = false;
+	ImGui::Columns(2, "##ParticleDetailsColumns", false);
+	ImGui::SetColumnWidth(0, ParticleDetailsColumnWidth);
+	for (int32 PropIndex = 0; PropIndex < static_cast<int32>(Props.size()); ++PropIndex)
+	{
+		const FProperty* Prop = Props[PropIndex];
+		if (!Prop)
+		{
+			continue;
+		}
+
+		ImGui::PushID(PropIndex);
+		ImGui::TextUnformatted(Prop->Name.c_str());
+		ImGui::NextColumn();
+		ImGui::SetNextItemWidth(-1.0f);
+		if (RenderParticleProperty(*Prop, Object))
+		{
+			HandleEditedParticleProperty(Object, Prop);
+			bChanged = true;
+		}
+		ImGui::NextColumn();
+		ImGui::PopID();
+	}
+	ImGui::Columns(1);
+	return bChanged;
+}
+
+bool FParticleSystemEditorWidget::RenderParticleProperty(const FProperty& Prop, void* Container)
+{
+	void* ValuePtr = Prop.ContainerPtrToValuePtr(Container);
+	switch (Prop.GetType())
+	{
+	case EPropertyType::Bool:
+		return ImGui::Checkbox("##Value", static_cast<bool*>(ValuePtr));
+	case EPropertyType::ByteBool:
+	{
+		uint8* Value = static_cast<uint8*>(ValuePtr);
+		bool bValue = (*Value != 0);
+		if (ImGui::Checkbox("##Value", &bValue))
+		{
+			*Value = bValue ? 1 : 0;
+			return true;
+		}
+		return false;
+	}
+	case EPropertyType::Int:
+	{
+		const FNumericProperty& NumericProp = static_cast<const FNumericProperty&>(Prop);
+		int32* Value = static_cast<int32*>(ValuePtr);
+		if (NumericProp.Min != 0.0f || NumericProp.Max != 0.0f)
+		{
+			return ImGui::DragInt("##Value", Value, NumericProp.Speed, static_cast<int32>(NumericProp.Min), static_cast<int32>(NumericProp.Max));
+		}
+		return ImGui::DragInt("##Value", Value, NumericProp.Speed);
+	}
+	case EPropertyType::Float:
+	{
+		const FNumericProperty& NumericProp = static_cast<const FNumericProperty&>(Prop);
+		float* Value = static_cast<float*>(ValuePtr);
+		if (NumericProp.Min != 0.0f || NumericProp.Max != 0.0f)
+		{
+			return ImGui::DragFloat("##Value", Value, NumericProp.Speed, NumericProp.Min, NumericProp.Max, "%.4f");
+		}
+		return ImGui::DragFloat("##Value", Value, NumericProp.Speed, 0.0f, 0.0f, "%.4f");
+	}
+	case EPropertyType::Vec3:
+		return ImGui::DragFloat3("##Value", static_cast<float*>(ValuePtr), 0.1f);
+	case EPropertyType::Vec4:
+		return ImGui::DragFloat4("##Value", static_cast<float*>(ValuePtr), 0.1f);
+	case EPropertyType::Color4:
+	{
+		FLinearColor* Value = static_cast<FLinearColor*>(ValuePtr);
+		float Color[4] = { Value->R, Value->G, Value->B, Value->A };
+		if (ImGui::DragFloat4("##Value", Color, 0.01f, 0.0f, 0.0f, "%.4f"))
+		{
+			*Value = FLinearColor(Color[0], Color[1], Color[2], Color[3]);
+			return true;
+		}
+		return false;
+	}
+	case EPropertyType::MaterialSlot:
+	{
+		FMaterialSlot* Slot = static_cast<FMaterialSlot*>(ValuePtr);
+		FString Preview = (Slot->Path.empty() || Slot->Path == "None") ? "None" : Slot->Path;
+		bool bChanged = false;
+
+		if (ImGui::BeginCombo("##Mat", Preview.c_str()))
+		{
+			bool bSelectedNone = (Slot->Path == "None" || Slot->Path.empty());
+			if (ImGui::Selectable("None", bSelectedNone))
+			{
+				Slot->Path = "None";
+				bChanged = true;
+			}
+			if (bSelectedNone)
+			{
+				ImGui::SetItemDefaultFocus();
+			}
+
+			const TArray<FMaterialAssetListItem>& MatFiles = FMaterialManager::Get().GetAvailableMaterialFiles();
+			for (const FMaterialAssetListItem& Item : MatFiles)
+			{
+				bool bSelected = (Slot->Path == Item.FullPath);
+				if (ImGui::Selectable(Item.DisplayName.c_str(), bSelected))
+				{
+					Slot->Path = Item.FullPath;
+					bChanged = true;
+				}
+				if (bSelected)
+				{
+					ImGui::SetItemDefaultFocus();
+				}
+			}
+			ImGui::EndCombo();
+		}
+
+		if (ImGui::BeginDragDropTarget())
+		{
+			if (const ImGuiPayload* Payload = ImGui::AcceptDragDropPayload("MaterialContentItem"))
+			{
+				FContentItem ContentItem = *reinterpret_cast<const FContentItem*>(Payload->Data);
+				Slot->Path = FPaths::ToUtf8(ContentItem.Path.lexically_relative(FPaths::RootDir()).generic_wstring());
+				bChanged = true;
+			}
+			ImGui::EndDragDropTarget();
+		}
+
+		return bChanged;
+	}
+	case EPropertyType::Rotator:
+	{
+		FRotator* Rot = static_cast<FRotator*>(ValuePtr);
+		float RotXYZ[3] = { Rot->Roll, Rot->Pitch, Rot->Yaw };
+		if (ImGui::DragFloat3("##Value", RotXYZ, 0.1f))
+		{
+			Rot->Roll = RotXYZ[0];
+			Rot->Pitch = RotXYZ[1];
+			Rot->Yaw = RotXYZ[2];
+			return true;
+		}
+		return false;
+	}
+	case EPropertyType::String:
+	{
+		FString* Value = static_cast<FString*>(ValuePtr);
+		char Buffer[256];
+		strncpy_s(Buffer, sizeof(Buffer), Value->c_str(), _TRUNCATE);
+		if (ImGui::InputText("##Value", Buffer, sizeof(Buffer)))
+		{
+			*Value = Buffer;
+			return true;
+		}
+		return false;
+	}
+	case EPropertyType::Name:
+	{
+		FName* Value = static_cast<FName*>(ValuePtr);
+		const FString Current = Value->ToString();
+		char Buffer[256];
+		strncpy_s(Buffer, sizeof(Buffer), Current.c_str(), _TRUNCATE);
+		if (ImGui::InputText("##Value", Buffer, sizeof(Buffer)))
+		{
+			*Value = FName(Buffer);
+			return true;
+		}
+		return false;
+	}
+	case EPropertyType::Enum:
+	{
+		const FEnumProperty& EnumProp = static_cast<const FEnumProperty&>(Prop);
+		UEnum* Enum = EnumProp.GetEnum();
+		int32 CurrentValue = 0;
+		if (Prop.ElementSize == sizeof(uint8))
+		{
+			CurrentValue = *static_cast<uint8*>(ValuePtr);
+		}
+		else
+		{
+			CurrentValue = *static_cast<int32*>(ValuePtr);
+		}
+
+		const int32 CurrentIndex = Enum ? Enum->GetIndexByValue(CurrentValue) : -1;
+		const char* Preview = (Enum && CurrentIndex >= 0) ? Enum->GetNameByIndex(static_cast<uint32>(CurrentIndex)) : "Unknown";
+		bool bChanged = false;
+		if (ImGui::BeginCombo("##Value", Preview))
+		{
+			const uint32 Count = Enum ? Enum->NumEnums() : 0;
+			for (uint32 EnumIndex = 0; EnumIndex < Count; ++EnumIndex)
+			{
+				const int64 EnumValue = Enum->GetValueByIndex(EnumIndex);
+				const bool bSelected = static_cast<int64>(CurrentValue) == EnumValue;
+				if (ImGui::Selectable(Enum->GetNameByIndex(EnumIndex), bSelected))
+				{
+					if (Prop.ElementSize == sizeof(uint8))
+					{
+						*static_cast<uint8*>(ValuePtr) = static_cast<uint8>(EnumValue);
+					}
+					else
+					{
+						*static_cast<int32*>(ValuePtr) = static_cast<int32>(EnumValue);
+					}
+					bChanged = true;
+				}
+				if (bSelected)
+				{
+					ImGui::SetItemDefaultFocus();
+				}
+			}
+			ImGui::EndCombo();
+		}
+		return bChanged;
+	}
+	case EPropertyType::Struct:
+	{
+		const FStructProperty& StructProp = static_cast<const FStructProperty&>(Prop);
+		bool bChanged = false;
+		const TArray<FProperty*>& StructProps = StructProp.GetStructProperties();
+		for (int32 ChildIndex = 0; ChildIndex < static_cast<int32>(StructProps.size()); ++ChildIndex)
+		{
+			FProperty* ChildProp = StructProps[ChildIndex];
+			if (!ChildProp)
+			{
+				continue;
+			}
+			ImGui::PushID(ChildIndex);
+			ImGui::TextUnformatted(ChildProp->Name.c_str());
+			ImGui::SameLine();
+			ImGui::SetNextItemWidth(-1.0f);
+			bChanged |= RenderParticleProperty(*ChildProp, ValuePtr);
+			ImGui::PopID();
+		}
+		return bChanged;
+	}
+	default:
+		ImGui::TextDisabled("Unsupported");
+		return false;
+	}
+}
+
+void FParticleSystemEditorWidget::HandleEditedParticleProperty(UObject* Object, const FProperty* Prop)
+{
+	if (!Object)
+	{
+		return;
+	}
+
+	if (Prop)
+	{
+		Object->PostEditProperty(Prop->Name.c_str());
+	}
+	if (UParticleModule* Module = Cast<UParticleModule>(Object))
+	{
+		Module->CacheModuleValues();
+	}
+
+	UParticleSystem* Asset = Cast<UParticleSystem>(EditedObject);
+	UParticleEmitter* Emitter = (SelectedEmitterIndex >= 0 && Asset) ? Asset->GetEmitter(SelectedEmitterIndex) : nullptr;
+	UParticleLODLevel* LOD = Emitter ? Emitter->GetLODLevel(0) : nullptr;
+	if (LOD)
+	{
+		LOD->CacheModules();
+	}
+	if (Asset)
+	{
+		Asset->CacheSystemModuleInfo();
+	}
+	if (UParticleSystemComponent* PreviewComponent = ViewportClient.GetPreviewComponent())
+	{
+		PreviewComponent->SetTemplate(Asset);
+	}
+	MarkDirty();
 }
 
 bool FParticleSystemEditorWidget::RenderEmittersPanel()

@@ -9,6 +9,8 @@ struct ImVec2;
 class UParticleSystem;
 class UParticleEmitter;
 class UParticleModule;
+class UObject;
+class FProperty;
 
 class FParticleSystemEditorWidget : public FAssetEditorWidget
 {
@@ -30,6 +32,10 @@ public:
 private:
 	void RenderPreviewViewport(const ImVec2& Size);
 	bool RenderDetailsPanel();
+	bool RenderEditableProperties(UObject* Object);
+	bool RenderParticleProperty(const FProperty& Prop, void* Container);
+	bool RenderParticleDistribution(UParticleModule* Module);
+	void HandleEditedParticleProperty(UObject* Object, const FProperty* Prop);
 	bool RenderEmittersPanel();
 	bool RenderEmitterBlock(UParticleEmitter* Emitter, int32 EmitterIndex);
 	bool RenderEmitterHeader(UParticleEmitter* Emitter, int32 EmitterIndex);
