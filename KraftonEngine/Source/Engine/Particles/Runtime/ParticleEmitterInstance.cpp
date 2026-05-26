@@ -106,7 +106,7 @@ void FParticleEmitterInstance::Tick(float DeltaTime, TArray<FParticleEventData>&
 	}
 
 	//시간되었으면 spawn하는 로직
-	Tick_SpawnParticles(DeltaTime);
+	Tick_SpawnParticles(DeltaTime, &OutEventQueue);
 
 	if(!bFirstTime){
 		//if (ActiveParticles > 0) UpdateBoundingBox(DeltaTime);
@@ -211,7 +211,7 @@ void FParticleEmitterInstance::ResetParticleParameters(float DeltaTime)
 	}
 }
 
-void FParticleEmitterInstance::Tick_SpawnParticles(float DeltaTime)
+void FParticleEmitterInstance::Tick_SpawnParticles(float DeltaTime, TArray<FParticleEventData>* OutEventQueue)
 {
 	if (!CurrentLODLevel || !bEnabled)
 		return;
@@ -262,7 +262,7 @@ void FParticleEmitterInstance::Tick_SpawnParticles(float DeltaTime)
 			Increment,
 			InitialLocation,
 			FVector::ZeroVector,
-			&OutEventQueue
+			OutEventQueue
 		);
 	}
 
@@ -363,7 +363,7 @@ void FParticleEmitterInstance::KillExpiredParticles(TArray<FParticleEventData>& 
 	BEGIN_PARTICLE_UPDATE_LOOP
 	if (Particle.Lifetime > 0.0f && Particle.RelativeTime >= 1.0f)
 	{
-		PublishParticleEvents(EParticleEventType::PEET_Death, Particle, Index, OutEventQueue);
+		PublishParticleEvents(EParticleEventType::PEET_Death, Particle, Index, &OutEventQueue);
 		KillParticle(Index);
 	}
 	END_PARTICLE_UPDATE_LOOP

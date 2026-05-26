@@ -48,7 +48,7 @@ struct FParticleEmitterInstance
 	void Reset();
 	void ResetParticleParameters(float DeltaTime);												// 전체 초기화 아님, 틱 중에 초기화되어야하는 파라미터 초기화
 
-	void Tick_SpawnParticles(float DeltaTime);
+	void Tick_SpawnParticles(float DeltaTime, TArray<FParticleEventData>* OutEventQueue);
     int32 GetActiveParticleCount() const { return ActiveParticles; }
 
     virtual FDynamicEmitterDataBase *CreateDynamicEmitterData(); // 렌더링 데이터 생성
