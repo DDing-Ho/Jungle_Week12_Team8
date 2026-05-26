@@ -281,19 +281,20 @@ FDynamicEmitterDataBase* FParticleEmitterInstance::CreateDynamicEmitterData()
 		Source.SortMode = RequiredModule->GetSortMode();
 	}
 
-	Source.DataContainer.Allocate(ParticleStride, MaxActiveParticles);
+	Source.DataContainer.Allocate(ParticleStride, ActiveParticles);
 
-	memcpy(
-		Source.DataContainer.ParticleData,
-		ParticleData,
-		ParticleStride * MaxActiveParticles
-	);
+	for (int32 i = 0; i < ActiveParticles; ++i)
+	{
+		uint16 SrcIndex = ParticleIndices[i];
 
-	memcpy(
-		Source.DataContainer.ParticleIndices,
-		ParticleIndices,
-		sizeof(uint16) * ActiveParticles
-	);
+		memcpy(
+			Source.DataContainer.ParticleData + ParticleStride * i,
+			ParticleData + ParticleStride * SrcIndex,
+			ParticleStride
+		);
+
+		Source.DataContainer.ParticleIndices[i] = i;
+	}
 
 	return Data;
 }
@@ -308,8 +309,6 @@ void FParticleEmitterInstance::PreSpawn(FBaseParticle& Particle, const FVector& 
 	
 	//TODO: 모듈 생성시 아래 초기화 없앨것
 	//현재 모듈이 없어서 초기화 불가능해서 일단 여기서 진행 
-	Particle.RelativeTime = 0.0f;
-	Particle.Lifetime = 1.0f;
 	Particle.Color = FColor::White();
 	Particle.BaseColor = Particle.Color;
 	Particle.Size = FVector(1.0f, 1.0f, 1.0f);
@@ -358,4 +357,75 @@ void FParticleEmitterInstance::ProcessEvents()
 FBaseParticle& FParticleEmitterInstance::GetParticle(int32 index)
 {
 	return *reinterpret_cast<FBaseParticle*>(ParticleData + ParticleStride * ParticleIndices[index]);
+}
+
+
+// Mesh Paticle============================================================
+void FParticleMeshEmitterInstance::Init(UParticleSystemComponent* InComponent, UParticleEmitter* InTemplate)
+{
+	FParticleEmitterInstance::Init(InComponent, InTemplate);
+
+	MeshTypeData = nullptr;
+	if (CurrentLODLevel)
+	{
+		MeshTypeData = Cast<UParticleModuleTypeDataMesh>(CurrentLODLevel->GetTypeDataModule());
+	}
+}
+
+void FParticleMeshEmitterInstance::Tick(float DeltaTime)
+{
+	FParticleEmitterInstance::Tick(DeltaTime);
+
+	//MeshRotation및 payload계산
+}
+
+FDynamicEmitterDataBase* FParticleMeshEmitterInstance::CreateDynamicEmitterData()
+{
+	if (ActiveParticles <= 0)
+		return nullptr;
+
+	if (!ParticleData || !ParticleIndices)
+		return nullptr;
+
+	if (!CurrentLODLevel)
+		return nullptr;
+
+	if (!MeshTypeData || !MeshTypeData->GetMesh())
+		return nullptr;
+
+	FDynamicMeshEmitterData* Data = new FDynamicMeshEmitterData();
+
+	FDynamicMeshEmitterReplayData& Source = Data->Source;
+
+	Source.eEmitterType = EDynamicEmitterType::DET_Mesh;
+	Source.ActiveParticleCount = ActiveParticles;
+	Source.ParticleStride = ParticleStride;
+	Source.Scale = FVector(1.0f, 1.0f, 1.0f);
+	Source.Mesh = MeshTypeData->GetMesh();
+
+	UParticleModuleRequired* RequiredModule = CurrentLODLevel->GetRequiredModule();
+	Source.RequiredModule = RequiredModule;
+
+	if (RequiredModule)
+	{
+		Source.Material = RequiredModule->GetMaterial();
+		Source.SortMode = RequiredModule->GetSortMode();
+	}
+
+	Source.DataContainer.Allocate(ParticleStride, ActiveParticles);
+
+	for (int32 i = 0; i < ActiveParticles; ++i)
+	{
+		uint16 SrcIndex = ParticleIndices[i];
+
+		memcpy(
+			Source.DataContainer.ParticleData + ParticleStride * i,
+			ParticleData + ParticleStride * SrcIndex,
+			ParticleStride
+		);
+
+		Source.DataContainer.ParticleIndices[i] = i;
+	}
+
+	return Data;
 }

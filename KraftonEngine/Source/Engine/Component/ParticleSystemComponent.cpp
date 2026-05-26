@@ -166,7 +166,42 @@ void UParticleSystemComponent::CreateEmitterInstances()
 
 	const TArray<UParticleEmitter*> TemplateEmitters = Template->GetEmitters();
 	for (auto Emitter : TemplateEmitters) {
-		FParticleEmitterInstance* Instance = new FParticleEmitterInstance();
+		if (!Emitter)
+			continue;
+
+		EParticleEmitterType EmitterType = EParticleEmitterType::PET_Sprite;
+
+		if (UParticleLODLevel* LOD = Emitter->GetLODLevel(0))
+		{
+			if (UParticleModuleTypeDataBase* TypeData = LOD->GetTypeDataModule())
+			{
+				EmitterType = TypeData->GetEmitterType();
+			}
+		}
+
+		FParticleEmitterInstance* Instance = nullptr;
+
+		switch (EmitterType)
+		{
+		case EParticleEmitterType::PET_Sprite:
+			Instance = new FParticleEmitterInstance();
+			break;
+
+		case EParticleEmitterType::PET_Mesh:
+			Instance = new FParticleMeshEmitterInstance();
+			break;
+
+		case EParticleEmitterType::PET_Beam:
+		case EParticleEmitterType::PET_Ribbon:
+		default:
+			Instance = new FParticleEmitterInstance();
+			break;
+		}
+
+		if (!Instance)
+		{
+			Instance = new FParticleEmitterInstance();
+		}
 		Instance->Init(this, Emitter);
 
 		EmitterInstances.push_back(Instance);
