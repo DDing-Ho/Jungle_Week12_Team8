@@ -36,6 +36,9 @@ private:
 	void BeginMaterialCreate(EMaterialCreatePreset Preset, const FString& DefaultName);
 	void RenderMaterialCreatePopup();
 	bool ExecuteMaterialCreate();
+	void BeginParticleSystemCreate(const FString& DefaultName);
+	void RenderParticleSystemCreatePopup();
+	bool ExecuteParticleSystemCreate();
 	void BeginRenameAsset(const FContentItem& Item);
 	void RenderRenamePopup();
 	bool ExecuteRenameAsset();
@@ -62,6 +65,10 @@ private:
 	EMaterialCreatePreset PendingMaterialPreset = EMaterialCreatePreset::UberLit;
 	char MaterialCreateName[128] = {};
 	FString MaterialCreateError;
+
+	bool bOpenParticleSystemCreatePopup = false;
+	char ParticleSystemCreateName[128] = {};
+	FString ParticleSystemCreateError;
 
 	bool bOpenRenamePopup = false;
 	std::filesystem::path RenameSourcePath;

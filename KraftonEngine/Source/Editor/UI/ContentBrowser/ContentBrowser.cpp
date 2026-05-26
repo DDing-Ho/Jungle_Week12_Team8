@@ -180,7 +180,7 @@ namespace
 		std::snprintf(Buffer, BufferSize, "%s", Value.c_str());
 	}
 
-	bool TryNormalizeAssetName(const char* RawInput, FString& OutName, FString& OutError)
+	bool TryNormalizeAssetName(const char* RawInput, FString& OutName, FString& OutError, const char* ExtensionToStrip)
 	{
 		FString Name = TrimCopy(RawInput ? FString(RawInput) : FString());
 		if (Name.empty())
@@ -209,7 +209,7 @@ namespace
 		FString Extension = FPaths::ToUtf8(NamePath.extension().wstring());
 		std::transform(Extension.begin(), Extension.end(), Extension.begin(),
 			[](unsigned char Ch) { return static_cast<char>(std::tolower(Ch)); });
-		if (Extension == ".mat")
+		if (ExtensionToStrip && Extension == ExtensionToStrip)
 		{
 			Name = FPaths::ToUtf8(NamePath.stem().wstring());
 		}
@@ -297,6 +297,7 @@ void FEditorContentBrowserWidget::Render(float DeltaTime)
 
 	RenderFbxImportPopup();
 	RenderMaterialCreatePopup();
+	RenderParticleSystemCreatePopup();
 	RenderRenamePopup();
 	RenderDeletePopup();
 
@@ -616,18 +617,7 @@ void FEditorContentBrowserWidget::DrawContents()
 			}
 			if (ImGui::MenuItem("Particle System"))
 			{
-				FString CreatedPath;
-				if (FAssetFactory::CreateParticleSystemAsset(FPaths::ToUtf8(BrowserContext.CurrentPath), "NewParticleSystem", CreatedPath))
-				{
-					Refresh();
-					if (BrowserContext.EditorEngine)
-					{
-						if (UParticleSystem* Asset = FParticleSystemAssetManager::Get().Load(CreatedPath))
-						{
-							BrowserContext.EditorEngine->OpenAssetEditorForObject(Asset);
-						}
-					}
-				}
+				BeginParticleSystemCreate("NewParticleSystem");
 			}
 			ImGui::EndMenu();
 		}
@@ -700,7 +690,7 @@ void FEditorContentBrowserWidget::RenderMaterialCreatePopup()
 bool FEditorContentBrowserWidget::ExecuteMaterialCreate()
 {
 	FString AssetName;
-	if (!TryNormalizeAssetName(MaterialCreateName, AssetName, MaterialCreateError))
+	if (!TryNormalizeAssetName(MaterialCreateName, AssetName, MaterialCreateError, ".mat"))
 	{
 		return false;
 	}
@@ -719,6 +709,87 @@ bool FEditorContentBrowserWidget::ExecuteMaterialCreate()
 		if (UMaterial* Material = FMaterialManager::Get().GetOrCreateMaterial(CreatedPath))
 		{
 			BrowserContext.EditorEngine->OpenAssetEditorForObject(Material);
+		}
+	}
+
+	return true;
+}
+
+void FEditorContentBrowserWidget::BeginParticleSystemCreate(const FString& DefaultName)
+{
+	CopyToInputBuffer(ParticleSystemCreateName, sizeof(ParticleSystemCreateName), DefaultName);
+	ParticleSystemCreateError.clear();
+	bOpenParticleSystemCreatePopup = true;
+}
+
+void FEditorContentBrowserWidget::RenderParticleSystemCreatePopup()
+{
+	constexpr const char* PopupName = "Create Particle System";
+	if (bOpenParticleSystemCreatePopup)
+	{
+		ImGui::OpenPopup(PopupName);
+		bOpenParticleSystemCreatePopup = false;
+	}
+
+	if (!ImGui::BeginPopupModal(PopupName, nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+	{
+		return;
+	}
+
+	ImGui::TextUnformatted("Name");
+	ImGui::SetNextItemWidth(320.0f);
+	const bool bSubmitted = ImGui::InputText("##ParticleSystemCreateName", ParticleSystemCreateName, sizeof(ParticleSystemCreateName), ImGuiInputTextFlags_EnterReturnsTrue);
+
+	if (!ParticleSystemCreateError.empty())
+	{
+		ImGui::TextColored(ImVec4(1.0f, 0.32f, 0.26f, 1.0f), "%s", ParticleSystemCreateError.c_str());
+	}
+
+	if (bSubmitted)
+	{
+		if (ExecuteParticleSystemCreate())
+		{
+			ImGui::CloseCurrentPopup();
+		}
+	}
+
+	if (ImGui::Button("Create"))
+	{
+		if (ExecuteParticleSystemCreate())
+		{
+			ImGui::CloseCurrentPopup();
+		}
+	}
+	ImGui::SameLine();
+	if (ImGui::Button("Cancel"))
+	{
+		ImGui::CloseCurrentPopup();
+	}
+
+	ImGui::EndPopup();
+}
+
+bool FEditorContentBrowserWidget::ExecuteParticleSystemCreate()
+{
+	FString AssetName;
+	if (!TryNormalizeAssetName(ParticleSystemCreateName, AssetName, ParticleSystemCreateError, ".uasset"))
+	{
+		return false;
+	}
+
+	FString CreatedPath;
+	if (!FAssetFactory::CreateParticleSystemAsset(FPaths::ToUtf8(BrowserContext.CurrentPath), AssetName, CreatedPath))
+	{
+		ParticleSystemCreateError = "Failed to create particle system.";
+		return false;
+	}
+
+	Refresh();
+	if (BrowserContext.EditorEngine)
+	{
+		if (UParticleSystem* Asset = FParticleSystemAssetManager::Get().Load(CreatedPath))
+		{
+			BrowserContext.EditorEngine->OpenAssetEditorForObject(Asset);
 		}
 	}
 
@@ -783,7 +854,7 @@ void FEditorContentBrowserWidget::RenderRenamePopup()
 bool FEditorContentBrowserWidget::ExecuteRenameAsset()
 {
 	FString AssetName;
-	if (!TryNormalizeAssetName(RenameAssetName, AssetName, RenameError))
+	if (!TryNormalizeAssetName(RenameAssetName, AssetName, RenameError, ".mat"))
 	{
 		return false;
 	}
