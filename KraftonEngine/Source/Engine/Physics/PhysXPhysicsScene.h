@@ -60,6 +60,10 @@ public:
 		ECollisionChannel TraceChannel = ECollisionChannel::WorldStatic,
 		const AActor* IgnoreActor = nullptr) const override;
 
+	bool SphereSweep(const FVector& Start, const FVector& End, float Radius, FHitResult& OutHit,
+		ECollisionChannel TraceChannel = ECollisionChannel::WorldStatic,
+		const AActor* IgnoreActor = nullptr) const override;
+
 private:
 	UWorld* World = nullptr;
 

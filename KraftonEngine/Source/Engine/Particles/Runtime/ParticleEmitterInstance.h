@@ -52,6 +52,7 @@ struct FParticleEmitterInstance
     int32 GetActiveParticleCount() const { return ActiveParticles; }
 
     virtual FDynamicEmitterDataBase *CreateDynamicEmitterData(); // 렌더링 데이터 생성
+    void PublishParticleEvents(EParticleEventType EventType, const FBaseParticle& Particle, int32 ParticleIndex, TArray<FParticleEventData>* OutEventQueue, const FVector& EventNormal = FVector::ZeroVector);
 
   private:
     void PreSpawn(FBaseParticle &Particle, const FVector &InitialLocation, const FVector &InitialVelocity); // Spawn 기본값 설정
@@ -59,7 +60,6 @@ struct FParticleEmitterInstance
     void KillExpiredParticles(TArray<FParticleEventData>& OutEventQueue);                                   // 수명 종료 Particle 제거
     bool HasReceiverFor(const FParticleEventData& Event) const;
     void ProcessReceivedEvents();
-    void PublishParticleEvents(EParticleEventType EventType, const FBaseParticle& Particle, int32 ParticleIndex, TArray<FParticleEventData>* OutEventQueue, const FVector& EventNormal = FVector::ZeroVector);
     int32 ResolveEmitterIndex() const;
 	
 	FBaseParticle& GetParticle(int32 index);

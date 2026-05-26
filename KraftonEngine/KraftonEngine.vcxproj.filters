@@ -2093,7 +2093,10 @@
     <ClInclude Include="Source\Engine\Particles\Common\ParticleTypes.h">
       <Filter>Source\Engine\Particles\Common</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Engine\Particles\Modules\ParticleCollisionKillModules.h">
+    <ClInclude Include="Source\Engine\Particles\Modules\ParticleCollisionModules.h">
+      <Filter>Source\Engine\Particles\Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Particles\Modules\ParticleKillModules.h">
       <Filter>Source\Engine\Particles\Modules</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Particles\Modules\ParticleCoreModules.h">

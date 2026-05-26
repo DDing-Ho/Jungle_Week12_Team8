@@ -70,4 +70,13 @@ public:
 	virtual bool Raycast(const FVector& Start, const FVector& Dir, float MaxDist, FHitResult& OutHit,
 		ECollisionChannel TraceChannel = ECollisionChannel::WorldStatic,
 		const AActor* IgnoreActor = nullptr) const = 0;
+
+	// --- SphereSweep ---
+	// Radius를 반지름으로 하는 구를 Start에서 End까지 이동시키며 충돌 검사.
+	// OutHit.WorldHitLocation : 실제 표면 접촉점
+	// OutHit.ShapeLocation    : 충돌 당시 구 중심 위치 (= WorldHitLocation + ImpactNormal * Radius)
+	// 파티클 위치 보정에는 ShapeLocation을 직접 사용하면 됨.
+	virtual bool SphereSweep(const FVector& Start, const FVector& End, float Radius, FHitResult& OutHit,
+		ECollisionChannel TraceChannel = ECollisionChannel::WorldStatic,
+		const AActor* IgnoreActor = nullptr) const = 0;
 };

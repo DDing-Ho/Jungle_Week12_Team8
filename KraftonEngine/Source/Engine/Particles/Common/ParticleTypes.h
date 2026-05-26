@@ -125,6 +125,39 @@ enum class EParticleModuleClass : uint8
     Unknown = 0xFF
 };
 
+/** Collision Module의 충돌 쿼리 방식 */
+UENUM()
+enum class EParticleCollisionQueryMode : uint8
+{
+    // 파티클 중심점 경로를 선분으로 검사.
+    // 가장 빠름. spark, rain, 소형 파티클 대량 처리에 적합.
+    Raycast,
+
+    // AABB를 Radius만큼 팽창(Minkowski sum)한 뒤 ray test.
+    // CollisionRadius를 반영한 빠른 근사 방식.
+    // 모서리/엣지 근처에서 보수적(과검출)이나 대부분 파티클에 실용적.
+    // 기본 CPU particle collision에 적합.
+    ExpandedAABBSweep,
+
+    // CollisionRadius를 반지름으로 하는 구가 이동한 부피를 정확히 검사.
+    // PhysX 백엔드에서는 PxScene::sweep()을 사용하여 정확도가 높음.
+    // Native 백엔드에서는 현재 ExpandedAABBSweep으로 폴백.
+    // 크기가 눈에 띄는 파티클, mesh particle, debris에 적합.
+    SphereSweep,
+};
+
+/** Collision Module에서 MaxCollisions 초과 시 취할 동작 */
+UENUM()
+enum class EParticleCollisionCompletionOption : uint8
+{
+    EPCC_Kill,             // MaxCollisions 도달 시 파티클 제거
+    EPCC_Freeze,           // 파티클 완전 고정, 이후 업데이트 중단
+    EPCC_HaltCollisions,   // 충돌 검사만 중단, 나머지 업데이트는 계속
+    EPCC_FreezeTranslation,// 위치 이동만 멈추고, 나머지 업데이트는 계속
+    EPCC_FreezeRotation,   // 회전만 멈추고, 위치 이동 등은 계속
+    EPCC_FreezeMovement,   // 위치 이동 + 회전을 멈추고, 나머지 업데이트는 계속
+};
+
 /** Rendering 계층으로 전달되는 Dynamic Emitter 타입 */
 enum class EDynamicEmitterType : uint8
 {

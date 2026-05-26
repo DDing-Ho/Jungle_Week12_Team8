@@ -180,7 +180,7 @@ class UParticleModuleColor : public UParticleModule
     virtual void Serialize(FArchive& Ar) override;
     virtual void CacheModuleValues() override;
     virtual void Spawn(FParticleEmitterInstance* Owner, FBaseParticle& Particle, float SpawnTime) override;
-    virtual void Update(FParticleEmitterInstance* Owner, float DeltaTime) override;
+    virtual void Update(FParticleEmitterInstance* Owner, float DeltaTime, TArray<FParticleEventData>* /*OutEventQueue*/ = nullptr) override;
 
     UDistributionLinearColor* GetColorDist() const { return ColorDist; }
 
@@ -205,7 +205,7 @@ class UParticleModuleSize : public UParticleModule
     virtual void Serialize(FArchive& Ar) override;
     virtual void CacheModuleValues() override;
     virtual void Spawn(FParticleEmitterInstance* Owner, FBaseParticle& Particle, float SpawnTime) override;
-    virtual void Update(FParticleEmitterInstance* Owner, float DeltaTime) override;
+    virtual void Update(FParticleEmitterInstance* Owner, float DeltaTime, TArray<FParticleEventData>* /*OutEventQueue*/ = nullptr) override;
 
     UDistributionVector* GetSizeDist() const { return SizeDist; }
 

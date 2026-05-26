@@ -9,7 +9,8 @@
  */
 
 #pragma once
-#include "ParticleCollisionKillModules.h"
+#include "ParticleCollisionModules.h"
+#include "ParticleKillModules.h"
 #include "ParticleEventModules.generated.h"
 
 struct FParticleEventData;

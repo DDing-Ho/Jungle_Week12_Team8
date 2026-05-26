@@ -43,6 +43,17 @@ public:
 		ECollisionChannel TraceChannel = ECollisionChannel::WorldStatic,
 		const AActor* IgnoreActor = nullptr) const override;
 
+	bool SphereSweep(const FVector& Start, const FVector& End, float Radius, FHitResult& OutHit,
+		ECollisionChannel TraceChannel = ECollisionChannel::WorldStatic,
+		const AActor* IgnoreActor = nullptr) const override;
+
+private:
+	// Fast approximation of sphere sweep against AABB.
+	// Expands target AABB by Radius and raycasts the sphere center (Minkowski sum).
+	// Cheap and stable for particle collision, but conservative near edges/corners.
+	bool SphereSweepApprox_ExpandedAABB(const FVector& Start, const FVector& End, float Radius, FHitResult& OutHit,
+		ECollisionChannel TraceChannel, const AActor* IgnoreActor) const;
+
 private:
 	UWorld* World = nullptr;
 	std::vector<UPrimitiveComponent*> RegisteredComponents;

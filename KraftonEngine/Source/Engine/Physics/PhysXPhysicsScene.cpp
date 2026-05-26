@@ -1024,8 +1024,94 @@ bool FPhysXPhysicsScene::Raycast(const FVector& Start, const FVector& Dir, float
 	OutHit.bHit = true;
 	OutHit.Distance = Block.distance;
 	OutHit.WorldHitLocation = ToFVector(Block.position);
+	OutHit.ShapeLocation    = OutHit.WorldHitLocation; // Raycast: shape 위치 = 표면 접촉점
 	OutHit.ImpactNormal = ToFVector(Block.normal);
 	OutHit.WorldNormal = OutHit.ImpactNormal;
+
+	if (Block.shape && Block.shape->userData)
+	{
+		OutHit.HitComponent = static_cast<UPrimitiveComponent*>(Block.shape->userData);
+		OutHit.HitActor = OutHit.HitComponent->GetOwner();
+	}
+	else if (Block.actor && Block.actor->userData)
+	{
+		OutHit.HitActor = static_cast<AActor*>(Block.actor->userData);
+	}
+
+	return true;
+}
+
+// ============================================================
+// SphereSweep — PhysX PxScene::sweep() + PxSphereGeometry
+// ============================================================
+
+bool FPhysXPhysicsScene::SphereSweep(const FVector& Start, const FVector& End, float Radius, FHitResult& OutHit,
+	ECollisionChannel TraceChannel, const AActor* IgnoreActor) const
+{
+	if (!Scene) return false;
+
+	FVector Move = End - Start;
+	float MoveDist = sqrtf(Move.X * Move.X + Move.Y * Move.Y + Move.Z * Move.Z);
+	if (MoveDist < 1e-6f) return false;
+
+	FVector Dir;
+	Dir.X = Move.X / MoveDist;
+	Dir.Y = Move.Y / MoveDist;
+	Dir.Z = Move.Z / MoveDist;
+
+	// Raycast와 동일한 채널 필터
+	struct FChannelSweepFilter : PxQueryFilterCallback
+	{
+		const AActor* IgnoreActor = nullptr;
+		PxU32 TraceBit = 0;
+
+		FChannelSweepFilter(const AActor* InIgnoreActor, ECollisionChannel InChannel)
+			: IgnoreActor(InIgnoreActor)
+			, TraceBit(1u << static_cast<PxU32>(InChannel))
+		{}
+
+		PxQueryHitType::Enum preFilter(const PxFilterData&, const PxShape* Shape, const PxRigidActor* Actor, PxHitFlags&) override
+		{
+			if (IgnoreActor && Actor && Actor->userData == IgnoreActor)
+				return PxQueryHitType::eNONE;
+			if (Shape)
+			{
+				const PxFilterData ShapeData = Shape->getQueryFilterData();
+				if ((ShapeData.word1 & TraceBit) == 0)
+					return PxQueryHitType::eNONE;
+			}
+			return PxQueryHitType::eBLOCK;
+		}
+
+		PxQueryHitType::Enum postFilter(const PxFilterData&, const PxQueryHit&) override
+		{
+			return PxQueryHitType::eBLOCK;
+		}
+	};
+
+	PxSphereGeometry SphereGeom(Radius);
+	PxTransform StartPose(ToPxVec3(Start));
+	PxSweepBuffer SweepHit;
+	PxQueryFilterData FilterData;
+	FilterData.flags = PxQueryFlag::eSTATIC | PxQueryFlag::eDYNAMIC | PxQueryFlag::ePREFILTER;
+	FChannelSweepFilter FilterCallback(IgnoreActor, TraceChannel);
+
+	bool bStatus = Scene->sweep(SphereGeom, StartPose, ToPxVec3(Dir), MoveDist,
+		SweepHit, PxHitFlag::eDEFAULT | PxHitFlag::ePOSITION | PxHitFlag::eNORMAL,
+		FilterData, &FilterCallback);
+	if (!bStatus || !SweepHit.hasBlock) return false;
+
+	const PxSweepHit& Block = SweepHit.block;
+	const FVector ImpactNormal = ToFVector(Block.normal);
+
+	OutHit.bHit = true;
+	OutHit.Distance = Block.distance;
+	// PhysX sweep의 Block.position은 표면 접촉점
+	OutHit.WorldHitLocation = ToFVector(Block.position);
+	// 구 중심 = 표면 접촉점 + normal 방향으로 Radius만큼 이동
+	OutHit.ShapeLocation = OutHit.WorldHitLocation + ImpactNormal * Radius;
+	OutHit.ImpactNormal = ImpactNormal;
+	OutHit.WorldNormal  = ImpactNormal;
 
 	if (Block.shape && Block.shape->userData)
 	{

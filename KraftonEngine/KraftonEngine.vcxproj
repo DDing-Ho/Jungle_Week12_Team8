@@ -862,7 +862,8 @@ xcopy /Y "$(ProjectDir)ThirdParty\lua\bin\lua51.dll" "$(OutDir)"</Command>
     <ClInclude Include="Source\Engine\Particles\Common\ParticleHelper.h" />
     <ClInclude Include="Source\Engine\Particles\Common\ParticleRandomTypes.h" />
     <ClInclude Include="Source\Engine\Particles\Common\ParticleTypes.h" />
-    <ClInclude Include="Source\Engine\Particles\Modules\ParticleCollisionKillModules.h" />
+    <ClInclude Include="Source\Engine\Particles\Modules\ParticleCollisionModules.h" />
+    <ClInclude Include="Source\Engine\Particles\Modules\ParticleKillModules.h" />
     <ClInclude Include="Source\Engine\Particles\Modules\ParticleCoreModules.h" />
     <ClInclude Include="Source\Engine\Particles\Modules\ParticleEventModules.h" />
     <ClInclude Include="Source\Engine\Particles\Modules\ParticleModules.h" />

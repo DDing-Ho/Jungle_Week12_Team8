@@ -101,9 +101,8 @@ void FParticleEmitterInstance::Tick(float DeltaTime, TArray<FParticleEventData>&
 
 	for (UParticleModule* Module : CurrentLODLevel->GetUpdateModules())
 	{
-		if (Module && Module->IsEnabled()) {
-			Module->Update(this, DeltaTime);
-		}
+		if (Module && Module->IsEnabled())
+			Module->Update(this, DeltaTime, &OutEventQueue);
 	}
 
 	//시간되었으면 spawn하는 로직

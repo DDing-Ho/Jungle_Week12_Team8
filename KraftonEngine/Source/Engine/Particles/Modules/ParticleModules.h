@@ -12,6 +12,10 @@
 #include "../Common/ParticleRandomTypes.h"
 #include "ParticleModules.generated.h"
 
+struct FParticleEventData;
+struct FBaseParticle;
+struct FParticleEmitterInstance;
+
 /** 모든 Particle Module의 공통 기반 클래스 */
 UCLASS()
 class UParticleModule : public UObject
@@ -26,7 +30,7 @@ class UParticleModule : public UObject
     virtual void InitializeModule(UParticleEmitter *InEmitter) {}
     virtual void PreSpawn(FParticleEmitterInstance *Owner, FBaseParticle &Particle) {}
     virtual void Spawn(FParticleEmitterInstance *Owner, FBaseParticle &Particle, float SpawnTime) {}
-    virtual void Update(FParticleEmitterInstance *Owner, float DeltaTime) {}
+    virtual void Update(FParticleEmitterInstance *Owner, float DeltaTime, TArray<FParticleEventData>* /*OutEventQueue*/ = nullptr) {}
     virtual void Serialize(FArchive& Ar) override;
 	//나중에 추가적 payload를 가진 module이 있으면 사용해야함
 	virtual uint32 RequiredBytes(UParticleModuleTypeDataBase* TypeData) const { return 0; }
