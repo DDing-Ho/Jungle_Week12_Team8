@@ -2,6 +2,8 @@
 
 #include "Object/ObjectFactory.h"
 #include "Platform/Paths.h"
+#include "SimpleJSON/json.hpp"
+#include <fstream>
 #include <filesystem>
 
 #include "Animation/AnimInstanceAsset.h"
@@ -70,6 +72,39 @@ namespace
 		Emitter->AddLODLevel(LOD);
 		NewAsset->AddEmitter(Emitter);
 		NewAsset->CacheSystemModuleInfo();
+	}
+
+	void InitializeMaterialJson(json::JSON& JsonData, const FString& MaterialPath, EMaterialCreatePreset Preset)
+	{
+		JsonData["PathFileName"] = MaterialPath;
+		JsonData["Origin"] = "Editor";
+
+		switch (Preset)
+		{
+		case EMaterialCreatePreset::ParticleSprite:
+			JsonData["ShaderPath"] = "Shaders/Particles/ParticleSprite.hlsl";
+			JsonData["BlendMode"] = "Translucent";
+			JsonData["RenderPass"] = "AlphaBlend";
+			JsonData["BlendState"] = "AlphaBlend";
+			JsonData["DepthStencilState"] = "Default";
+			JsonData["RasterizerState"] = "SolidNoCull";
+			JsonData["Parameters"] = json::Object();
+			JsonData["Textures"] = json::Object();
+			break;
+
+		case EMaterialCreatePreset::UberLit:
+		default:
+			JsonData["ShaderPath"] = "Shaders/Geometry/UberLit.hlsl";
+			JsonData["BlendMode"] = "Opaque";
+			JsonData["RenderPass"] = "Opaque";
+			JsonData["BlendState"] = "Opaque";
+			JsonData["DepthStencilState"] = "Default";
+			JsonData["RasterizerState"] = "SolidBackCull";
+			JsonData["Parameters"]["SectionColor"] = json::Array(1.0f, 1.0f, 1.0f, 1.0f);
+			JsonData["Parameters"]["HasNormalMap"] = 0.0f;
+			JsonData["Textures"] = json::Object();
+			break;
+		}
 	}
 }
 
@@ -193,5 +228,37 @@ bool FAssetFactory::CreateParticleSystemAsset(const FString& DirectoryPath, cons
 	}
 
 	OutCreatedPath = FPaths::ToUtf8(AssetPath.wstring());
+	return true;
+}
+
+bool FAssetFactory::CreateMaterial(const FString& DirectoryPath, const FString& AssetName, EMaterialCreatePreset Preset, FString& OutCreatedPath)
+{
+	const std::filesystem::path Directory(FPaths::ToWide(DirectoryPath));
+	if (!std::filesystem::exists(Directory) || !std::filesystem::is_directory(Directory))
+	{
+		return false;
+	}
+
+	const FString DefaultName = AssetName.empty() ? FString("NewMaterial") : AssetName;
+	const std::filesystem::path AssetPath = BuildUniqueAssetPath(Directory, DefaultName, L".mat");
+	const FString AssetPathString = FPaths::ToUtf8(AssetPath.generic_wstring());
+	const FString MaterialPath = FPaths::MakeProjectRelative(AssetPathString);
+
+	json::JSON JsonData;
+	InitializeMaterialJson(JsonData, MaterialPath, Preset);
+
+	std::ofstream File(AssetPath);
+	if (!File.is_open())
+	{
+		return false;
+	}
+
+	File << JsonData.dump();
+	if (!File.good())
+	{
+		return false;
+	}
+
+	OutCreatedPath = MaterialPath;
 	return true;
 }

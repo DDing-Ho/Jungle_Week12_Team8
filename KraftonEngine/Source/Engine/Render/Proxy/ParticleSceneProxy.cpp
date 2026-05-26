@@ -7,7 +7,59 @@
 #include "Render/Shader/ShaderManager.h"
 #include "Materials/Material.h"
 #include "Object/ObjectFactory.h"
+#include "Engine/Runtime/Engine.h"
+#include "Render/Pipeline/Renderer.h"
 #include "Math/Matrix.h"
+
+#include <d3d11.h>
+#include <wrl/client.h>
+
+namespace
+{
+	ID3D11ShaderResourceView* GetParticleFallbackWhiteSRV()
+	{
+		static Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> WhiteSRV;
+		if (WhiteSRV)
+		{
+			return WhiteSRV.Get();
+		}
+
+		ID3D11Device* Device = GEngine ? GEngine->GetRenderer().GetFD3DDevice().GetDevice() : nullptr;
+		if (!Device)
+		{
+			return nullptr;
+		}
+
+		D3D11_TEXTURE2D_DESC TextureDesc = {};
+		TextureDesc.Width = 1;
+		TextureDesc.Height = 1;
+		TextureDesc.MipLevels = 1;
+		TextureDesc.ArraySize = 1;
+		TextureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		TextureDesc.SampleDesc.Count = 1;
+		TextureDesc.Usage = D3D11_USAGE_IMMUTABLE;
+		TextureDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+
+		const uint32 WhitePixel = 0xffffffff;
+		D3D11_SUBRESOURCE_DATA InitialData = {};
+		InitialData.pSysMem = &WhitePixel;
+		InitialData.SysMemPitch = sizeof(WhitePixel);
+
+		Microsoft::WRL::ComPtr<ID3D11Texture2D> Texture;
+		if (FAILED(Device->CreateTexture2D(&TextureDesc, &InitialData, Texture.GetAddressOf())))
+		{
+			return nullptr;
+		}
+
+		if (FAILED(Device->CreateShaderResourceView(Texture.Get(), nullptr, WhiteSRV.GetAddressOf())))
+		{
+			WhiteSRV.Reset();
+			return nullptr;
+		}
+
+		return WhiteSRV.Get();
+	}
+}
 
 // ============================================================
 // FParticleSceneProxy — 생성 / 소멸
@@ -114,13 +166,17 @@ void FParticleSceneProxy::UpdateMesh()
 			ParticleMaterials[i] = CreateParticleMaterial(Shader);
 
 		// 텍스처 SRV를 source material에서 매 틱 복사
+		ID3D11ShaderResourceView* ParticleSRV = GetParticleFallbackWhiteSRV();
 		if (Source.Material)
 		{
 			const ID3D11ShaderResourceView* const* SrcSRVs = Source.Material->GetCachedSRVs();
-			ParticleMaterials[i]->SetCachedSRV(
-				EMaterialTextureSlot::Diffuse,
-				const_cast<ID3D11ShaderResourceView*>(SrcSRVs[(int)EMaterialTextureSlot::Diffuse]));
+			ID3D11ShaderResourceView* SourceSRV = const_cast<ID3D11ShaderResourceView*>(SrcSRVs[(int)EMaterialTextureSlot::Diffuse]);
+			if (SourceSRV)
+			{
+				ParticleSRV = SourceSRV;
+			}
 		}
+		ParticleMaterials[i]->SetCachedSRV(EMaterialTextureSlot::Diffuse, ParticleSRV);
 
 		CachedEmitters.push_back({ Data, i });
 		// SectionDraws 범위는 UpdatePerViewport에서 vertex 조립 후 확정

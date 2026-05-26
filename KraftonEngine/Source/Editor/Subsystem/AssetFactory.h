@@ -2,6 +2,12 @@
 
 #include "Core/CoreTypes.h"
 
+enum class EMaterialCreatePreset
+{
+	UberLit,
+	ParticleSprite,
+};
+
 class FAssetFactory
 {
 public:
@@ -9,4 +15,5 @@ public:
 	static bool CreateCameraShake(const FString& DirectoryPath, const FString& AssetName, FString& OutCreatedPath);
 	static bool CreateAnimInstanceAsset(const FString& DirectoryPath, const FString& AssetName, FString& OutCreatedPath);
 	static bool CreateParticleSystemAsset(const FString& DirectoryPath, const FString& AssetName, FString& OutCreatedPath);
+	static bool CreateMaterial(const FString& DirectoryPath, const FString& AssetName, EMaterialCreatePreset Preset, FString& OutCreatedPath);
 };

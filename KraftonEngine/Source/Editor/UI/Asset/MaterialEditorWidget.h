@@ -29,6 +29,7 @@ private:
 	bool RenderShaderParameters(UMaterial* Material);
 	bool RenderTextureSlots(UMaterial* Material);
 	void RenderPreviewViewport(float DetailsWidth);
+	void RenderPreviewUnavailable(float DetailsWidth);
 
 private:
 	SWindow MaterialViewportWindow;
@@ -39,4 +40,6 @@ private:
 	uint32 InstanceId = 0;
 	FName PreviewWorldHandle = FName::None;
 	FString WindowIdSuffix;
+	bool bSupportsStaticMeshPreview = true;
+	bool bViewportRegistered = false;
 };

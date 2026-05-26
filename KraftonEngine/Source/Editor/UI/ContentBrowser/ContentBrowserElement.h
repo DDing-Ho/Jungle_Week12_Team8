@@ -23,6 +23,7 @@ public:
 
 protected:
 	FString EllipsisText(const FString& text, float maxWidth);
+	void RenderDefaultContextMenu(ContentBrowserContext& Context);
 
 	virtual FString GetDisplayName() const;
 	virtual const char* GetTypeLabel() const { return ""; }
@@ -157,6 +158,7 @@ class MaterialElement final : public ContentBrowserElement
 {
 public:
 	virtual const char* GetDragItemType() override { return "MaterialContentItem"; }
+	void RenderContextMenu(ContentBrowserContext& Context) override;
 	void OnDoubleLeftClicked(ContentBrowserContext& Context) override;
 
 protected:

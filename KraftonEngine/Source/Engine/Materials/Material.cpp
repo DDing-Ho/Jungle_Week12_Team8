@@ -6,6 +6,56 @@
 #include "Render/Pipeline/Renderer.h"
 #include "Render/Types/MaterialTextureSlot.h"
 
+namespace
+{
+	int32 ResolveTextureSlotFromShader(FShader* Shader, const FString& ParamName)
+	{
+		if (!Shader)
+		{
+			return -1;
+		}
+
+		for (const FMaterialTextureBindingInfo& Binding : Shader->GetTextureBindings())
+		{
+			if (Binding.Name == ParamName && Binding.SlotIndex < static_cast<uint32>(EMaterialTextureSlot::Max))
+			{
+				return static_cast<int32>(Binding.SlotIndex);
+			}
+		}
+
+		return -1;
+	}
+
+	int32 ResolveTextureSlotFromLegacyName(const FString& ParamName)
+	{
+		for (int32 Slot = 0; Slot < static_cast<int32>(EMaterialTextureSlot::Max); ++Slot)
+		{
+			const FString SlotName = MaterialTextureSlot::ToString(Slot) + "Texture";
+			if (ParamName == SlotName)
+			{
+				return Slot;
+			}
+		}
+
+		return -1;
+	}
+
+	int32 ResolveTextureSlot(FShader* Shader, const FString& ParamName)
+	{
+		const int32 ShaderSlot = ResolveTextureSlotFromShader(Shader, ParamName);
+		return ShaderSlot >= 0 ? ShaderSlot : ResolveTextureSlotFromLegacyName(ParamName);
+	}
+
+	bool IsColorTextureParameter(const FString& ParamName)
+	{
+		return ParamName == "DiffuseTexture"
+			|| ParamName == "ParticleTexture"
+			|| ParamName == "EmissiveTexture"
+			|| ParamName == "Custom0Texture"
+			|| ParamName == "Custom1Texture";
+	}
+}
+
 
 // ─── FMaterialTemplate ───
 
@@ -158,15 +208,11 @@ bool UMaterial::SetTextureParameter(const FString& ParamName, UTexture2D* Textur
 {
 	TextureParameters[ParamName] = Texture;
 
-	// CachedSRVs 갱신 — 슬롯 이름과 매칭되면 즉시 반영
-	for (int s = 0; s < (int)EMaterialTextureSlot::Max; s++)
+	// Shader reflection binding을 우선 사용하고, 기존 DiffuseTexture/NormalTexture 이름 규칙으로 fallback합니다.
+	const int32 SlotIndex = ResolveTextureSlot(GetShader(), ParamName);
+	if (SlotIndex >= 0)
 	{
-		FString SlotName = MaterialTextureSlot::ToString(s) + "Texture";
-		if (ParamName == SlotName)
-		{
-			CachedSRVs[s] = (Texture && Texture->GetSRV()) ? Texture->GetSRV() : nullptr;
-			break;
-		}
+		CachedSRVs[SlotIndex] = (Texture && Texture->GetSRV()) ? Texture->GetSRV() : nullptr;
 	}
 
 	return true;
@@ -262,10 +308,32 @@ void UMaterial::RebuildCachedSRVs()
 	for (int s = 0; s < (int)EMaterialTextureSlot::Max; s++)
 	{
 		CachedSRVs[s] = nullptr;
-		UTexture2D* Tex = nullptr;
-		FString SlotName = MaterialTextureSlot::ToString(s) + "Texture";
-		if (GetTextureParameter(SlotName, Tex) && Tex && Tex->GetSRV())
-			CachedSRVs[s] = Tex->GetSRV();
+	}
+
+	if (FShader* Shader = GetShader())
+	{
+		for (const FMaterialTextureBindingInfo& Binding : Shader->GetTextureBindings())
+		{
+			if (Binding.SlotIndex >= static_cast<uint32>(EMaterialTextureSlot::Max))
+			{
+				continue;
+			}
+
+			UTexture2D* Tex = nullptr;
+			if (GetTextureParameter(Binding.Name, Tex) && Tex && Tex->GetSRV())
+			{
+				CachedSRVs[Binding.SlotIndex] = Tex->GetSRV();
+			}
+		}
+	}
+
+	for (const auto& Pair : TextureParameters)
+	{
+		const int32 SlotIndex = ResolveTextureSlotFromLegacyName(Pair.first);
+		if (SlotIndex >= 0 && Pair.second && Pair.second->GetSRV())
+		{
+			CachedSRVs[SlotIndex] = Pair.second->GetSRV();
+		}
 	}
 }
 
@@ -341,15 +409,10 @@ void UMaterial::Serialize(FArchive& Ar)
 			if (!TexturePath.empty())
 			{
 				ID3D11Device* Device = GEngine->GetRenderer().GetFD3DDevice().GetDevice();
-				const bool bIsColorTexture =
-					SlotName == "DiffuseTexture" ||
-					SlotName == "EmissiveTexture" ||
-					SlotName == "Custom0Texture" ||
-					SlotName == "Custom1Texture";
 				UTexture2D* Loaded = UTexture2D::LoadFromFile(
 					TexturePath,
 					Device,
-					bIsColorTexture ? ETextureColorSpace::SRGB : ETextureColorSpace::Linear);
+					IsColorTextureParameter(SlotName) ? ETextureColorSpace::SRGB : ETextureColorSpace::Linear);
 				if (Loaded)
 				{
 					TextureParameters[SlotName] = Loaded;

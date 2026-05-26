@@ -30,9 +30,34 @@ namespace
 	bool IsColorTextureSlot(const FString& SlotName)
 	{
 		return SlotName == "DiffuseTexture"
+			|| SlotName == "ParticleTexture"
 			|| SlotName == "EmissiveTexture"
 			|| SlotName == "Custom0Texture"
 			|| SlotName == "Custom1Texture";
+	}
+
+	bool SupportsStaticMeshPreview(UMaterial* Material)
+	{
+		if (!Material)
+		{
+			return false;
+		}
+
+		FShader* Shader = Material->GetShader();
+		if (!Shader)
+		{
+			return false;
+		}
+
+		for (const FMaterialTextureBindingInfo& Binding : Shader->GetTextureBindings())
+		{
+			if (Binding.Name == "ParticleTexture")
+			{
+				return false;
+			}
+		}
+
+		return true;
 	}
 
 	TArray<FMaterialTextureBindingInfo> GetEditableTextureBindings(UMaterial* Material)
@@ -163,6 +188,12 @@ void FMaterialEditorWidget::Open(UObject* Object)
 		return;
 	}
 
+	bSupportsStaticMeshPreview = SupportsStaticMeshPreview(EditingMaterial);
+	if (!bSupportsStaticMeshPreview)
+	{
+		return;
+	}
+
 	FWorldContext& WorldContext = GEngine->CreateWorldContext(EWorldType::EditorPreview, PreviewWorldHandle);
 	WorldContext.World->SetWorldType(EWorldType::EditorPreview);
 	WorldContext.World->InitWorld();
@@ -194,6 +225,7 @@ void FMaterialEditorWidget::Open(UObject* Object)
 
 	WorldContext.World->SetEditorPOVProvider(&ViewportClient);
 	FSlateApplication::Get().RegisterViewport(&MaterialViewportWindow, &ViewportClient);
+	bViewportRegistered = true;
 }
 
 void FMaterialEditorWidget::Close()
@@ -211,9 +243,14 @@ void FMaterialEditorWidget::Close()
 		}
 	}
 
-	FSlateApplication::Get().UnregisterViewport(&ViewportClient);
+	if (bViewportRegistered)
+	{
+		FSlateApplication::Get().UnregisterViewport(&ViewportClient);
+		bViewportRegistered = false;
+	}
 	ViewportClient.Release();
 	PreviewMeshComponent = nullptr;
+	bSupportsStaticMeshPreview = true;
 
 	if (EditingMaterial)
 	{
@@ -224,7 +261,7 @@ void FMaterialEditorWidget::Close()
 
 void FMaterialEditorWidget::Tick(float DeltaTime)
 {
-	if (ViewportClient.IsRenderable())
+	if (bSupportsStaticMeshPreview && ViewportClient.IsRenderable())
 	{
 		ViewportClient.Tick(DeltaTime);
 	}
@@ -232,7 +269,7 @@ void FMaterialEditorWidget::Tick(float DeltaTime)
 
 void FMaterialEditorWidget::CollectPreviewViewports(TArray<IEditorPreviewViewportClient*>& OutClients) const
 {
-	if (IsOpen())
+	if (IsOpen() && bSupportsStaticMeshPreview)
 	{
 		OutClients.push_back(const_cast<FStaticMeshEditorViewportClient*>(&ViewportClient));
 	}
@@ -288,6 +325,10 @@ void FMaterialEditorWidget::Render(float DeltaTime)
 
 	if (ImGui::Button("Save"))
 	{
+		if (OriginalMaterial && Material)
+		{
+			Material->SetAssetPathFileName(OriginalMaterial->GetAssetPathFileName());
+		}
 		if (FMaterialManager::Get().SaveMaterial(Material))
 		{
 			if (!OriginalMaterial || OriginalMaterial->CopyEditableStateFrom(Material))
@@ -301,9 +342,16 @@ void FMaterialEditorWidget::Render(float DeltaTime)
 	ImGui::Separator();
 
 	static float DetailsWidth = 360.0f;
-	RenderPreviewViewport(DetailsWidth);
-
-	ImGui::SameLine();
+	if (bSupportsStaticMeshPreview)
+	{
+		RenderPreviewViewport(DetailsWidth);
+		ImGui::SameLine();
+	}
+	else
+	{
+		RenderPreviewUnavailable(DetailsWidth);
+		ImGui::SameLine();
+	}
 
 	ImGui::BeginChild("MaterialDetails", ImVec2(DetailsWidth, 0), true);
 	const bool bChanged = RenderDetailsPanel(Material);
@@ -364,6 +412,22 @@ void FMaterialEditorWidget::RenderPreviewViewport(float DetailsWidth)
 
 			FViewportToolbar::Render(Context);
 		}
+	}
+	ImGui::EndGroup();
+}
+
+void FMaterialEditorWidget::RenderPreviewUnavailable(float DetailsWidth)
+{
+	ImGui::BeginGroup();
+	{
+		float AvailableWidth = ImGui::GetContentRegionAvail().x - DetailsWidth - ImGui::GetStyle().ItemSpacing.x;
+		AvailableWidth = (std::max)(AvailableWidth, 220.0f);
+		ImVec2 Size = ImVec2(AvailableWidth, ImGui::GetContentRegionAvail().y);
+
+		ImGui::BeginChild("MaterialPreviewUnavailable", Size, true);
+		ImGui::TextDisabled("Preview unavailable for this shader.");
+		ImGui::TextWrapped("Particle Sprite materials can be edited here, but they are rendered through the particle pipeline.");
+		ImGui::EndChild();
 	}
 	ImGui::EndGroup();
 }

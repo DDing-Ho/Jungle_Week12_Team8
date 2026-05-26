@@ -191,6 +191,7 @@ void ContentBrowserElement::Render(ContentBrowserContext& Context)
 	if (ImGui::BeginPopupContextItem())
 	{
 		RenderContextMenu(Context);
+		RenderDefaultContextMenu(Context);
 		ImGui::EndPopup();
 	}
 
@@ -206,6 +207,20 @@ void ContentBrowserElement::Render(ContentBrowserContext& Context)
 		ImGui::SetDragDropPayload(GetDragItemType(), &ContentItem, sizeof(ContentItem));
 		OnDrag(Context);
 		ImGui::EndDragDropSource();
+	}
+}
+
+void ContentBrowserElement::RenderDefaultContextMenu(ContentBrowserContext& Context)
+{
+	if (ContentItem.bIsDirectory || !Context.OnDeleteAsset)
+	{
+		return;
+	}
+
+	ImGui::Separator();
+	if (ImGui::MenuItem("Delete"))
+	{
+		Context.OnDeleteAsset(ContentItem);
 	}
 }
 
@@ -582,6 +597,14 @@ void AnimInstanceElement::OnDoubleLeftClicked(ContentBrowserContext& Context)
 	if (UAnimInstanceAsset* AnimInstanceAsset = FAnimInstanceAssetManager::Get().Load(FilePath))
 	{
 		Context.EditorEngine->OpenAssetEditorForObject(AnimInstanceAsset);
+	}
+}
+
+void MaterialElement::RenderContextMenu(ContentBrowserContext& Context)
+{
+	if (ImGui::MenuItem("Rename") && Context.OnRenameAsset)
+	{
+		Context.OnRenameAsset(ContentItem);
 	}
 }
 

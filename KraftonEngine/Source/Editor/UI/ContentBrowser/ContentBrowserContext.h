@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include "Core/CoreTypes.h"
+#include "ContentItem.h"
 #include "imgui.h" 
 #include "Platform/Paths.h"
 #include <functional>
@@ -17,6 +18,8 @@ struct ContentBrowserContext final
 
 	UEditorEngine* EditorEngine;
 	std::function<void(const FString&)> OnImportFbxSource;
+	std::function<void(const FContentItem&)> OnRenameAsset;
+	std::function<void(const FContentItem&)> OnDeleteAsset;
 
 	bool bPendingContentRefresh = false;
 	bool bShowSourceFiles = false;

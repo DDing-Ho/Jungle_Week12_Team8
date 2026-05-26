@@ -12,6 +12,7 @@
 #include "Editor/Import/EditorFbxImportService.h"
 #include "Mesh/MeshImportOptions.h"
 #include "Mesh/MeshManager.h"
+#include "Materials/Material.h"
 #include "Materials/MaterialManager.h"
 #include "CameraShake/CameraShakeAsset.h"
 #include "CameraShake/CameraShakeManager.h"
@@ -27,6 +28,8 @@
 #include <commdlg.h>
 #include <algorithm>
 #include <cctype>
+#include <cstdio>
+#include <cstring>
 
 namespace
 {
@@ -149,6 +152,78 @@ namespace
 		const FString Extension = GetLowerExtension(Path);
 		return Extension == ".obj" || Extension == ".mtl" || Extension == ".fbx";
 	}
+
+	FString TrimCopy(const FString& Value)
+	{
+		size_t Start = 0;
+		while (Start < Value.size() && std::isspace(static_cast<unsigned char>(Value[Start])))
+		{
+			++Start;
+		}
+
+		size_t End = Value.size();
+		while (End > Start && std::isspace(static_cast<unsigned char>(Value[End - 1])))
+		{
+			--End;
+		}
+
+		return Value.substr(Start, End - Start);
+	}
+
+	void CopyToInputBuffer(char* Buffer, size_t BufferSize, const FString& Value)
+	{
+		if (!Buffer || BufferSize == 0)
+		{
+			return;
+		}
+
+		std::snprintf(Buffer, BufferSize, "%s", Value.c_str());
+	}
+
+	bool TryNormalizeAssetName(const char* RawInput, FString& OutName, FString& OutError)
+	{
+		FString Name = TrimCopy(RawInput ? FString(RawInput) : FString());
+		if (Name.empty())
+		{
+			OutError = "Name cannot be empty.";
+			return false;
+		}
+
+		if (Name == "." || Name == "..")
+		{
+			OutError = "Name is reserved.";
+			return false;
+		}
+
+		const char* InvalidChars = "<>:\"/\\|?*";
+		for (char Ch : Name)
+		{
+			if (static_cast<unsigned char>(Ch) < 32 || std::strchr(InvalidChars, Ch))
+			{
+				OutError = "Name contains invalid file characters.";
+				return false;
+			}
+		}
+
+		std::filesystem::path NamePath(FPaths::ToWide(Name));
+		FString Extension = FPaths::ToUtf8(NamePath.extension().wstring());
+		std::transform(Extension.begin(), Extension.end(), Extension.begin(),
+			[](unsigned char Ch) { return static_cast<char>(std::tolower(Ch)); });
+		if (Extension == ".mat")
+		{
+			Name = FPaths::ToUtf8(NamePath.stem().wstring());
+		}
+
+		if (Name.empty())
+		{
+			OutError = "Name cannot be empty.";
+			return false;
+		}
+
+		OutName = Name;
+		OutError.clear();
+		return true;
+	}
 }
 
 void FEditorContentBrowserWidget::Initialize(UEditorEngine* InEditor, ID3D11Device* InDevice)
@@ -169,6 +244,14 @@ void FEditorContentBrowserWidget::Initialize(UEditorEngine* InEditor, ID3D11Devi
 	Context.OnImportFbxSource = [this](const FString& SourcePath)
 	{
 		BeginFbxImport(SourcePath);
+	};
+	Context.OnRenameAsset = [this](const FContentItem& Item)
+	{
+		BeginRenameAsset(Item);
+	};
+	Context.OnDeleteAsset = [this](const FContentItem& Item)
+	{
+		BeginDeleteAsset(Item);
 	};
 	BrowserContext = Context;
 	LoadFromSettings();
@@ -213,6 +296,9 @@ void FEditorContentBrowserWidget::Render(float DeltaTime)
 	}
 
 	RenderFbxImportPopup();
+	RenderMaterialCreatePopup();
+	RenderRenamePopup();
+	RenderDeletePopup();
 
 	if (!ImGui::BeginTable("ContentBrowserLayout", 3, ImGuiTableFlags_Resizable | ImGuiTableFlags_BordersInnerV))
 	{
@@ -471,6 +557,18 @@ void FEditorContentBrowserWidget::DrawContents()
 	{
 		if (ImGui::BeginMenu("Create"))
 		{
+			if (ImGui::BeginMenu("Material"))
+			{
+				if (ImGui::MenuItem("UberLit"))
+				{
+					BeginMaterialCreate(EMaterialCreatePreset::UberLit, "NewUberLitMaterial");
+				}
+				if (ImGui::MenuItem("Particle Sprite"))
+				{
+					BeginMaterialCreate(EMaterialCreatePreset::ParticleSprite, "NewParticleSpriteMaterial");
+				}
+				ImGui::EndMenu();
+			}
 			if (ImGui::MenuItem("Float Curve"))
 			{
 				FString CreatedPath;
@@ -542,6 +640,254 @@ void FEditorContentBrowserWidget::DrawContents()
 
 		ImGui::EndPopup();
 	}
+}
+
+void FEditorContentBrowserWidget::BeginMaterialCreate(EMaterialCreatePreset Preset, const FString& DefaultName)
+{
+	PendingMaterialPreset = Preset;
+	CopyToInputBuffer(MaterialCreateName, sizeof(MaterialCreateName), DefaultName);
+	MaterialCreateError.clear();
+	bOpenMaterialCreatePopup = true;
+}
+
+void FEditorContentBrowserWidget::RenderMaterialCreatePopup()
+{
+	constexpr const char* PopupName = "Create Material";
+	if (bOpenMaterialCreatePopup)
+	{
+		ImGui::OpenPopup(PopupName);
+		bOpenMaterialCreatePopup = false;
+	}
+
+	if (!ImGui::BeginPopupModal(PopupName, nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+	{
+		return;
+	}
+
+	ImGui::TextUnformatted("Name");
+	ImGui::SetNextItemWidth(320.0f);
+	const bool bSubmitted = ImGui::InputText("##MaterialCreateName", MaterialCreateName, sizeof(MaterialCreateName), ImGuiInputTextFlags_EnterReturnsTrue);
+
+	if (!MaterialCreateError.empty())
+	{
+		ImGui::TextColored(ImVec4(1.0f, 0.32f, 0.26f, 1.0f), "%s", MaterialCreateError.c_str());
+	}
+
+	if (bSubmitted)
+	{
+		if (ExecuteMaterialCreate())
+		{
+			ImGui::CloseCurrentPopup();
+		}
+	}
+
+	if (ImGui::Button("Create"))
+	{
+		if (ExecuteMaterialCreate())
+		{
+			ImGui::CloseCurrentPopup();
+		}
+	}
+	ImGui::SameLine();
+	if (ImGui::Button("Cancel"))
+	{
+		ImGui::CloseCurrentPopup();
+	}
+
+	ImGui::EndPopup();
+}
+
+bool FEditorContentBrowserWidget::ExecuteMaterialCreate()
+{
+	FString AssetName;
+	if (!TryNormalizeAssetName(MaterialCreateName, AssetName, MaterialCreateError))
+	{
+		return false;
+	}
+
+	FString CreatedPath;
+	if (!FAssetFactory::CreateMaterial(FPaths::ToUtf8(BrowserContext.CurrentPath), AssetName, PendingMaterialPreset, CreatedPath))
+	{
+		MaterialCreateError = "Failed to create material.";
+		return false;
+	}
+
+	FMaterialManager::Get().ScanMaterialAssets();
+	Refresh();
+	if (BrowserContext.EditorEngine)
+	{
+		if (UMaterial* Material = FMaterialManager::Get().GetOrCreateMaterial(CreatedPath))
+		{
+			BrowserContext.EditorEngine->OpenAssetEditorForObject(Material);
+		}
+	}
+
+	return true;
+}
+
+void FEditorContentBrowserWidget::BeginRenameAsset(const FContentItem& Item)
+{
+	RenameSourcePath = Item.Path;
+	CopyToInputBuffer(RenameAssetName, sizeof(RenameAssetName), FPaths::ToUtf8(Item.Path.stem().wstring()));
+	RenameError.clear();
+	bOpenRenamePopup = true;
+}
+
+void FEditorContentBrowserWidget::RenderRenamePopup()
+{
+	constexpr const char* PopupName = "Rename Asset";
+	if (bOpenRenamePopup)
+	{
+		ImGui::OpenPopup(PopupName);
+		bOpenRenamePopup = false;
+	}
+
+	if (!ImGui::BeginPopupModal(PopupName, nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+	{
+		return;
+	}
+
+	ImGui::TextUnformatted("Name");
+	ImGui::SetNextItemWidth(320.0f);
+	const bool bSubmitted = ImGui::InputText("##RenameAssetName", RenameAssetName, sizeof(RenameAssetName), ImGuiInputTextFlags_EnterReturnsTrue);
+
+	if (!RenameError.empty())
+	{
+		ImGui::TextColored(ImVec4(1.0f, 0.32f, 0.26f, 1.0f), "%s", RenameError.c_str());
+	}
+
+	if (bSubmitted)
+	{
+		if (ExecuteRenameAsset())
+		{
+			ImGui::CloseCurrentPopup();
+		}
+	}
+
+	if (ImGui::Button("Rename"))
+	{
+		if (ExecuteRenameAsset())
+		{
+			ImGui::CloseCurrentPopup();
+		}
+	}
+	ImGui::SameLine();
+	if (ImGui::Button("Cancel"))
+	{
+		ImGui::CloseCurrentPopup();
+	}
+
+	ImGui::EndPopup();
+}
+
+bool FEditorContentBrowserWidget::ExecuteRenameAsset()
+{
+	FString AssetName;
+	if (!TryNormalizeAssetName(RenameAssetName, AssetName, RenameError))
+	{
+		return false;
+	}
+
+	const FString OldPath = FPaths::MakeProjectRelative(FPaths::ToUtf8(RenameSourcePath.generic_wstring()));
+	FString NewPath;
+	if (!FMaterialManager::Get().RenameMaterial(OldPath, AssetName, NewPath))
+	{
+		RenameError = "Failed to rename material.";
+		return false;
+	}
+
+	BrowserContext.SelectedElement.reset();
+	Refresh();
+	return true;
+}
+
+void FEditorContentBrowserWidget::BeginDeleteAsset(const FContentItem& Item)
+{
+	DeleteSourcePath = Item.Path;
+	DeleteAssetName = FPaths::ToUtf8(Item.Path.filename().wstring());
+	DeleteError.clear();
+	bOpenDeletePopup = true;
+}
+
+void FEditorContentBrowserWidget::RenderDeletePopup()
+{
+	constexpr const char* PopupName = "Delete Asset";
+	if (bOpenDeletePopup)
+	{
+		ImGui::OpenPopup(PopupName);
+		bOpenDeletePopup = false;
+	}
+
+	if (!ImGui::BeginPopupModal(PopupName, nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+	{
+		return;
+	}
+
+	ImGui::TextWrapped("Delete this file?");
+	ImGui::TextUnformatted(DeleteAssetName.c_str());
+
+	if (!DeleteError.empty())
+	{
+		ImGui::TextColored(ImVec4(1.0f, 0.32f, 0.26f, 1.0f), "%s", DeleteError.c_str());
+	}
+
+	if (ImGui::Button("Delete"))
+	{
+		if (ExecuteDeleteAsset())
+		{
+			ImGui::CloseCurrentPopup();
+		}
+	}
+	ImGui::SameLine();
+	if (ImGui::Button("Cancel"))
+	{
+		ImGui::CloseCurrentPopup();
+	}
+
+	ImGui::EndPopup();
+}
+
+bool FEditorContentBrowserWidget::ExecuteDeleteAsset()
+{
+	const std::filesystem::path FullPath = DeleteSourcePath.lexically_normal();
+	if (!std::filesystem::exists(FullPath))
+	{
+		DeleteError = "File does not exist.";
+		return false;
+	}
+
+	if (!std::filesystem::is_regular_file(FullPath))
+	{
+		DeleteError = "Only files can be deleted.";
+		return false;
+	}
+
+	const std::filesystem::path AssetRoot = std::filesystem::path(FPaths::AssetDir()).lexically_normal();
+	if (!IsSubPath(AssetRoot, FullPath))
+	{
+		DeleteError = "Only files under Asset/ can be deleted.";
+		return false;
+	}
+
+	const FString Extension = GetLowerExtension(FullPath);
+	const FString RelativePath = ToProjectRelativePath(FullPath);
+
+	std::error_code Error;
+	if (!std::filesystem::remove(FullPath, Error) || Error)
+	{
+		DeleteError = "Failed to delete file.";
+		return false;
+	}
+
+	if (Extension == ".mat")
+	{
+		FMaterialManager::Get().ForgetMaterial(RelativePath);
+	}
+
+	BrowserContext.SelectedElement.reset();
+	RefreshImportedAssetLists();
+	Refresh();
+	return true;
 }
 
 void FEditorContentBrowserWidget::BeginImportSourceFile()
