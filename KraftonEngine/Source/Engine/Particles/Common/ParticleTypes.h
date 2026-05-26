@@ -17,6 +17,7 @@
 #include "Core/EngineTypes.h"
 #include "Math/Rotator.h"
 #include "Math/Vector.h"
+#include "ParticleTypes.generated.h"
 
 class UObject;
 class UMaterial;
@@ -36,6 +37,7 @@ struct FDynamicEmitterReplayDataBase;
 struct FDynamicEmitterDataBase;
 
 /** Emitter의 기본 렌더링 / 구성 타입 */
+UENUM()
 enum class EParticleEmitterType : uint8
 {
     PET_Sprite,     // Quad Sprite 기반 Emitter
@@ -45,6 +47,7 @@ enum class EParticleEmitterType : uint8
 };
 
 /** Emitter의 에디터 / 디버그 렌더 표시 방식 */
+UENUM()
 enum class EParticleEmitterRenderMode : uint8
 {
     ERM_Normal,     // 원래 의도된 방식으로 렌더링
@@ -91,6 +94,7 @@ enum class EParticleModuleUpdatePhase : uint8
 };
 
 /** Particle Event 종류 */
+UENUM()
 enum class EParticleEventType : uint8
 {
     PEET_Spawn,          // Particle 생성 이벤트
@@ -101,6 +105,7 @@ enum class EParticleEventType : uint8
 };
 
 /** Particle 정렬 방식 */
+UENUM()
 enum class EParticleSortMode : uint8
 {
     PSM_None,           // 정렬 없음

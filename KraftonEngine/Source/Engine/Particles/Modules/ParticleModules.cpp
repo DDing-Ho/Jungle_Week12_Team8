@@ -14,6 +14,7 @@
 #include "Mesh/MeshManager.h"
 #include "Object/FUObjectArray.h"
 #include <chrono>
+#include <cstring>
 
 // ─────────────────────────────────────────────────────────────────────────────
 // UParticleModule (base)
@@ -46,6 +47,35 @@ void UParticleModule::InitializeStream()
 // Core Modules
 // ─────────────────────────────────────────────────────────────────────────────
 
+void UParticleModuleRequired::SetMaterial(UMaterial* InMaterial)
+{
+	Material = InMaterial;
+	if (Material)
+	{
+		MaterialSlot.Path = Material->GetAssetPathFileName();
+	}
+	else
+	{
+		MaterialSlot.Path = "None";
+	}
+}
+
+void UParticleModuleRequired::PostEditProperty(const char* PropertyName)
+{
+    UParticleModule::PostEditProperty(PropertyName);
+    if (PropertyName && strcmp(PropertyName, "Material") == 0)
+    {
+        if (MaterialSlot.Path.empty() || MaterialSlot.Path == "None")
+        {
+            SetMaterial(nullptr);
+        }
+        else
+        {
+            SetMaterial(FMaterialManager::Get().GetOrCreateMaterial(MaterialSlot.Path));
+        }
+    }
+}
+
 void UParticleModuleRequired::Serialize(FArchive& Ar)
 {
     UParticleModule::Serialize(Ar);
@@ -54,10 +84,19 @@ void UParticleModuleRequired::Serialize(FArchive& Ar)
     Ar << TypeInt;
     if (Ar.IsLoading()) EmitterType = static_cast<EParticleEmitterType>(TypeInt);
 
-    FString MatPath = (Ar.IsSaving() && Material) ? Material->GetAssetPathFileName() : FString();
+    FString MatPath = MaterialSlot.Path;
     Ar << MatPath;
-    if (Ar.IsLoading() && !MatPath.empty())
-        Material = FMaterialManager::Get().GetOrCreateMaterial(MatPath);
+    if (Ar.IsLoading())
+    {
+        if (MatPath.empty() || MatPath == "None")
+        {
+            SetMaterial(nullptr);
+        }
+        else
+        {
+            SetMaterial(FMaterialManager::Get().GetOrCreateMaterial(MatPath));
+        }
+    }
 
     int32 SortInt = static_cast<int32>(SortMode);
     Ar << SortInt;

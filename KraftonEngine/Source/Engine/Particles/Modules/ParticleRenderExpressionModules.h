@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @file ParticleRenderExpressionModules.h
  * @brief Particle 렌더링 표현 확장 Module 정의.
  *
@@ -28,10 +28,15 @@ class UParticleModuleSubUV : public UParticleModule
     virtual void Serialize(FArchive& Ar) override;
 
   private:
+    UPROPERTY(Edit, Category="Particle", DisplayName="Horizontal Count", Min=1, Max=1024, Speed=1.0)
     int32 HorizontalCount = 1;       // Texture Atlas 가로 프레임 수
+    UPROPERTY(Edit, Category="Particle", DisplayName="Vertical Count", Min=1, Max=1024, Speed=1.0)
     int32 VerticalCount = 1;         // Texture Atlas 세로 프레임 수
+    UPROPERTY(Edit, Category="Particle", DisplayName="Start Frame", Min=0, Max=100000, Speed=1.0)
     int32 StartFrame = 0;            // 시작 SubUV 프레임
+    UPROPERTY(Edit, Category="Particle", DisplayName="End Frame", Min=0, Max=100000, Speed=1.0)
     int32 EndFrame = 0;              // 종료 SubUV 프레임
+    UPROPERTY(Edit, Category="Particle", DisplayName="Use Sub Image Index")
     bool  bUseSubImageIndex = false; // 직접 프레임 인덱스 사용 여부
 };
 
@@ -49,7 +54,9 @@ class UParticleModuleLight : public UParticleModule
 
   private:
     FColor LightColor = FColor::White(); // Particle Light 색상
+    UPROPERTY(Edit, Category="Particle", DisplayName="Intensity", Min=0.0, Max=100000.0, Speed=0.1)
     float  Intensity = 1.0f;           // Particle Light 밝기
+    UPROPERTY(Edit, Category="Particle", DisplayName="Radius", Min=0.0, Max=100000.0, Speed=0.1)
     float  Radius = 100.0f;            // Particle Light 영향 반경
 };
 
@@ -67,6 +74,7 @@ class UParticleModuleVectorField : public UParticleModule
 
   private:
     UObject *VectorFieldAsset = nullptr; // Vector Field Asset 참조
+    UPROPERTY(Edit, Category="Particle", DisplayName="Intensity", Speed=0.1)
     float    Intensity = 1.0f;           // Vector Field 영향 강도
 };
 
@@ -83,6 +91,7 @@ class UParticleModuleCamera : public UParticleModule
     virtual void Serialize(FArchive& Ar) override;
 
   private:
+    UPROPERTY(Edit, Category="Particle", DisplayName="Camera Offset", Speed=0.1)
     float CameraOffset = 0.0f; // 카메라 방향 기준 위치 보정값
 };
 
@@ -99,6 +108,8 @@ class UParticleModuleParameter : public UParticleModule
     virtual void Serialize(FArchive& Ar) override;
 
   private:
+    UPROPERTY(Edit, Category="Particle", DisplayName="Parameter Name")
     FName    ParameterName;  // 외부로 전달할 Parameter 이름
+    UPROPERTY(Edit, Category="Particle", DisplayName="Parameter Value")
     FVector4 ParameterValue; // Material 등에 전달할 Parameter 값
 };

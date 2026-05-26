@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @file ParticleModules.h
  * @brief Particle Module 공통 기반 클래스 정의.
  *
@@ -40,9 +40,11 @@ class UParticleModule : public UObject
     bool IsEnabled() const { return bEnabled; }
     void SetEnabled(bool bInEnabled) { bEnabled = bInEnabled; }
 
+    UPROPERTY(Edit, Category="Particle", DisplayName="Random Seed Info")
     FParticleRandomSeedInfo RandomSeedInfo; // 에디터에서 설정하는 Seed 정보
 
   protected:
+    UPROPERTY(Edit, Category="Particle", DisplayName="Enabled")
     bool          bEnabled    = true; // Module 활성 여부
     FRandomStream ModuleStream;       // 이 모듈 전용 랜덤 스트림 (런타임, 직렬화 안 함)
 };

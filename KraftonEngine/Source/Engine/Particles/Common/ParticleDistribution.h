@@ -14,6 +14,7 @@
 #include "Core/EngineTypes.h"
 #include "Math/Vector.h"
 #include "Serialization/Archive.h"
+#include "ParticleDistribution.generated.h"
 
 // ─────────────────────────────────────────────────────────────────────────────
 // FRandomStream — Seed 기반 재현 가능한 의사난수 스트림 (LCG)
@@ -130,6 +131,7 @@ struct FLinearColorCurve
 // Distribution — 값 샘플링 방식
 // ─────────────────────────────────────────────────────────────────────────────
 
+UENUM()
 enum class EDistributionType : uint8
 {
     Constant,       // 고정값 (Min 사용)

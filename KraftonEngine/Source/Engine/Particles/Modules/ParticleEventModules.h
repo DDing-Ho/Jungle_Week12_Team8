@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @file ParticleEventModules.h
  * @brief Particle Event 생성 / 수신 Module 정의.
  *
@@ -55,7 +55,9 @@ class UParticleModuleEventReceiverSpawn : public UParticleModule
     virtual void Serialize(FArchive& Ar) override;
 
   private:
+    UPROPERTY(Edit, Category="Particle", DisplayName="Listen Event Type")
     EParticleEventType ListenEventType = EParticleEventType::PEET_Collision; // 수신할 Event 종류
+    UPROPERTY(Edit, Category="Particle", DisplayName="Spawn Count", Min=0, Max=100000, Speed=1.0)
     int32              SpawnCount = 1;                                  // Event 수신 시 생성할 Particle 수
 };
 
@@ -72,5 +74,6 @@ class UParticleModuleEventReceiverKillAll : public UParticleModule
     virtual void Serialize(FArchive& Ar) override;
 
   private:
+    UPROPERTY(Edit, Category="Particle", DisplayName="Listen Event Type")
     EParticleEventType ListenEventType = EParticleEventType::PEET_Collision; // 수신할 Event 종류
 };
