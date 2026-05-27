@@ -33,6 +33,7 @@ public:
 
 private:
 	void RenderPreviewViewport(const ImVec2& Size);
+	void RenderPreviewStatsOverlay(const ImVec2& ViewportPos, const ImVec2& ViewportSize) const;
 	UParticleSystemComponent* GetPreviewParticleComponent() const;
 	void ReplayPreviewParticleSystem();
 	bool RenderDetailsPanel();
@@ -95,9 +96,10 @@ private:
 	bool bPendingClose = false;
 
 	// Viewport playback controls
-	bool  bAnimPaused     = false;
-	bool  bAnimRealtime   = true;
-	bool  bAnimLoop       = true;
-	float AnimSpeedScale  = 1.0f;
-	bool  bWasActive      = false;
+	bool  bAnimPaused       = false;
+	bool  bAnimRealtime     = true;
+	bool  bAnimLoop         = true;
+	float AnimSpeedScale    = 1.0f;
+	bool  bWasActive        = false;
+	bool  bShowPreviewStats = true;
 };
