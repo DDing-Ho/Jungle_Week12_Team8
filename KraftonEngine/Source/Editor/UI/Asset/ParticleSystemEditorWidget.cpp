@@ -1552,160 +1552,90 @@ void FParticleSystemEditorWidget::RenderPreviewStatsOverlay(const ImVec2& Viewpo
 {
 	UParticleSystemComponent* PreviewComponent = GetPreviewParticleComponent();
 	if (!PreviewComponent || ViewportSize.x <= 0.0f || ViewportSize.y <= 0.0f)
-	{
 		return;
-	}
 
 	const FParticlePreviewStats Stats = GatherParticlePreviewStats(PreviewComponent);
-	const FStatEntry* TickEntry          = FindParticleStatEntry("ParticleSystemComponent::Tick");
-	const FStatEntry* SimulateEntry      = FindParticleStatEntry("ParticleEmitters::Simulate");
-	const FStatEntry* ProcessEventsEntry = FindParticleStatEntry("ParticleEmitters::ProcessEvents");
-	const FStatEntry* BuildEntry         = FindParticleStatEntry("ParticleSystemComponent::BuildRenderData");
+	const FStatEntry* TickEntry = FindParticleStatEntry("ParticleSystemComponent::Tick");
 
-	const char* PlaybackLabel = bAnimPaused ? "Paused" : "Playing";
-	const char* ActiveLabel   = PreviewComponent->IsActive() ? "Active" : "Inactive";
-	const char* LoopLabel     = bAnimLoop ? "On" : "Off";
-
-	// ── 행 데이터 ─────────────────────────────────────────────────────
-	struct FPreviewStatRow
-	{
-		const char* Label;         // nullptr → 섹션 헤더
-		char        Value[96];
-		bool        bSection;
-	};
-
-	FPreviewStatRow Rows[24] = {};
+	// ── 행 구성 ───────────────────────────────────────────────────────
+	struct FRow { char Label[24]; char Value[96]; };
+	FRow Rows[6] = {};
 	int32 RowCount = 0;
 
 	auto AddRow = [&](const char* Label, const char* Fmt, ...)
 	{
-		FPreviewStatRow& R = Rows[RowCount++];
-		R.Label   = Label;
-		R.bSection = false;
+		FRow& R = Rows[RowCount++];
+		strncpy_s(R.Label, Label, sizeof(R.Label) - 1);
 		va_list Args; va_start(Args, Fmt);
 		vsnprintf(R.Value, sizeof(R.Value), Fmt, Args);
 		va_end(Args);
 	};
-	auto AddSection = [&](const char* Title)
+
+	// Playback : Playing 0.50x | 0.42 s | Loop
 	{
-		FPreviewStatRow& R = Rows[RowCount++];
-		R.Label   = Title;
-		R.bSection = true;
-		R.Value[0] = '\0';
-	};
+		const char* Pb = bAnimPaused ? "Paused" : "Playing";
+		const float  T = PreviewComponent->GetSystemElapsedTime();
+		if (bAnimLoop)
+			AddRow("Playback", "%s  %.2fx  |  %.2f s  |  Loop", Pb, AnimSpeedScale, T);
+		else
+			AddRow("Playback", "%s  %.2fx  |  %.2f s", Pb, AnimSpeedScale, T);
+	}
 
-	// --- State ---
-	AddSection("State");
-	AddRow("Playback",    "%s  %.2fx", PlaybackLabel, AnimSpeedScale);
-	AddRow("Time",        "%.2f s", PreviewComponent->GetSystemElapsedTime());
-	AddRow("System",      "%s  Loop %s", ActiveLabel, LoopLabel);
-	AddRow("LOD",         "edit %d / runtime %d", EditedLODIndex, PreviewComponent->GetLODLevel());
-	AddRow("Emitters",    "%d active / %d total", Stats.ActiveEmitters, Stats.TotalEmitters);
-	AddRow("Particles",   "%d alive / %d max", Stats.ActiveParticles, Stats.MaxParticles);
-	AddRow("DrawBatches", "%d", Stats.RenderedEmitters);
+	AddRow("LOD",       "%d", EditedLODIndex);
+	AddRow("Emitters",  "%d / %d active", Stats.ActiveEmitters, Stats.TotalEmitters);
+	AddRow("Particles", "%d alive / %d max", Stats.ActiveParticles, Stats.MaxParticles);
+	AddRow("Frame",     "+%d spawn  /  -%d kill  /  %d events",
+		PreviewComponent->GetTotalSpawnedThisFrame(),
+		PreviewComponent->GetTotalKilledThisFrame(),
+		Stats.QueuedEvents);
+	AddRow("CPU",       "%.3f ms", TickEntry ? TickEntry->LastTime * 1000.0 : 0.0);
 
-	// --- Frame ---
-	AddSection("Frame");
-	AddRow("Spawned", "%d / frame", PreviewComponent->GetTotalSpawnedThisFrame());
-	AddRow("Killed",  "%d / frame", PreviewComponent->GetTotalKilledThisFrame());
-	AddRow("Events",  "%d / frame", Stats.QueuedEvents);
-
-	// --- CPU Time ---
-	AddSection("CPU Time");
-	AddRow("Tick",            "%.3f ms  (avg %.3f)",
-		TickEntry ? TickEntry->LastTime * 1000.0 : 0.0,
-		TickEntry ? TickEntry->AvgTime * 1000.0 : 0.0);
-	AddRow("Simulate",        "%.3f ms  (avg %.3f)",
-		SimulateEntry ? SimulateEntry->LastTime * 1000.0 : 0.0,
-		SimulateEntry ? SimulateEntry->AvgTime * 1000.0 : 0.0);
-	AddRow("ProcessEvents",   "%.3f ms  (avg %.3f)",
-		ProcessEventsEntry ? ProcessEventsEntry->LastTime * 1000.0 : 0.0,
-		ProcessEventsEntry ? ProcessEventsEntry->AvgTime * 1000.0 : 0.0);
-	AddRow("BuildRenderData", "%.3f ms  (avg %.3f)",
-		BuildEntry ? BuildEntry->LastTime * 1000.0 : 0.0,
-		BuildEntry ? BuildEntry->AvgTime * 1000.0 : 0.0);
-
-	// ── 레이아웃 계산 ─────────────────────────────────────────────────
-	constexpr float PanelPaddingX    = 12.0f;
-	constexpr float PanelPaddingY    = 10.0f;
-	constexpr float LineSpacing      = 4.0f;
-	constexpr float SectionPreGap    = 6.0f;   // 섹션 헤더 위 여백
-	constexpr float PanelTopOffset   = 6.0f;
-	constexpr float PanelRightOffset = 10.0f;
-	constexpr float PanelMinWidth    = 260.0f;
-	constexpr float ColumnGap        = 16.0f;
+	// ── 레이아웃 ──────────────────────────────────────────────────────
+	constexpr float PadX         = 12.0f;
+	constexpr float PadY         = 10.0f;
+	constexpr float LineSpacing  = 4.0f;
+	constexpr float TopOffset    = 6.0f;
+	constexpr float RightOffset  = 10.0f;
+	constexpr float MinWidth     = 220.0f;
+	constexpr float ColGap       = 14.0f;
 
 	const float LineH = ImGui::GetTextLineHeight();
 
-	float MaxLabelW = 0.0f, MaxValueW = 0.0f, MaxSectionW = 0.0f;
+	float MaxLabelW = 0.0f, MaxValueW = 0.0f;
 	for (int32 i = 0; i < RowCount; ++i)
 	{
-		if (Rows[i].bSection)
-			MaxSectionW = (std::max)(MaxSectionW, ImGui::CalcTextSize(Rows[i].Label).x);
-		else
-		{
-			MaxLabelW = (std::max)(MaxLabelW, ImGui::CalcTextSize(Rows[i].Label).x);
-			MaxValueW = (std::max)(MaxValueW, ImGui::CalcTextSize(Rows[i].Value).x);
-		}
+		MaxLabelW = (std::max)(MaxLabelW, ImGui::CalcTextSize(Rows[i].Label).x);
+		MaxValueW = (std::max)(MaxValueW, ImGui::CalcTextSize(Rows[i].Value).x);
 	}
-	const float ContentW     = (std::max)(MaxSectionW, MaxLabelW + ColumnGap + MaxValueW);
-	const float PanelWidth   = (std::max)(PanelMinWidth, ContentW + PanelPaddingX * 2.0f);
-	const float TitleHeight  = LineH + 4.0f;
 
-	// 전체 높이 계산
-	float TotalContentH = 0.0f;
-	for (int32 i = 0; i < RowCount; ++i)
-	{
-		if (Rows[i].bSection)
-			TotalContentH += (i == 0 ? 0.0f : SectionPreGap) + LineH + 3.0f;
-		else
-			TotalContentH += LineH + LineSpacing;
-	}
-	const float PanelHeight = PanelPaddingY * 2.0f + TitleHeight + TotalContentH;
+	const float ContentW  = MaxLabelW + ColGap + MaxValueW;
+	const float PanelW    = (std::max)(MinWidth, ContentW + PadX * 2.0f);
+	const float TitleH    = LineH + 4.0f;
+	const float PanelH    = PadY * 2.0f + TitleH
+		+ LineH * static_cast<float>(RowCount)
+		+ LineSpacing * static_cast<float>(RowCount - 1);
 
-	const ImVec2 PanelMin(
-		ViewportPos.x + ViewportSize.x - PanelWidth - PanelRightOffset,
-		ViewportPos.y + PanelTopOffset);
-	const ImVec2 PanelMax(PanelMin.x + PanelWidth, PanelMin.y + PanelHeight);
+	const ImVec2 PMin(ViewportPos.x + ViewportSize.x - PanelW - RightOffset, ViewportPos.y + TopOffset);
+	const ImVec2 PMax(PMin.x + PanelW, PMin.y + PanelH);
 
 	// ── 렌더링 ────────────────────────────────────────────────────────
 	ImDrawList* DL = ImGui::GetWindowDrawList();
-	DL->AddRectFilled(PanelMin, PanelMax, IM_COL32(10, 12, 16, 215), 6.0f);
-	DL->AddRect(PanelMin, PanelMax, IM_COL32(0, 181, 219, 180), 6.0f, 0, 1.0f);
-	DL->AddText(ImVec2(PanelMin.x + PanelPaddingX, PanelMin.y + PanelPaddingY), IM_COL32(170, 220, 235, 255), "Preview Stats");
+	DL->AddRectFilled(PMin, PMax, IM_COL32(10, 12, 16, 215), 6.0f);
+	DL->AddRect(PMin, PMax, IM_COL32(0, 181, 219, 180), 6.0f, 0, 1.0f);
+	DL->AddText(ImVec2(PMin.x + PadX, PMin.y + PadY), IM_COL32(170, 220, 235, 255), "Preview Stats");
 
-	const float LabelX    = PanelMin.x + PanelPaddingX;
-	const float ValueX    = LabelX + MaxLabelW + ColumnGap;
-	const ImU32 ColLabel  = IM_COL32(175, 175, 175, 255);
-	const ImU32 ColValue  = IM_COL32(235, 235, 235, 255);
-	const ImU32 ColTiming = IM_COL32(132, 214, 255, 255);
-	const ImU32 ColSec    = IM_COL32(140, 210, 255, 230);
-	const ImU32 ColLine   = IM_COL32(80, 130, 180, 120);
+	const float LabelX   = PMin.x + PadX;
+	const float ValueX   = LabelX + MaxLabelW + ColGap;
+	const ImU32 ColLabel = IM_COL32(175, 175, 175, 255);
+	const ImU32 ColValue = IM_COL32(235, 235, 235, 255);
+	const ImU32 ColCPU   = IM_COL32(132, 214, 255, 255);
 
-	float CurY = PanelMin.y + PanelPaddingY + TitleHeight;
+	float CurY = PMin.y + PadY + TitleH;
 	for (int32 i = 0; i < RowCount; ++i)
 	{
-		if (Rows[i].bSection)
-		{
-			if (i > 0)
-				CurY += SectionPreGap;
-			// 구분선
-			DL->AddLine(ImVec2(LabelX, CurY), ImVec2(PanelMin.x + PanelWidth - PanelPaddingX, CurY), ColLine);
-			CurY += 2.0f;
-			DL->AddText(ImVec2(LabelX, CurY), ColSec, Rows[i].Label);
-			CurY += LineH + 3.0f;
-		}
-		else
-		{
-			// CPU Time 섹션 항목은 타이밍 색
-			const bool bIsTiming = (strcmp(Rows[i].Label, "Tick") == 0 ||
-				strcmp(Rows[i].Label, "Simulate") == 0 ||
-				strcmp(Rows[i].Label, "ProcessEvents") == 0 ||
-				strcmp(Rows[i].Label, "BuildRenderData") == 0);
-			DL->AddText(ImVec2(LabelX, CurY), ColLabel, Rows[i].Label);
-			DL->AddText(ImVec2(ValueX, CurY), bIsTiming ? ColTiming : ColValue, Rows[i].Value);
-			CurY += LineH + LineSpacing;
-		}
+		DL->AddText(ImVec2(LabelX, CurY), ColLabel, Rows[i].Label);
+		DL->AddText(ImVec2(ValueX, CurY), (i == RowCount - 1) ? ColCPU : ColValue, Rows[i].Value);
+		CurY += LineH + LineSpacing;
 	}
 }
 

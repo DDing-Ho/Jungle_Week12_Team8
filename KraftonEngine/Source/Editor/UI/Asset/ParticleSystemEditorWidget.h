@@ -101,5 +101,5 @@ private:
 	bool  bAnimLoop         = true;
 	float AnimSpeedScale    = 1.0f;
 	bool  bWasActive        = false;
-	bool  bShowPreviewStats = true;
+	bool  bShowPreviewStats = false;
 };
