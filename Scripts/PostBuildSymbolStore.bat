@@ -130,14 +130,13 @@ if "%GIT_COMMIT%"=="" (
 )
 
 rem ------------------------------------------------------------
-rem Normalize source root (ensure trailing backslash)
+rem Normalize source root
+rem 1. Convert forward slashes to backslashes
+rem 2. Ensure trailing backslash
 rem ------------------------------------------------------------
 
-if not "%SOURCE_ROOT%"=="" (
-    if not "%SOURCE_ROOT:~-1%"=="\" (
-        set "SOURCE_ROOT=%SOURCE_ROOT%\"
-    )
-)
+if not "%SOURCE_ROOT%"=="" set "SOURCE_ROOT=%SOURCE_ROOT:/=\%"
+if not "%SOURCE_ROOT%"=="" if not "%SOURCE_ROOT:~-1%"=="\" set "SOURCE_ROOT=%SOURCE_ROOT%\"
 
 rem ------------------------------------------------------------
 rem Print summary
@@ -251,6 +250,7 @@ set "INDEXED_COUNT=0"
 
 for /f "usebackq delims=" %%S in ("%SRC_LIST%") do (
     set "SRC_ABS=%%S"
+    set "SRC_ABS=!SRC_ABS:/=\!"
     set "SRC_REL=!SRC_ABS:%SOURCE_ROOT%=!"
 
     if not "!SRC_REL!"=="!SRC_ABS!" (
