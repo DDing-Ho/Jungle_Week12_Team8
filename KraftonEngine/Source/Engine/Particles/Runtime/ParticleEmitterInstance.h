@@ -35,6 +35,8 @@ struct FParticleEmitterInstance
     uint32 ParticleCounter = 0;                    // 누적 생성 카운터
     int32  MaxActiveParticles = 0;                 // 최대 활성 Particle 수
     float  SpawnFraction = 0.0f;                   // SpawnRate 소수점 이월값
+    int32  SpawnedThisFrame = 0;                   // 이번 프레임 생성 수
+    int32  KilledThisFrame = 0;                    // 이번 프레임 제거 수
 
     TArray<FParticleEventData>  ReceivedEvents; // 이 Emitter가 받을 Event 목록
     

@@ -40,11 +40,15 @@ class UParticleSystemComponent : public UPrimitiveComponent
     UParticleSystem *GetTemplate() const { return Template; }
     void             SetTemplate(UParticleSystem *InTemplate);
 
-    const TArray<FParticleEmitterInstance *> &GetEmitterInstances() const { return EmitterInstances; }
-    const TArray<FDynamicEmitterDataBase *>  &GetEmitterRenderData() const { return EmitterRenderData; }
-    const TArray<FParticleEventData>         &GetFrameEventQueue() const { return FrameEventQueue; }
+	const TArray<FParticleEmitterInstance *> &GetEmitterInstances() const { return EmitterInstances; }
+	const TArray<FDynamicEmitterDataBase *>  &GetEmitterRenderData() const { return EmitterRenderData; }
+	const TArray<FParticleEventData>         &GetFrameEventQueue() const { return FrameEventQueue; }
+	int32 GetTotalActiveParticles() const { return TotalActiveParticles; }
+	int32 GetTotalSpawnedThisFrame() const { return TotalSpawnedThisFrame; }
+	int32 GetTotalKilledThisFrame() const { return TotalKilledThisFrame; }
+	float GetSystemElapsedTime() const { return SystemElapsedTime; }
 
-    bool IsActive() const { return bIsActive; }
+	bool IsActive() const { return bIsActive; }
     bool IsEventTraceEnabled() const
     {
 #if defined(_DEBUG)
@@ -54,11 +58,11 @@ class UParticleSystemComponent : public UPrimitiveComponent
 #endif
     }
 
-    void SetParticleVisible(bool bInVisible) { bParticleVisible = bInVisible; }
-    bool IsParticleVisible() const { return bParticleVisible; }
+	void SetParticleVisible(bool bInVisible) { bParticleVisible = bInVisible; }
+	bool IsParticleVisible() const { return bParticleVisible; }
 
 	void SetLODLevel(int32 Level);
-	int32 GetLODLevel() {return CurrentLODLevelIndex;}
+	int32 GetLODLevel() const { return CurrentLODLevelIndex; }
 	int32 CalculateLODLevel(const FVector& EffectLocation) const;
 
 	void SetCustomTimeDilation(float InDilation) { CustomTimeDilation = InDilation; }
@@ -101,6 +105,9 @@ private:
 
 	int32 CurrentLODLevelIndex;		 // 현재 LODLevel
 	int32 TotalActiveParticles;		 // 액티브된 모든 파티클 개수
+	int32 TotalSpawnedThisFrame = 0; // 이번 프레임 전체 생성 수
+	int32 TotalKilledThisFrame  = 0; // 이번 프레임 전체 제거 수
+	float SystemElapsedTime     = 0.0f; // 시스템 활성화 후 경과 시간
 	float AccumLODDistanceCheckTime; // LOD 거리 재검사 누적 시간
 	bool  bCalculateLODLevel;        // 자동 LOD 계산 활성 여부
 };

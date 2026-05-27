@@ -121,6 +121,9 @@ void FParticleEmitterInstance::Tick(float DeltaTime, TArray<FParticleEventData>&
 
 	RealDeltaTime = InRealDeltaTime >= 0.0f ? InRealDeltaTime : DeltaTime;
 
+	SpawnedThisFrame = 0;
+	KilledThisFrame  = 0;
+
 	// 이미터 시간 갱신
 	EmitterTime += DeltaTime;
 
@@ -171,6 +174,7 @@ void FParticleEmitterInstance::SpawnParticles(int32 Count, float StartTime, floa
 		}
 
 		PostSpawn(Particle, SpawnTime, OutEventQueue);
+		++SpawnedThisFrame;
 	}
 }
 
@@ -190,6 +194,7 @@ void FParticleEmitterInstance::KillParticle(int32 Index)
 	}
 
 	ActiveParticles--;
+	++KilledThisFrame;
 }
 
 void FParticleEmitterInstance::KillParticleWithEvents(int32 Index, TArray<FParticleEventData>* OutEventQueue)

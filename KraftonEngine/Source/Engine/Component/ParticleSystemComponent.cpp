@@ -7,6 +7,7 @@
 #include "GameFramework/World.h"
 #include "GameFramework/AActor.h"
 #include "Core/Log.h"
+#include "Profiling/Stats.h"
 #include "Profiling/Timer.h"
 #include "Runtime/Engine.h"
 
@@ -178,6 +179,8 @@ void UParticleSystemComponent::Deactivate()
 
 void UParticleSystemComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction& ThisTickFunction)
 {
+	SCOPE_STAT_CAT("ParticleSystemComponent::Tick", "Particles");
+
 	UPrimitiveComponent::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
 	if (!Template)
@@ -231,12 +234,20 @@ void UParticleSystemComponent::TickComponent(float DeltaTime, ELevelTick TickTyp
 
 	//이벤트 버퍼 정리
 	FrameEventQueue.clear();
-	TotalActiveParticles = 0;
+	TotalActiveParticles  = 0;
+	TotalSpawnedThisFrame = 0;
+	TotalKilledThisFrame  = 0;
+	SystemElapsedTime    += DeltaTime;
 
-	// 인스턴스 tick
-	for (auto instance : EmitterInstances) {
-		if (!instance) continue;
-		instance->Tick(DeltaTimeTick, FrameEventQueue, RawDeltaTime);
+	{
+		SCOPE_STAT_CAT("ParticleEmitters::Simulate", "Particles");
+
+		for (auto instance : EmitterInstances) {
+			if (!instance) continue;
+			instance->Tick(DeltaTimeTick, FrameEventQueue, RawDeltaTime);
+			TotalSpawnedThisFrame += instance->SpawnedThisFrame;
+			TotalKilledThisFrame  += instance->KilledThisFrame;
+		}
 	}
 
 #if defined(_DEBUG)
@@ -246,10 +257,14 @@ void UParticleSystemComponent::TickComponent(float DeltaTime, ELevelTick TickTyp
 	}
 #endif
 
-	for (auto instance : EmitterInstances) {
-		if (!instance) continue;
-		instance->ProcessEvents(FrameEventQueue);
-		TotalActiveParticles += instance->ActiveParticles;
+	{
+		SCOPE_STAT_CAT("ParticleEmitters::ProcessEvents", "Particles");
+
+		for (auto instance : EmitterInstances) {
+			if (!instance) continue;
+			instance->ProcessEvents(FrameEventQueue);
+			TotalActiveParticles += instance->ActiveParticles;
+		}
 	}
 
 #if defined(_DEBUG)
@@ -464,6 +479,9 @@ void UParticleSystemComponent::ActivateSystem()
 
 	bIsActive = true;
 	SetComponentTickEnabled(true);
+	SystemElapsedTime     = 0.0f;
+	TotalSpawnedThisFrame = 0;
+	TotalKilledThisFrame  = 0;
 
 	// Asset의 Delay 설정 적용
 	if (Template->GetUseDelayRange())
@@ -578,6 +596,8 @@ void UParticleSystemComponent::PostDuplicate()
 
 void UParticleSystemComponent::BuildRenderData()
 {
+	SCOPE_STAT_CAT("ParticleSystemComponent::BuildRenderData", "Particles");
+
 	ClearRenderData();
 
 	if (EmitterInstances.empty())
