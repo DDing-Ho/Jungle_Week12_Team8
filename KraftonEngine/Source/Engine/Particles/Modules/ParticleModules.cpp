@@ -1306,8 +1306,25 @@ void UParticleModuleKill::Update(
 
 void UParticleModuleEventGenerator::Serialize(FArchive& Ar)
 {
+#if defined(_DEBUG)
+	LogGeneratedEvents(Ar.IsSaving() ? "Serialize-BeforeSave" : "Serialize-BeforeLoad", this);
+#endif
     UParticleModule::Serialize(Ar);
-    Ar << GeneratedEvents;
+    // FParticleEventGeneratorEntry has custom field-wise serialization for FName.
+    // Serialize entries one by one so we don't fall back to raw TArray bulk-copy.
+    uint32 GeneratedEventCount = Ar.IsSaving() ? static_cast<uint32>(GeneratedEvents.size()) : 0u;
+    Ar << GeneratedEventCount;
+    if (Ar.IsLoading())
+    {
+        GeneratedEvents.resize(GeneratedEventCount);
+    }
+    for (uint32 EventIndex = 0; EventIndex < GeneratedEventCount; ++EventIndex)
+    {
+        Ar << GeneratedEvents[EventIndex];
+    }
+#if defined(_DEBUG)
+	LogGeneratedEvents(Ar.IsSaving() ? "Serialize-AfterSave" : "Serialize-AfterLoad", this);
+#endif
 }
 
 void UParticleModuleEventReceiverBase::Serialize(FArchive& Ar)
