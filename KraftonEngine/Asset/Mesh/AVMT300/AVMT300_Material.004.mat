@@ -1,0 +1,18 @@
+{
+  "BlendMode" : "Opaque",
+  "BlendState" : "Opaque",
+  "DepthStencilState" : "Default",
+  "Origin" : "ObjImport",
+  "Parameters" : {
+    "HasNormalMap" : 0.000000,
+    "SectionColor" : [1.000000, 1.000000, 1.000000, 1.000000],
+    "_pad" : [0.000000, 0.000000, 0.000000]
+  },
+  "PathFileName" : "Asset/Mesh/AVMT300/AVMT300_Material.004.mat",
+  "RasterizerState" : "SolidBackCull",
+  "RenderPass" : "Opaque",
+  "ShaderPath" : "Shaders/Geometry/UberLit.hlsl",
+  "Textures" : {
+    "DiffuseTexture" : "Asset/Mesh/AVMT300/Texture/texture.jpg"
+  }
+}
