@@ -298,7 +298,7 @@ float FParticleFloatCurve::Eval(float T) const
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// FRawDistributionFloat — 런타임 전용, BakedMin/Max 로 동작
+// FRawDistributionFloat
 // ─────────────────────────────────────────────────────────────────────────────
 
 float FRawDistributionFloat::GetValue(float T, FRandomStream* Stream) const
@@ -319,23 +319,8 @@ float FRawDistributionFloat::GetValue(float T, float RandomFactor) const
     case EDistributionType::ConstantCurve:
     case EDistributionType::UniformCurve:
     {
-        float MinVal = Min;
-        float MaxVal = Max;
-
-        if (bCanBeBaked && !BakedMin.empty())
-        {
-            const float NormT = T * static_cast<float>(NUM_BAKED_SAMPLES - 1);
-            int32 Idx = static_cast<int32>(NormT);
-            if (Idx >= NUM_BAKED_SAMPLES - 1) Idx = NUM_BAKED_SAMPLES - 2;
-            const float Frac = NormT - static_cast<float>(Idx);
-            MinVal = BakedMin[Idx] + Frac * (BakedMin[Idx + 1] - BakedMin[Idx]);
-            MaxVal = BakedMax[Idx] + Frac * (BakedMax[Idx + 1] - BakedMax[Idx]);
-        }
-        else
-        {
-            MinVal = EvalFloatCurveWithOptions(MinCurve, T, bIsLooped, LoopKeyOffset);
-            MaxVal = EvalFloatCurveWithOptions(MaxCurve, T, bIsLooped, LoopKeyOffset);
-        }
+        const float MinVal = EvalFloatCurveWithOptions(MinCurve, T, bIsLooped, LoopKeyOffset);
+        const float MaxVal = EvalFloatCurveWithOptions(MaxCurve, T, bIsLooped, LoopKeyOffset);
 
         if (Type == EDistributionType::ConstantCurve)
         {
@@ -414,29 +399,14 @@ FVector FRawDistributionVector::GetValue(float T, const FVector& RandomFactors, 
     case EDistributionType::ConstantCurve:
     case EDistributionType::UniformCurve:
     {
-        FVector MinVal = Min;
-        FVector MaxVal = Max;
-
-        if (bCanBeBaked && !BakedMin.empty())
-        {
-            const float NormT = T * static_cast<float>(NUM_BAKED_SAMPLES - 1);
-            int32 Idx = static_cast<int32>(NormT);
-            if (Idx >= NUM_BAKED_SAMPLES - 1) Idx = NUM_BAKED_SAMPLES - 2;
-            const float Frac = NormT - static_cast<float>(Idx);
-            MinVal = BakedMin[Idx] + (BakedMin[Idx + 1] - BakedMin[Idx]) * Frac;
-            MaxVal = BakedMax[Idx] + (BakedMax[Idx + 1] - BakedMax[Idx]) * Frac;
-        }
-        else
-        {
-            MinVal = FVector(
-                EvalFloatCurveWithOptions(MinCurve.X, T, bIsLooped, LoopKeyOffset),
-                EvalFloatCurveWithOptions(MinCurve.Y, T, bIsLooped, LoopKeyOffset),
-                EvalFloatCurveWithOptions(MinCurve.Z, T, bIsLooped, LoopKeyOffset));
-            MaxVal = FVector(
-                EvalFloatCurveWithOptions(MaxCurve.X, T, bIsLooped, LoopKeyOffset),
-                EvalFloatCurveWithOptions(MaxCurve.Y, T, bIsLooped, LoopKeyOffset),
-                EvalFloatCurveWithOptions(MaxCurve.Z, T, bIsLooped, LoopKeyOffset));
-        }
+        const FVector MinVal(
+            EvalFloatCurveWithOptions(MinCurve.X, T, bIsLooped, LoopKeyOffset),
+            EvalFloatCurveWithOptions(MinCurve.Y, T, bIsLooped, LoopKeyOffset),
+            EvalFloatCurveWithOptions(MinCurve.Z, T, bIsLooped, LoopKeyOffset));
+        const FVector MaxVal(
+            EvalFloatCurveWithOptions(MaxCurve.X, T, bIsLooped, LoopKeyOffset),
+            EvalFloatCurveWithOptions(MaxCurve.Y, T, bIsLooped, LoopKeyOffset),
+            EvalFloatCurveWithOptions(MaxCurve.Z, T, bIsLooped, LoopKeyOffset));
 
         if (Type == EDistributionType::ConstantCurve)
         {
@@ -516,23 +486,8 @@ FLinearColor FRawDistributionLinearColor::GetValue(float T, float RandomFactor) 
     case EDistributionType::ConstantCurve:
     case EDistributionType::UniformCurve:
     {
-        FLinearColor MinVal = Min;
-        FLinearColor MaxVal = Max;
-
-        if (bCanBeBaked && !BakedMin.empty())
-        {
-            const float NormT = T * static_cast<float>(NUM_BAKED_SAMPLES - 1);
-            int32 Idx = static_cast<int32>(NormT);
-            if (Idx >= NUM_BAKED_SAMPLES - 1) Idx = NUM_BAKED_SAMPLES - 2;
-            const float Frac = NormT - static_cast<float>(Idx);
-            MinVal = LerpColor(BakedMin[Idx], BakedMin[Idx + 1], Frac);
-            MaxVal = LerpColor(BakedMax[Idx], BakedMax[Idx + 1], Frac);
-        }
-        else
-        {
-            MinVal = EvalLinearColorCurveWithOptions(MinCurve, T, bIsLooped, LoopKeyOffset);
-            MaxVal = EvalLinearColorCurveWithOptions(MaxCurve, T, bIsLooped, LoopKeyOffset);
-        }
+        const FLinearColor MinVal = EvalLinearColorCurveWithOptions(MinCurve, T, bIsLooped, LoopKeyOffset);
+        const FLinearColor MaxVal = EvalLinearColorCurveWithOptions(MaxCurve, T, bIsLooped, LoopKeyOffset);
 
         if (Type == EDistributionType::ConstantCurve)
         {

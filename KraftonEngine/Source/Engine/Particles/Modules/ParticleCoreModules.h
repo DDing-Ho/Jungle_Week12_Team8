@@ -2,9 +2,9 @@
  * @file ParticleCoreModules.h
  * @brief 기본 Particle Module 정의.
  *
- * 각 모듈은 에디터 측 UDistribution* (커브 편집 가능) 과
- * 런타임 측 FRawDistribution (Baked 테이블) 을 함께 보유한다.
- * CacheModuleValues()를 호출하면 UDistribution → FRawDistribution 동기화가 된다.
+ * 각 모듈은 편집/직렬화용 UDistribution* 와
+ * 실행 시 샘플링에 사용하는 FRawDistribution 을 함께 보유한다.
+ * CacheModuleValues()를 호출하면 편집 데이터가 런타임 평가 캐시로 동기화된다.
  */
 
 #pragma once
@@ -148,10 +148,8 @@ class UParticleModuleLifetime : public UParticleModule
     UDistributionFloat* GetLifetimeDist() const { return LifetimeDist; }
 
   private:
-    // 에디터 측: 커브/범위 편집 가능
     UPROPERTY(Edit, Category="Particle", DisplayName="Lifetime", Type=Distribution, Class=UDistributionFloat)
     UDistributionFloat* LifetimeDist = nullptr;
-    // 런타임 측: Baked 테이블
     FRawDistributionFloat RawLifetime = FRawDistributionFloat::MakeConstant(1.0f);
 };
 

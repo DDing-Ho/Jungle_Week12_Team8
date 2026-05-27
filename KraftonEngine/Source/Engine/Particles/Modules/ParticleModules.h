@@ -41,7 +41,7 @@ class UParticleModule : public UObject
     virtual bool SupportsRandomSeed() const { return false; }
     virtual void GetEditableProperties(TArray<const FProperty*>& OutProps) override;
 
-    /** UDistribution 에디터 데이터로부터 FRawDistribution 런타임 캐시를 재구성한다. */
+    /** UDistribution 편집 데이터를 런타임 분포 평가 캐시로 동기화한다. */
     virtual void CacheModuleValues() {}
 
     /** RandomSeedInfo를 바탕으로 ModuleStream을 초기화한다. Init 시 한 번 호출. */

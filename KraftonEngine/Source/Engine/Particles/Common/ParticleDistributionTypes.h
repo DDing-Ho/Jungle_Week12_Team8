@@ -2,8 +2,8 @@
  * @file ParticleDistributionTypes.h
  * @brief 에디터 측 Distribution UObject 정의.
  *
- * 에디터에서 커브 및 범위를 편집하고, BuildRaw()로 런타임 FRawDistribution을 생성한다.
- * 런타임에는 FRawDistribution* 만 사용하며 UDistribution* 은 필요 없다.
+ * 에디터에서 커브 및 범위를 편집하고, BuildRaw()로 런타임 평가용 값을 만든다.
+ * UDistribution* 는 편집/직렬화용이고, 실제 파티클 실행은 FRawDistribution* 로 평가한다.
  *
  * 포함 클래스:
  * - UDistributionFloat:       float 분포 에디터 오브젝트
@@ -29,7 +29,7 @@ class UDistributionFloat : public UObject
 
     virtual void Serialize(FArchive& Ar) override;
 
-    /** 현재 설정으로 런타임 FRawDistributionFloat를 생성한다. */
+    /** 현재 편집 설정을 런타임 평가용 값 타입으로 복사한다. */
     FRawDistributionFloat BuildRaw() const;
 
     UPROPERTY(Edit, Category="Particle")
@@ -41,7 +41,6 @@ class UDistributionFloat : public UObject
     bool              bIsLooped = false;
     float             LoopKeyOffset = 0.f;
     bool              bUseExtremes = false;
-    bool              bCanBeBaked = true;
     FParticleFloatCurve       MinCurve;
     FParticleFloatCurve       MaxCurve;
 };
@@ -69,7 +68,6 @@ class UDistributionVector : public UObject
     bool              bIsLooped = false;
     float             LoopKeyOffset = 0.f;
     bool              bUseExtremes = false;
-    bool              bCanBeBaked = true;
     EParticleLockedAxesMode LockedAxesMode = EParticleLockedAxesMode::None;
     uint8             MirrorFlags = PMF_None;
     FVectorCurve      MinCurve;
@@ -97,7 +95,6 @@ class UDistributionLinearColor : public UObject
     bool               bIsLooped = false;
     float              LoopKeyOffset = 0.f;
     bool               bUseExtremes = false;
-    bool               bCanBeBaked = true;
     FLinearColorCurve  MinCurve;
     FLinearColorCurve  MaxCurve;
 };

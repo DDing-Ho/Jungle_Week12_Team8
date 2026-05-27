@@ -2244,7 +2244,6 @@ bool FParticleSystemEditorWidget::RenderParticleDistribution(UParticleModule* Mo
 		const bool bConstant = Dist->Type == EDistributionType::Constant;
 		const bool bUniformRangeOnly = Dist->Type == EDistributionType::Uniform;
 		DrawType(Dist->Type);
-		DrawBool("Can be Baked", Dist->bCanBeBaked);
 		if (bConstant) DrawFloat("Constant", Dist->Min);
 		if (bUniformRangeOnly) DrawFloat("Min", Dist->Min);
 		if (bUniformRangeOnly) DrawFloat("Max", Dist->Max);
@@ -2265,7 +2264,6 @@ bool FParticleSystemEditorWidget::RenderParticleDistribution(UParticleModule* Mo
 		const bool bConstant = Dist->Type == EDistributionType::Constant;
 		const bool bUniformRangeOnly = Dist->Type == EDistributionType::Uniform;
 		DrawType(Dist->Type);
-		DrawBool("Can be Baked", Dist->bCanBeBaked);
 		DrawLockedAxesMode("Locked Axes", Dist->LockedAxesMode);
 		if (bConstant) DrawVector("Constant", Dist->Min);
 		if (bUniformRangeOnly) DrawVector("Min", Dist->Min);
@@ -2295,7 +2293,6 @@ bool FParticleSystemEditorWidget::RenderParticleDistribution(UParticleModule* Mo
 		const bool bConstant = Dist->Type == EDistributionType::Constant;
 		const bool bUniformRangeOnly = Dist->Type == EDistributionType::Uniform;
 		DrawType(Dist->Type);
-		DrawBool("Can be Baked", Dist->bCanBeBaked);
 		if (bConstant) DrawColor("Constant", Dist->Min);
 		if (bUniformRangeOnly) DrawColor("Min", Dist->Min);
 		if (bUniformRangeOnly) DrawColor("Max", Dist->Max);

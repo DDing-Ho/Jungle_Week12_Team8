@@ -5,7 +5,7 @@
  * 포함 타입:
  * - FRandomStream: Seed 기반 재현 가능한 의사난수 스트림 (LCG)
  * - FFloatCurve / FVectorCurve: 키프레임 보간 커브
- * - FRawDistributionFloat / FRawDistributionVector: 런타임 Distribution (Baked 테이블 포함)
+ * - FRawDistributionFloat / FRawDistributionVector: 런타임 분포 평가용 값 타입
  */
 
 #pragma once
@@ -177,10 +177,7 @@ enum class EDistributionType : uint8
     UniformCurve,   // 수명에 따른 커브 범위에서 랜덤
 };
 
-// 언리얼 Cascade와 같은 수치 사용
-static constexpr int32 NUM_BAKED_SAMPLES = 256; // 커브를 256등분으로 굽기
-
-// ── Float Distribution (런타임 전용 — 커브 없음, Baked 테이블만) ──────────────
+// ── Float Distribution (런타임 분포 평가용 값 타입) ─────────────────────────
 
 struct FRawDistributionFloat
 {
@@ -190,16 +187,11 @@ struct FRawDistributionFloat
     bool              bIsLooped = false;
     float             LoopKeyOffset = 0.f;
     bool              bUseExtremes = false;
-    bool              bCanBeBaked = true;
 
     FParticleFloatCurve MinCurve;
     FParticleFloatCurve MaxCurve;
 
-    // 런타임 Baked 테이블 (Curve 타입일 때 사용, 직렬화하지 않음)
-    TArray<float> BakedMin;
-    TArray<float> BakedMax;
-
-    // T: 파티클 RelativeTime(0~1), Stream: nullptr이면 중간값
+    // T: 파티클 RelativeTime(0~1), Stream: nullptr이면 중간값으로 평가
     float GetValue(float T, FRandomStream* Stream = nullptr) const;
     float GetValue(float T, float RandomFactor) const;
 
@@ -207,7 +199,7 @@ struct FRawDistributionFloat
     static FRawDistributionFloat MakeUniform(float InMin, float InMax);
 };
 
-// ── Vector Distribution (런타임 전용) ────────────────────────────────────────
+// ── Vector Distribution (런타임 분포 평가용 값 타입) ───────────────────────
 
 struct FRawDistributionVector
 {
@@ -217,15 +209,11 @@ struct FRawDistributionVector
     bool              bIsLooped = false;
     float             LoopKeyOffset = 0.f;
     bool              bUseExtremes = false;
-    bool              bCanBeBaked = true;
     EParticleLockedAxesMode LockedAxesMode = EParticleLockedAxesMode::None;
     uint8             MirrorFlags = PMF_None;
 
     FVectorCurve      MinCurve;
     FVectorCurve      MaxCurve;
-
-    TArray<FVector> BakedMin;
-    TArray<FVector> BakedMax;
 
     FVector GetValue(float T, FRandomStream* Stream = nullptr) const;
     FVector GetValue(float T, const FVector& RandomFactors, const FVector& MirrorRandomFactors) const;
@@ -234,7 +222,7 @@ struct FRawDistributionVector
     static FRawDistributionVector MakeUniform(const FVector& InMin, const FVector& InMax);
 };
 
-// ── LinearColor Distribution (런타임 전용) ───────────────────────────────────
+// ── LinearColor Distribution (런타임 분포 평가용 값 타입) ──────────────────
 
 struct FRawDistributionLinearColor
 {
@@ -244,14 +232,9 @@ struct FRawDistributionLinearColor
     bool              bIsLooped = false;
     float             LoopKeyOffset = 0.f;
     bool              bUseExtremes = false;
-    bool              bCanBeBaked = true;
 
     FLinearColorCurve MinCurve;
     FLinearColorCurve MaxCurve;
-
-    // 런타임 Baked 테이블 (직렬화하지 않음)
-    TArray<FLinearColor> BakedMin;
-    TArray<FLinearColor> BakedMax;
 
     FLinearColor GetValue(float T, FRandomStream* Stream = nullptr) const;
     FLinearColor GetValue(float T, float RandomFactor) const;
