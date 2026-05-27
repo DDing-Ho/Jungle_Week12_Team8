@@ -817,8 +817,13 @@ void FParticleSystemEditorWidget::Open(UObject* Object)
 	FloorActor->InitDefaultComponents("Asset/Mesh/CubeGrid/SM_CubeGrid_StaticMesh.uasset");
 	UBoxComponent* FloorBoxComponent = FloorActor->AddComponent<UBoxComponent>();
 	FloorBoxComponent->AttachToComponent(FloorActor->GetRootComponent());
+	FloorBoxComponent->SetBoxExtent(FVector(1.0f, 1.0f, 1.0f));
+	FloorBoxComponent->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+	FloorBoxComponent->SetCollisionObjectType(ECollisionChannel::WorldStatic);
 	FloorActor->SetActorLocation(ParticlePreviewFloorLocation);
 	FloorActor->SetActorScale(ParticlePreviewFloorScale);
+
+	WorldContext.World->BeginPlay();
 
 	ImVec2 ViewportSize = ImGui::GetContentRegionAvail();
 
