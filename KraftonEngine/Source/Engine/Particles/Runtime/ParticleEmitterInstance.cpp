@@ -178,6 +178,7 @@ void FParticleEmitterInstance::Init(UParticleSystemComponent* InComponent, UPart
 	EmitterTime = 0.0f;
 	LastDeltaTime = 0.0f;
 	RealDeltaTime = 0.0f;
+	ResetComponentSpawnPerUnitState();
 
 	// 각 모듈의 RandomSeedInfo를 바탕으로 모듈 전용 스트림 초기화
 	for (UParticleModule* Module : CurrentLODLevel->GetModules())
@@ -313,6 +314,7 @@ void FParticleEmitterInstance::SetCurrentLODIndex(int32 NewIndex, bool bFullRese
 		EmitterTime = 0.0f;
 		SpawnFraction = 0.0f;
 		bFirstTime = true;
+		ResetComponentSpawnPerUnitState();
 	}
 }
 
@@ -328,6 +330,7 @@ void FParticleEmitterInstance::Reset()
 	bFirstTime = true;
 	bEnabled = true;
 	ReceivedEvents.clear();
+	ResetComponentSpawnPerUnitState();
 
 	if (CurrentLODLevel)
 	{
@@ -375,14 +378,53 @@ void FParticleEmitterInstance::ResetParticleParameters(float DeltaTime)
 	}
 }
 
-void FParticleEmitterInstance::Tick_SpawnParticles(float DeltaTime, TArray<FParticleEventData>* OutEventQueue)
+UParticleModuleSpawnPerUnit* FParticleEmitterInstance::FindSpawnPerUnitModule() const
 {
-	if (!CurrentLODLevel || !bEnabled)
-		return;
+	if (!CurrentLODLevel)
+		return nullptr;
 
-	if (EmitterTime < 0.0f)
-		return;
+	for (UParticleModule* Module : CurrentLODLevel->GetModules())
+	{
+		if (!Module || !Module->IsEnabled())
+			continue;
 
+		if (UParticleModuleSpawnPerUnit* SpawnPerUnit = Cast<UParticleModuleSpawnPerUnit>(Module))
+		{
+			return SpawnPerUnit;
+		}
+	}
+
+	return nullptr;
+}
+
+bool FParticleEmitterInstance::SupportsComponentSpawnPerUnit() const
+{
+	if (!CurrentLODLevel)
+		return false;
+
+	EParticleEmitterType EmitterType = EParticleEmitterType::PET_Sprite;
+	if (UParticleModuleTypeDataBase* TypeData = CurrentLODLevel->GetTypeDataModule())
+	{
+		EmitterType = TypeData->GetEmitterType();
+	}
+	else if (UParticleModuleRequired* Required = CurrentLODLevel->GetRequiredModule())
+	{
+		EmitterType = Required->GetEmitterType();
+	}
+
+	return EmitterType == EParticleEmitterType::PET_Sprite
+		|| EmitterType == EParticleEmitterType::PET_Mesh;
+}
+
+void FParticleEmitterInstance::ResetComponentSpawnPerUnitState()
+{
+	LastComponentSpawnPerUnitLocation = FVector::ZeroVector;
+	ComponentSpawnPerUnitDistanceRemainder = 0.0f;
+	bHasLastComponentSpawnPerUnitLocation = false;
+}
+
+void FParticleEmitterInstance::SpawnParticlesByRate(float DeltaTime, TArray<FParticleEventData>* OutEventQueue)
+{
 	float SpawnRate = 0.0f;
 
 	for (UParticleModule* Module : CurrentLODLevel->GetSpawnModules())
@@ -423,8 +465,76 @@ void FParticleEmitterInstance::Tick_SpawnParticles(float DeltaTime, TArray<FPart
 		);
 	}
 
-	bFirstTime = false;
 	SpawnFraction = NewSpawnFraction;
+}
+
+void FParticleEmitterInstance::SpawnParticlesByUnitMovement(
+	UParticleModuleSpawnPerUnit* SpawnPerUnitModule,
+	float DeltaTime,
+	TArray<FParticleEventData>* OutEventQueue)
+{
+	if (!SpawnPerUnitModule || !OwnerComponent)
+	{
+		ResetComponentSpawnPerUnitState();
+		return;
+	}
+
+	const FVector CurrentLocation = OwnerComponent->GetWorldLocation();
+	if (!bHasLastComponentSpawnPerUnitLocation)
+	{
+		LastComponentSpawnPerUnitLocation = CurrentLocation;
+		ComponentSpawnPerUnitDistanceRemainder = 0.0f;
+		bHasLastComponentSpawnPerUnitLocation = true;
+		return;
+	}
+
+	const FVector PreviousLocation = LastComponentSpawnPerUnitLocation;
+	const float Distance = FVector::Distance(PreviousLocation, CurrentLocation);
+	const float PreviousRemainder = ComponentSpawnPerUnitDistanceRemainder;
+	float NewRemainder = PreviousRemainder;
+	int32 SpawnCount = CalculateSpawnPerUnitCount(SpawnPerUnitModule, Distance, PreviousRemainder, NewRemainder);
+	SpawnCount = (std::min)(SpawnCount, (std::max)(0, MaxActiveParticles - ActiveParticles));
+
+	const float UnitDistance = SpawnPerUnitModule->GetUnitDistance();
+	const float DistanceToFirstSpawn = UnitDistance - PreviousRemainder;
+	for (int32 SpawnIndex = 0; SpawnIndex < SpawnCount; ++SpawnIndex)
+	{
+		const float DistanceAlongSegment = DistanceToFirstSpawn + static_cast<float>(SpawnIndex) * UnitDistance;
+		const float Alpha = Distance > 1.0e-4f ? (std::clamp)(DistanceAlongSegment / Distance, 0.0f, 1.0f) : 1.0f;
+		const FVector SpawnLocation = FVector::Lerp(PreviousLocation, CurrentLocation, Alpha);
+		SpawnParticles(1, DeltaTime * (1.0f - Alpha), 0.0f, SpawnLocation, FVector::ZeroVector, OutEventQueue);
+	}
+
+	LastComponentSpawnPerUnitLocation = CurrentLocation;
+	ComponentSpawnPerUnitDistanceRemainder = NewRemainder;
+}
+
+void FParticleEmitterInstance::Tick_SpawnParticles(float DeltaTime, TArray<FParticleEventData>* OutEventQueue)
+{
+	if (!CurrentLODLevel || !bEnabled)
+		return;
+
+	if (EmitterTime < 0.0f)
+		return;
+
+	UParticleModuleSpawnPerUnit* SpawnPerUnitModule = FindSpawnPerUnitModule();
+	const bool bUseSpawnPerUnit = SpawnPerUnitModule && SupportsComponentSpawnPerUnit();
+
+	if (!bUseSpawnPerUnit || !SpawnPerUnitModule->ShouldIgnoreSpawnRate())
+	{
+		SpawnParticlesByRate(DeltaTime, OutEventQueue);
+	}
+
+	if (bUseSpawnPerUnit)
+	{
+		SpawnParticlesByUnitMovement(SpawnPerUnitModule, DeltaTime, OutEventQueue);
+	}
+	else
+	{
+		ResetComponentSpawnPerUnitState();
+	}
+
+	bFirstTime = false;
 }
 
 FDynamicEmitterDataBase* FParticleEmitterInstance::CreateDynamicEmitterData()

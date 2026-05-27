@@ -67,6 +67,11 @@ struct FParticleEmitterInstance
     bool HasReceiverFor(const FParticleEventData& Event) const;
     void ProcessReceivedEvents(TArray<FParticleEventData>* OutEventQueue);
     int32 ResolveEmitterIndex() const;
+    UParticleModuleSpawnPerUnit* FindSpawnPerUnitModule() const;
+    bool SupportsComponentSpawnPerUnit() const;
+    void ResetComponentSpawnPerUnitState();
+    void SpawnParticlesByRate(float DeltaTime, TArray<FParticleEventData>* OutEventQueue);
+    void SpawnParticlesByUnitMovement(UParticleModuleSpawnPerUnit* SpawnPerUnitModule, float DeltaTime, TArray<FParticleEventData>* OutEventQueue);
 	
 	FBaseParticle& GetParticle(int32 index);
 
@@ -77,6 +82,9 @@ struct FParticleEmitterInstance
 	float EmitterTime = 0.0f;	// 이미터 시간
 	float LastDeltaTime = 0.0f;	// 마지막으로 스폰한 시간
     float RealDeltaTime = 0.0f; // Time dilation 적용 전 delta
+    FVector LastComponentSpawnPerUnitLocation = FVector::ZeroVector;
+    float ComponentSpawnPerUnitDistanceRemainder = 0.0f;
+    bool bHasLastComponentSpawnPerUnitLocation = false;
 };
 
 // Sprite Paticle============================================================
