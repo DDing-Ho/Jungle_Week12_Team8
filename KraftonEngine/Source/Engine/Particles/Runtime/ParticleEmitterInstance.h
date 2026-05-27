@@ -54,7 +54,7 @@ struct FParticleEmitterInstance
 
     virtual void PreSpawn(FBaseParticle& Particle, const FVector& InitialLocation, const FVector& InitialVelocity); // Spawn 기본값 설정
     virtual void PostSpawn(FBaseParticle& Particle, float SpawnTime, TArray<FParticleEventData>* OutEventQueue);
-	void Tick_SpawnParticles(float DeltaTime, TArray<FParticleEventData>* OutEventQueue);
+	virtual void Tick_SpawnParticles(float DeltaTime, TArray<FParticleEventData>* OutEventQueue);
     int32 GetActiveParticleCount() const { return ActiveParticles; }
     float GetEmitterTime() const { return EmitterTime; }
     float GetRealDeltaTime() const { return RealDeltaTime; }
@@ -62,7 +62,7 @@ struct FParticleEmitterInstance
     virtual FDynamicEmitterDataBase *CreateDynamicEmitterData(); // 렌더링 데이터 생성
     void PublishParticleEvents(EParticleEventType EventType, const FBaseParticle& Particle, int32 ParticleIndex, TArray<FParticleEventData>* OutEventQueue, const FVector& EventNormal = FVector::ZeroVector);
 
-  private:
+  protected:
     void KillExpiredParticles(TArray<FParticleEventData>& OutEventQueue);                                   // 수명 종료 Particle 제거
     bool HasReceiverFor(const FParticleEventData& Event) const;
     void ProcessReceivedEvents(TArray<FParticleEventData>* OutEventQueue);
@@ -110,4 +110,38 @@ struct FParticleBeamEmitterInstance : FParticleEmitterInstance
 
 private:
 	UParticleModuleTypeDataBeam* BeamTypeData = nullptr;
+};
+
+struct FParticleRibbonEmitterInstance : FParticleEmitterInstance
+{
+	void Init(UParticleSystemComponent* InComponent, UParticleEmitter* InTemplate) override;
+	FDynamicEmitterDataBase* CreateDynamicEmitterData() override;
+	void Tick_SpawnParticles(float DeltaTime, TArray<FParticleEventData>* OutEventQueue) override;
+	void PreSpawn(FBaseParticle& Particle, const FVector& InitialLocation, const FVector& InitialVelocity) override;
+
+private:
+	struct FSpawnPerUnitSourceState
+	{
+		uint32 SourceSpawnId = 0;
+		FVector LastLocation = FVector::ZeroVector;
+		float DistanceRemainder = 0.0f;
+		bool bHasLastLocation = false;
+	};
+
+	void CacheRibbonModules();
+	FParticleEmitterInstance* ResolveSourceEmitterInstance() const;
+	void SpawnFromSourceEmitter(FParticleEmitterInstance* SourceInstance, int32 SpawnEvents, float StartTime, float Increment, TArray<FParticleEventData>* OutEventQueue);
+	void SpawnSelfFromMovement(float DeltaTime, TArray<FParticleEventData>* OutEventQueue);
+	void SpawnFromSourceMovement(FParticleEmitterInstance* SourceInstance, TArray<FParticleEventData>* OutEventQueue);
+	FSpawnPerUnitSourceState* FindOrAddSpawnPerUnitSourceState(uint32 SourceSpawnId);
+	void PruneSpawnPerUnitSourceStates(const FParticleEmitterInstance* SourceInstance);
+
+	UParticleModuleTypeDataRibbon* RibbonTypeData = nullptr;
+	UParticleModuleTrailSource* TrailSourceModule = nullptr;
+	UParticleModuleSpawnPerUnit* SpawnPerUnitModule = nullptr;
+	uint32 PendingSourceSpawnId = 0;
+	FVector LastSelfSpawnPerUnitLocation = FVector::ZeroVector;
+	float SelfSpawnPerUnitDistanceRemainder = 0.0f;
+	bool bHasLastSelfSpawnPerUnitLocation = false;
+	TArray<FSpawnPerUnitSourceState> SpawnPerUnitSourceStates;
 };

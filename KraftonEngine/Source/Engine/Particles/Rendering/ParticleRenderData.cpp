@@ -9,6 +9,7 @@ namespace
 	constexpr int32 RotationModuleRotationOffset = 0;
 	constexpr int32 RotationModuleMeshRotationOffset = sizeof(float);
 	constexpr int32 RotationModuleDataSize = sizeof(float) + sizeof(FVector);
+	constexpr float RibbonEpsilon = 1.0e-4f;
 
 	const uint8* GetModuleData(const FDynamicEmitterReplayDataBase& Source, const FBaseParticle* Particle, int32 ModuleOffset, int32 RequiredBytes)
 	{
@@ -32,6 +33,73 @@ namespace
 		const uint8* ModuleData = GetModuleData(Source, Particle, Source.RotationModuleOffset, RotationModuleDataSize);
 		return ModuleData ? *reinterpret_cast<const FVector*>(ModuleData + RotationModuleMeshRotationOffset) : FVector::ZeroVector;
 	}
+
+	FVector SafeNormalized(const FVector& Value, const FVector& Fallback)
+	{
+		return Value.IsNearlyZero(RibbonEpsilon) ? Fallback : Value.Normalized();
+	}
+
+	FVector SelectRibbonAxis(const FDynamicRibbonEmitterReplayData& Source, const FParticleVertexBuildContext& Ctx)
+	{
+		switch (Source.RenderAxis)
+		{
+		case EParticleRibbonRenderAxis::WorldUp:  return FVector::UpVector;
+		case EParticleRibbonRenderAxis::SourceUp: return SafeNormalized(Source.SourceUp, FVector::UpVector);
+		case EParticleRibbonRenderAxis::CameraUp:
+		default:                                 return SafeNormalized(Ctx.CamUp, FVector::UpVector);
+		}
+	}
+
+	FVector BuildRibbonSideVector(
+		const FDynamicRibbonEmitterReplayData& Source,
+		const FParticleVertexBuildContext& Ctx,
+		const FVector& Tangent,
+		int32 SheetIndex,
+		int32 SheetCount)
+	{
+		const FVector Axis = SelectRibbonAxis(Source, Ctx);
+		FVector Side = SafeNormalized(Axis.Cross(Tangent), SafeNormalized(Ctx.CamRight, FVector::RightVector));
+		if (Side.IsNearlyZero(RibbonEpsilon))
+		{
+			Side = SafeNormalized(Ctx.CamRight.Cross(Tangent), FVector::RightVector);
+		}
+
+		if (SheetCount <= 1)
+		{
+			return Side;
+		}
+
+		FVector Binormal = SafeNormalized(Tangent.Cross(Side), Axis);
+		const float Angle = 3.1415926535f * static_cast<float>(SheetIndex) / static_cast<float>(SheetCount);
+		return SafeNormalized(Side * std::cos(Angle) + Binormal * std::sin(Angle), Side);
+	}
+
+	FVector4 LerpColor(const FVector4& A, const FVector4& B, float Alpha)
+	{
+		const float InvAlpha = 1.0f - Alpha;
+		return FVector4(
+			A.X * InvAlpha + B.X * Alpha,
+			A.Y * InvAlpha + B.Y * Alpha,
+			A.Z * InvAlpha + B.Z * Alpha,
+			A.W * InvAlpha + B.W * Alpha);
+	}
+
+	struct FRibbonBuildPoint
+	{
+		FVector Position;
+		FVector4 Color;
+		float Width = 1.0f;
+		uint32 SpawnId = 0;
+		uint32 SourceSpawnId = 0;
+	};
+
+	struct FRibbonSamplePoint
+	{
+		FVector Position;
+		FVector4 Color;
+		float Width = 1.0f;
+		float Distance = 0.0f;
+	};
 }
 
 // ============================================================
@@ -245,15 +313,153 @@ void FDynamicBeamEmitterData::GatherRenderData(
     // 미구현 — Beam 경로 분할 및 width 처리 필요
 }
 
-// TODO
 // ============================================================
 // FDynamicRibbonEmitterData::GatherRenderData
 // Ribbon Particle: 파티클 경로를 따라 strip 생성
 // ============================================================
-void FDynamicRibbonEmitterData::GatherRenderData(
-    const FParticleVertexBuildContext& /*Ctx*/,
-    TArray<FSpriteParticleInstanceVertex>& /*OutInstances*/,
-    TArray<uint32>&                        /*OutIndices*/) const
+void FDynamicRibbonEmitterData::GatherRibbonRenderData(
+    const FParticleVertexBuildContext& Ctx,
+    TArray<FRibbonParticleVertex>& OutVertices,
+    TArray<uint32>& OutIndices) const
 {
-    // 미구현 — 파티클 순서 보존 및 width 처리 필요
+    if (!Source.IsValid() || !Source.bRenderGeometry)
+        return;
+
+    const int32 Stride = Source.ParticleStride;
+    const uint8* RawData = Source.DataContainer.ParticleData;
+    if (!RawData || !Source.DataContainer.ParticleIndices || Stride <= 0)
+        return;
+
+    TArray<FRibbonBuildPoint> Points;
+    Points.reserve(Source.ActiveParticleCount);
+
+    for (int32 i = 0; i < Source.ActiveParticleCount; ++i)
+    {
+        const uint16 ParticleIdx = Source.DataContainer.ParticleIndices[i];
+        const FBaseParticle* P = reinterpret_cast<const FBaseParticle*>(RawData + Stride * ParticleIdx);
+        if (!P)
+            continue;
+
+        FRibbonBuildPoint Point;
+        Point.Position = FVector(
+            P->Location.X * Source.Scale.X,
+            P->Location.Y * Source.Scale.Y,
+            P->Location.Z * Source.Scale.Z);
+        Point.Color = FVector4(
+            P->Color.R / 255.0f,
+            P->Color.G / 255.0f,
+            P->Color.B / 255.0f,
+            P->Color.A / 255.0f);
+        Point.Width = (std::max)(0.001f, std::abs(P->Size.X * Source.Scale.X));
+        Point.SpawnId = P->SpawnId;
+        Point.SourceSpawnId = Source.bUseSourceEmitter ? P->SourceSpawnId : 0u;
+        Points.push_back(Point);
+    }
+
+    if (Points.size() < 2)
+        return;
+
+    std::stable_sort(Points.begin(), Points.end(),
+        [](const FRibbonBuildPoint& A, const FRibbonBuildPoint& B)
+        {
+            if (A.SourceSpawnId != B.SourceSpawnId)
+                return A.SourceSpawnId < B.SourceSpawnId;
+            return A.SpawnId < B.SpawnId;
+        });
+
+    const int32 MaxTrailCount = (std::max)(1, Source.MaxTrailCount);
+    const int32 MaxParticlesPerTrail = (std::max)(2, Source.MaxParticleInTrailCount);
+    const int32 SheetCount = (std::max)(1, Source.SheetsPerTrail);
+    int32 TrailCount = 0;
+
+    int32 GroupBegin = 0;
+    while (GroupBegin < static_cast<int32>(Points.size()) && TrailCount < MaxTrailCount)
+    {
+        int32 GroupEnd = GroupBegin + 1;
+        while (GroupEnd < static_cast<int32>(Points.size()) &&
+               Points[GroupEnd].SourceSpawnId == Points[GroupBegin].SourceSpawnId)
+        {
+            ++GroupEnd;
+        }
+
+        const int32 GroupCount = GroupEnd - GroupBegin;
+        if (GroupCount >= 2)
+        {
+            const int32 TrailBegin = GroupBegin + (std::max)(0, GroupCount - MaxParticlesPerTrail);
+            TArray<FRibbonSamplePoint> Samples;
+            Samples.reserve(GroupEnd - TrailBegin);
+
+            float AccumulatedDistance = 0.0f;
+            for (int32 PointIndex = TrailBegin; PointIndex < GroupEnd; ++PointIndex)
+            {
+                const FRibbonBuildPoint& Current = Points[PointIndex];
+
+                if (Samples.empty())
+                {
+                    Samples.push_back({ Current.Position, Current.Color, Current.Width, 0.0f });
+                    continue;
+                }
+
+                FRibbonSamplePoint Prev = Samples.back();
+                const float SegmentLength = FVector::Distance(Prev.Position, Current.Position);
+                const float StepSize = Source.DistanceTessellationStepSize;
+                const int32 SegmentSteps = StepSize > RibbonEpsilon
+                    ? (std::max)(1, static_cast<int32>(std::ceil(SegmentLength / StepSize)))
+                    : 1;
+
+                for (int32 Step = 1; Step <= SegmentSteps; ++Step)
+                {
+                    const float Alpha = static_cast<float>(Step) / static_cast<float>(SegmentSteps);
+                    const FVector Pos = FVector::Lerp(Prev.Position, Current.Position, Alpha);
+                    const FVector4 Color = LerpColor(Prev.Color, Current.Color, Alpha);
+                    const float Width = Prev.Width * (1.0f - Alpha) + Current.Width * Alpha;
+                    const float StepDistance = SegmentLength / static_cast<float>(SegmentSteps);
+                    AccumulatedDistance += StepDistance;
+                    Samples.push_back({ Pos, Color, Width, AccumulatedDistance });
+                }
+            }
+
+            if (Samples.size() >= 2)
+            {
+                for (int32 SheetIndex = 0; SheetIndex < SheetCount; ++SheetIndex)
+                {
+                    const uint32 VertexBase = static_cast<uint32>(OutVertices.size());
+                    for (int32 SampleIndex = 0; SampleIndex < static_cast<int32>(Samples.size()); ++SampleIndex)
+                    {
+                        const FRibbonSamplePoint& Sample = Samples[SampleIndex];
+                        const FVector Prev = Samples[(std::max)(0, SampleIndex - 1)].Position;
+                        const FVector Next = Samples[(std::min)(static_cast<int32>(Samples.size()) - 1, SampleIndex + 1)].Position;
+                        const FVector Tangent = SafeNormalized(Next - Prev, FVector::ForwardVector);
+                        const FVector Side = BuildRibbonSideVector(Source, Ctx, Tangent, SheetIndex, SheetCount);
+                        const float HalfWidth = Sample.Width * 0.5f;
+                        const float U = Source.TilingDistance > RibbonEpsilon
+                            ? Sample.Distance / Source.TilingDistance
+                            : Sample.Distance;
+
+                        OutVertices.push_back({ Sample.Position - Side * HalfWidth, FVector2(U, 1.0f), Sample.Color });
+                        OutVertices.push_back({ Sample.Position + Side * HalfWidth, FVector2(U, 0.0f), Sample.Color });
+                    }
+
+                    const int32 SegmentCount = static_cast<int32>(Samples.size()) - 1;
+                    for (int32 SegmentIndex = 0; SegmentIndex < SegmentCount; ++SegmentIndex)
+                    {
+                        const uint32 I0 = VertexBase + static_cast<uint32>(SegmentIndex * 2);
+                        const uint32 I1 = I0 + 1;
+                        const uint32 I2 = I0 + 2;
+                        const uint32 I3 = I0 + 3;
+                        OutIndices.push_back(I0);
+                        OutIndices.push_back(I1);
+                        OutIndices.push_back(I2);
+                        OutIndices.push_back(I1);
+                        OutIndices.push_back(I3);
+                        OutIndices.push_back(I2);
+                    }
+                }
+
+                ++TrailCount;
+            }
+        }
+
+        GroupBegin = GroupEnd;
+    }
 }

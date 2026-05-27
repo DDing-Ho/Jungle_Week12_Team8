@@ -302,11 +302,11 @@ void UParticleSystemComponent::UpdateWorldAABB() const
 			break;
 
 		case EParticleEmitterType::PET_Sprite:
+		case EParticleEmitterType::PET_Ribbon:
 			bHasParticleBounds |= ExpandBoundsBySpriteEmitter(ParticleBounds, Instance);
 			break;
 
 		case EParticleEmitterType::PET_Beam:
-		case EParticleEmitterType::PET_Ribbon:
 		default:
 			break;
 		}
@@ -443,6 +443,8 @@ FParticleEmitterInstance* UParticleSystemComponent::CreateEmitterInstanceForEmit
 		return new FParticleBeamEmitterInstance();
 
 	case EParticleEmitterType::PET_Ribbon:
+		return new FParticleRibbonEmitterInstance();
+
 	default:
 		return new FParticleEmitterInstance();
 	}

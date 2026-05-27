@@ -78,7 +78,15 @@ struct FDynamicBeamEmitterReplayData : public FDynamicEmitterReplayDataBase
 /** Ribbon Emitter 렌더링용 ReplayData */
 struct FDynamicRibbonEmitterReplayData : public FDynamicEmitterReplayDataBase
 {
-    float Width = 1.0f; // Ribbon 폭
+    int32 SheetsPerTrail = 1;
+    int32 MaxTrailCount = 1;
+    int32 MaxParticleInTrailCount = 256;
+    EParticleRibbonRenderAxis RenderAxis = EParticleRibbonRenderAxis::CameraUp;
+    float TilingDistance = 100.0f;
+    float DistanceTessellationStepSize = 0.0f;
+    bool bRenderGeometry = true;
+    bool bUseSourceEmitter = false;
+    FVector SourceUp = FVector::UpVector;
 };
 
 /** 렌더 패스에 전달되는 동적 Emitter 데이터 기반 구조 */
@@ -105,6 +113,12 @@ struct FDynamicEmitterDataBase
 
     virtual void GatherRenderData(const FParticleVertexBuildContext &Ctx,
                                       TArray<FMeshParticleInstanceVertex> &OutInstances) const
+    {
+    }
+
+    virtual void GatherRibbonRenderData(const FParticleVertexBuildContext& Ctx,
+                                        TArray<FRibbonParticleVertex>& OutVertices,
+                                        TArray<uint32>& OutIndices) const
     {
     }
 };
@@ -175,12 +189,17 @@ struct FDynamicRibbonEmitterData : public FDynamicEmitterDataBase
 {
     FDynamicRibbonEmitterReplayData Source; // Ribbon ReplayData
 
+    ~FDynamicRibbonEmitterData() override
+    {
+        Source.DataContainer.Release();
+    }
+
     const FDynamicEmitterReplayDataBase &GetSource() const override
     {
         return Source;
     }
     // 파티클 경로 따라 ribbon strip 생성
-    void GatherRenderData(const FParticleVertexBuildContext &Ctx,
-                              TArray<FSpriteParticleInstanceVertex> &OutInstances,
-                              TArray<uint32> &OutIndices) const override;
+    void GatherRibbonRenderData(const FParticleVertexBuildContext& Ctx,
+                                TArray<FRibbonParticleVertex>& OutVertices,
+                                TArray<uint32>& OutIndices) const override;
 };

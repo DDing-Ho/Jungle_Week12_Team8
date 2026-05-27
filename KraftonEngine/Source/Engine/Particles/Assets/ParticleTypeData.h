@@ -114,18 +114,55 @@ class UParticleModuleTypeDataRibbon : public UParticleModuleTypeDataBase
     virtual EParticleModuleClass GetModuleClass() const override { return EParticleModuleClass::TypeDataRibbon; }
     virtual void Serialize(FArchive& Ar) override;
 
-	float GetWidth() const { return Width; }
-	void  SetWidth(float InWidth) { Width = InWidth; }
-	float GetLifetime() const { return Lifetime; }
-	void  SetLifetime(float InLifetime) { Lifetime = InLifetime; }
-	float GetTextureTiling() const { return TextureTiling; }
-	void  SetTextureTiling(float InTextureTiling) { TextureTiling = InTextureTiling; }
+    int32 GetSheetsPerTrail() const { return SheetsPerTrail; }
+    int32 GetMaxTrailCount() const { return MaxTrailCount; }
+    int32 GetMaxParticleInTrailCount() const { return MaxParticleInTrailCount; }
+    bool ShouldSpawnInitialParticle() const { return bSpawnInitialParticle; }
+    bool ShouldDeadTrailsOnDeactivate() const { return bDeadTrailsOnDeactivate; }
+    bool ShouldDeadTrailsOnSourceLoss() const { return bDeadTrailsOnSourceLoss; }
+    EParticleRibbonRenderAxis GetRenderAxis() const { return RenderAxis; }
+    float GetTilingDistance() const { return TilingDistance; }
+    float GetDistanceTessellationStepSize() const { return DistanceTessellationStepSize; }
+    bool ShouldRecalculateTangentsEveryFrame() const { return bTangentRecalculationEveryFrame; }
+    bool ShouldEnablePreviousTangentRecalculation() const { return bEnablePreviousTangentRecalculation; }
+    bool ShouldRenderGeometry() const { return bRenderGeometry; }
+    bool ShouldRenderSpawnPoints() const { return bRenderSpawnPoints; }
+    bool ShouldRenderTangents() const { return bRenderTangents; }
+    bool ShouldRenderTessellation() const { return bRenderTessellation; }
 
   private:
-    UPROPERTY(Edit, Category="Particle", DisplayName="Width", Min=0.0, Max=100000.0, Speed=0.1)
-    float Width = 1.0f;         // Ribbon 폭
-    UPROPERTY(Edit, Category="Particle", DisplayName="Lifetime", Min=0.0, Max=100000.0, Speed=0.1)
-    float Lifetime = 1.0f;      // Ribbon Trail 유지 시간
-    UPROPERTY(Edit, Category="Particle", DisplayName="Texture Tiling", Min=0.0, Max=100000.0, Speed=0.1)
-    float TextureTiling = 1.0f; // Ribbon Texture 반복 비율
+    UPROPERTY(Edit, Category="Ribbon", DisplayName="Sheets Per Trail", Min=1, Max=8, Speed=1.0)
+    int32 SheetsPerTrail = 1;
+    UPROPERTY(Edit, Category="Ribbon", DisplayName="Max Trail Count", Min=1, Max=1024, Speed=1.0)
+    int32 MaxTrailCount = 1;
+    UPROPERTY(Edit, Category="Ribbon", DisplayName="Max Particle In Trail Count", Min=2, Max=100000, Speed=1.0)
+    int32 MaxParticleInTrailCount = 256;
+
+    UPROPERTY(Edit, Category="Ribbon", DisplayName="Spawn Initial Particle")
+    bool bSpawnInitialParticle = true;
+    UPROPERTY(Edit, Category="Ribbon", DisplayName="Dead Trails On Deactivate")
+    bool bDeadTrailsOnDeactivate = true;
+    UPROPERTY(Edit, Category="Ribbon", DisplayName="Dead Trails On Source Loss")
+    bool bDeadTrailsOnSourceLoss = true;
+
+    UPROPERTY(Edit, Category="Ribbon", DisplayName="Render Axis", Type=Enum, Enum=StaticEnum_EParticleRibbonRenderAxis())
+    EParticleRibbonRenderAxis RenderAxis = EParticleRibbonRenderAxis::CameraUp;
+    UPROPERTY(Edit, Category="Ribbon", DisplayName="Tiling Distance", Min=0.0, Max=100000.0, Speed=0.1)
+    float TilingDistance = 100.0f;
+    UPROPERTY(Edit, Category="Ribbon", DisplayName="Distance Tessellation Step Size", Min=0.0, Max=100000.0, Speed=0.1)
+    float DistanceTessellationStepSize = 0.0f;
+
+    UPROPERTY(Edit, Category="Ribbon", DisplayName="Tangent Recalculation Every Frame")
+    bool bTangentRecalculationEveryFrame = true;
+    UPROPERTY(Edit, Category="Ribbon", DisplayName="Enable Previous Tangent Recalculation")
+    bool bEnablePreviousTangentRecalculation = true;
+
+    UPROPERTY(Edit, Category="Ribbon Debug", DisplayName="Render Geometry")
+    bool bRenderGeometry = true;
+    UPROPERTY(Edit, Category="Ribbon Debug", DisplayName="Render Spawn Points")
+    bool bRenderSpawnPoints = false;
+    UPROPERTY(Edit, Category="Ribbon Debug", DisplayName="Render Tangents")
+    bool bRenderTangents = false;
+    UPROPERTY(Edit, Category="Ribbon Debug", DisplayName="Render Tessellation")
+    bool bRenderTessellation = false;
 };

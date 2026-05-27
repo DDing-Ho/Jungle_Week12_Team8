@@ -107,3 +107,95 @@ class UParticleModuleSubUVMovie : public UParticleModuleSubUVBase
     bool bUseEmitterTime = false;
 };
 
+/** Particle 위치 기반 Light 효과 모듈 */
+UCLASS()
+class UParticleModuleLight : public UParticleModule
+{
+  public:
+    GENERATED_BODY(UParticleModuleLight)
+
+    virtual EParticleModuleType        GetModuleType() const override { return EParticleModuleType::PMT_Light; }
+    virtual EParticleModuleUpdatePhase GetUpdatePhase() const override { return EParticleModuleUpdatePhase::PMUP_Update; }
+    virtual EParticleModuleClass       GetModuleClass() const override { return EParticleModuleClass::Light; }
+    virtual void Serialize(FArchive& Ar) override;
+
+  private:
+    FColor LightColor = FColor::White(); // Particle Light 색상
+    UPROPERTY(Edit, Category="Particle", DisplayName="Intensity", Min=0.0, Max=100000.0, Speed=0.1)
+    float  Intensity = 1.0f;           // Particle Light 밝기
+    UPROPERTY(Edit, Category="Particle", DisplayName="Radius", Min=0.0, Max=100000.0, Speed=0.1)
+    float  Radius = 100.0f;            // Particle Light 영향 반경
+};
+
+/** 3D Vector Field 기반 Particle 이동 모듈 */
+UCLASS()
+class UParticleModuleVectorField : public UParticleModule
+{
+  public:
+    GENERATED_BODY(UParticleModuleVectorField)
+
+    virtual EParticleModuleType        GetModuleType() const override { return EParticleModuleType::PMT_VectorField; }
+    virtual EParticleModuleUpdatePhase GetUpdatePhase() const override { return EParticleModuleUpdatePhase::PMUP_Update; }
+    virtual EParticleModuleClass       GetModuleClass() const override { return EParticleModuleClass::VectorField; }
+    virtual void Serialize(FArchive& Ar) override;
+
+  private:
+    UObject *VectorFieldAsset = nullptr; // Vector Field Asset 참조
+    UPROPERTY(Edit, Category="Particle", DisplayName="Intensity", Speed=0.1)
+    float    Intensity = 1.0f;           // Vector Field 영향 강도
+};
+
+/** 카메라 기준 Particle 위치 보정 모듈 */
+UCLASS()
+class UParticleModuleCamera : public UParticleModule
+{
+  public:
+    GENERATED_BODY(UParticleModuleCamera)
+
+    virtual EParticleModuleType        GetModuleType() const override { return EParticleModuleType::PMT_Camera; }
+    virtual EParticleModuleUpdatePhase GetUpdatePhase() const override { return EParticleModuleUpdatePhase::PMUP_Update; }
+    virtual EParticleModuleClass       GetModuleClass() const override { return EParticleModuleClass::Camera; }
+    virtual void Serialize(FArchive& Ar) override;
+
+  private:
+    UPROPERTY(Edit, Category="Particle", DisplayName="Camera Offset", Speed=0.1)
+    float CameraOffset = 0.0f; // 카메라 방향 기준 위치 보정값
+};
+
+/** Material 등 외부 시스템에 값을 전달하는 모듈 */
+UCLASS()
+class UParticleModuleParameter : public UParticleModule
+{
+  public:
+    GENERATED_BODY(UParticleModuleParameter)
+
+    virtual EParticleModuleType        GetModuleType() const override { return EParticleModuleType::PMT_Parameter; }
+    virtual EParticleModuleUpdatePhase GetUpdatePhase() const override { return EParticleModuleUpdatePhase::PMUP_Update; }
+    virtual EParticleModuleClass       GetModuleClass() const override { return EParticleModuleClass::Parameter; }
+    virtual void Serialize(FArchive& Ar) override;
+
+  private:
+    UPROPERTY(Edit, Category="Particle", DisplayName="Parameter Name")
+    FName    ParameterName;  // 외부로 전달할 Parameter 이름
+    UPROPERTY(Edit, Category="Particle", DisplayName="Parameter Value")
+    FVector4 ParameterValue; // Material 등에 전달할 Parameter 값
+};
+
+/** Ribbon emitter가 따라갈 source emitter를 지정하는 모듈 */
+UCLASS()
+class UParticleModuleTrailSource : public UParticleModule
+{
+  public:
+    GENERATED_BODY(UParticleModuleTrailSource)
+
+    virtual EParticleModuleType        GetModuleType() const override { return EParticleModuleType::PMT_TrailSource; }
+    virtual EParticleModuleUpdatePhase GetUpdatePhase() const override { return EParticleModuleUpdatePhase::PMUP_Update; }
+    virtual EParticleModuleClass       GetModuleClass() const override { return EParticleModuleClass::TrailSource; }
+    virtual void Serialize(FArchive& Ar) override;
+
+    const FName& GetSourceEmitterName() const { return SourceEmitterName; }
+
+  private:
+    UPROPERTY(Edit, Category="Trail Source", DisplayName="Source Emitter Name")
+    FName SourceEmitterName;
+};

@@ -123,6 +123,8 @@ FParticleSceneProxy::~FParticleSceneProxy()
 	QuadIB.Release();
 	InstanceVB.Release();
 	MeshInstanceVB.Release();
+	RibbonVB.Release();
+	RibbonIB.Release();
 }
 
 // ============================================================
@@ -230,10 +232,13 @@ void FParticleSceneProxy::UpdatePerViewport(const FFrameContext& Frame)
 {
 	StagedInstances.clear();
 	StagedMeshInstances.clear();
+	StagedRibbonVertices.clear();
+	StagedRibbonIndices.clear();
 	DrawSections.clear();
 	SectionDraws.clear();
 	bSpriteInstanceBufferDirty = true;
 	bMeshInstanceBufferDirty = true;
+	bRibbonBufferDirty = true;
 
 	if (!bVisible || CachedEmitters.empty()) return;
 
@@ -379,7 +384,28 @@ void FParticleSceneProxy::UpdatePerViewport(const FFrameContext& Frame)
 			continue;
 		}
 
-		// Beam/Ribbon은 section 타입만 예약해 둔다. GatherRenderData 구현 후 여기서 추가한다.
+		if (Source.eEmitterType == EDynamicEmitterType::DET_Ribbon)
+		{
+			const uint32 FirstIndex = static_cast<uint32>(StagedRibbonIndices.size());
+			E.Data->GatherRibbonRenderData(Ctx, StagedRibbonVertices, StagedRibbonIndices);
+
+			const uint32 IndexCount = static_cast<uint32>(StagedRibbonIndices.size()) - FirstIndex;
+			if (IndexCount == 0)
+				continue;
+
+			FParticleDrawSection Draw;
+			Draw.Type = EParticleDrawSectionType::Ribbon;
+			Draw.Material = ParticleMaterials[MaterialIndex];
+			Draw.FirstIndex = FirstIndex;
+			Draw.IndexCount = IndexCount;
+			Draw.FirstInstance = 0;
+			Draw.InstanceCount = 1;
+			Draw.SortDepth = SortDepth;
+			DrawSections.push_back(Draw);
+			continue;
+		}
+
+		// Beam은 section 타입만 예약해 둔다. GatherRenderData 구현 후 여기서 추가한다.
 	}
 }
 
@@ -485,6 +511,43 @@ bool FParticleSceneProxy::PrepareDrawBufferForSection(const FParticleDrawSection
 		OutBuffer.BaseVertex = 0;
 		OutBuffer.StartInstance = 0;
 		OutBuffer.InstanceCount = TotalInstanceCount;
+		return true;
+	}
+
+	if (Section.Type == EParticleDrawSectionType::Ribbon)
+	{
+		if (StagedRibbonVertices.empty() || StagedRibbonIndices.empty())
+			return false;
+
+		const uint32 TotalVertexCount = static_cast<uint32>(StagedRibbonVertices.size());
+		const uint32 TotalIndexCount = static_cast<uint32>(StagedRibbonIndices.size());
+		if (bRibbonBufferDirty)
+		{
+			if (RibbonVB.GetStride() == 0)
+				RibbonVB.Create(Device, TotalVertexCount, sizeof(FRibbonParticleVertex));
+			else
+				RibbonVB.EnsureCapacity(Device, TotalVertexCount);
+
+			if (RibbonIB.GetMaxCount() == 0)
+				RibbonIB.Create(Device, TotalIndexCount);
+			else
+				RibbonIB.EnsureCapacity(Device, TotalIndexCount);
+
+			if (!RibbonVB.Update(Context, StagedRibbonVertices.data(), TotalVertexCount))
+				return false;
+			if (!RibbonIB.Update(Context, StagedRibbonIndices.data(), TotalIndexCount))
+				return false;
+
+			bRibbonBufferDirty = false;
+		}
+
+		OutBuffer = {};
+		OutBuffer.VB = RibbonVB.GetBuffer();
+		OutBuffer.VBStride = RibbonVB.GetStride();
+		OutBuffer.IB = RibbonIB.GetBuffer();
+		OutBuffer.IndexCount = TotalIndexCount;
+		OutBuffer.FirstIndex = 0;
+		OutBuffer.BaseVertex = 0;
 		return true;
 	}
 

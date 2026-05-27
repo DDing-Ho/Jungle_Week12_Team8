@@ -70,6 +70,9 @@ namespace
 		}
 	}
 #endif
+
+    constexpr uint32 RibbonTypeDataSchemaMagic = 0x52494232u; // RIB2
+    constexpr uint32 RibbonTypeDataSchemaVersion = 1u;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -268,6 +271,22 @@ void UParticleModuleSpawn::CacheModuleValues()
     }
 
     RawSpawnRate = SpawnRateDist->BuildRaw();
+}
+
+void UParticleModuleSpawnPerUnit::Serialize(FArchive& Ar)
+{
+    UParticleModule::Serialize(Ar);
+    Ar << UnitDistance;
+    Ar << MaxSpawnCountPerFrame;
+    Ar << MaxFrameDistance;
+    Ar << bIgnoreSpawnRate;
+
+    if (Ar.IsLoading())
+    {
+        UnitDistance = (std::max)(0.001f, UnitDistance);
+        MaxSpawnCountPerFrame = (std::max)(1, MaxSpawnCountPerFrame);
+        MaxFrameDistance = (std::max)(0.0f, MaxFrameDistance);
+    }
 }
 
 // ── Lifetime ─────────────────────────────────────────────────────────────────
@@ -1685,6 +1704,42 @@ void UParticleModuleSubUVMovie::Update(
     END_UPDATE_LOOP
 }
 
+void UParticleModuleLight::Serialize(FArchive& Ar)
+{
+    UParticleModule::Serialize(Ar);
+    Ar << LightColor;
+    Ar << Intensity;
+    Ar << Radius;
+}
+
+void UParticleModuleVectorField::Serialize(FArchive& Ar)
+{
+    UParticleModule::Serialize(Ar);
+    // VectorFieldAsset은 이 엔진에서 지원하지 않음 - 경로 placeholder만 저장
+    FString VectorFieldPath;
+    Ar << VectorFieldPath;
+    Ar << Intensity;
+}
+
+void UParticleModuleCamera::Serialize(FArchive& Ar)
+{
+    UParticleModule::Serialize(Ar);
+    Ar << CameraOffset;
+}
+
+void UParticleModuleParameter::Serialize(FArchive& Ar)
+{
+    UParticleModule::Serialize(Ar);
+    Ar << ParameterName;
+    Ar << ParameterValue;
+}
+
+void UParticleModuleTrailSource::Serialize(FArchive& Ar)
+{
+    UParticleModule::Serialize(Ar);
+    Ar << SourceEmitterName;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // TypeData Modules
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1750,7 +1805,59 @@ void UParticleModuleTypeDataBeam::Serialize(FArchive& Ar)
 void UParticleModuleTypeDataRibbon::Serialize(FArchive& Ar)
 {
     UParticleModule::Serialize(Ar);
-    Ar << Width;
-    Ar << Lifetime;
-    Ar << TextureTiling;
+
+    uint32 SchemaMagic = RibbonTypeDataSchemaMagic;
+    if (Ar.IsSaving())
+    {
+        uint32 SchemaVersion = RibbonTypeDataSchemaVersion;
+        Ar << SchemaMagic;
+        Ar << SchemaVersion;
+    }
+    else
+    {
+        if (!Ar.CanSerialize(sizeof(uint32)))
+        {
+            return;
+        }
+
+        Ar << SchemaMagic;
+        if (SchemaMagic != RibbonTypeDataSchemaMagic)
+        {
+            float LegacyLifetime = 0.0f;
+            float LegacyTextureTiling = 0.0f;
+            if (Ar.CanSerialize(sizeof(float) * 2))
+            {
+                Ar << LegacyLifetime;
+                Ar << LegacyTextureTiling;
+            }
+            return;
+        }
+
+        uint32 SchemaVersion = 0u;
+        Ar << SchemaVersion;
+        if (SchemaVersion != RibbonTypeDataSchemaVersion)
+        {
+            return;
+        }
+    }
+
+    Ar << SheetsPerTrail;
+    Ar << MaxTrailCount;
+    Ar << MaxParticleInTrailCount;
+    Ar << bSpawnInitialParticle;
+    Ar << bDeadTrailsOnDeactivate;
+    Ar << bDeadTrailsOnSourceLoss;
+
+    int32 RenderAxisInt = static_cast<int32>(RenderAxis);
+    Ar << RenderAxisInt;
+    if (Ar.IsLoading()) RenderAxis = static_cast<EParticleRibbonRenderAxis>(RenderAxisInt);
+
+    Ar << TilingDistance;
+    Ar << DistanceTessellationStepSize;
+    Ar << bTangentRecalculationEveryFrame;
+    Ar << bEnablePreviousTangentRecalculation;
+    Ar << bRenderGeometry;
+    Ar << bRenderSpawnPoints;
+    Ar << bRenderTangents;
+    Ar << bRenderTessellation;
 }

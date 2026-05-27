@@ -381,6 +381,18 @@ static UParticleLODLevel* CreateDefaultParticleLODLevel(UParticleEmitter* Emitte
 	return LOD;
 }
 
+static UParticleModuleTypeDataBase* CreateParticleTypeDataByEmitterType(EParticleEmitterType Type, UObject* Outer)
+{
+	switch (Type)
+	{
+	case EParticleEmitterType::PET_Mesh:   return GUObjectArray.CreateObject<UParticleModuleTypeDataMesh>(Outer);
+	case EParticleEmitterType::PET_Beam:   return GUObjectArray.CreateObject<UParticleModuleTypeDataBeam>(Outer);
+	case EParticleEmitterType::PET_Ribbon: return GUObjectArray.CreateObject<UParticleModuleTypeDataRibbon>(Outer);
+	case EParticleEmitterType::PET_Sprite:
+	default:                               return GUObjectArray.CreateObject<UParticleModuleTypeDataSprite>(Outer);
+	}
+}
+
 static UParticleModule* FindModuleByClass(const UParticleLODLevel* LODLevel, EParticleModuleClass ModuleClass)
 {
 	if (!LODLevel)
@@ -673,6 +685,7 @@ static bool IsParticleMaterialPath(const FString& MaterialPath)
 constexpr FParticleModuleAddOption ParticleModuleAddOptions[] =
 {
 	{ EParticleModuleClass::Spawn, "Spawn" },
+	{ EParticleModuleClass::SpawnPerUnit, "Spawn Per Unit" },
 	{ EParticleModuleClass::Lifetime, "Lifetime" },
 	{ EParticleModuleClass::Location, "Location" },
 	{ EParticleModuleClass::Velocity, "Velocity" },
@@ -688,6 +701,11 @@ constexpr FParticleModuleAddOption ParticleModuleAddOptions[] =
 	{ EParticleModuleClass::EventReceiverKillAll, "Event Receiver Kill All" },
 	{ EParticleModuleClass::SubImageIndex, "SubImage Index" },
 	{ EParticleModuleClass::SubUVMovie, "SubUV Movie" },
+	{ EParticleModuleClass::TrailSource, "Trail Source" },
+	{ EParticleModuleClass::Light, "Light" },
+	{ EParticleModuleClass::VectorField, "Vector Field" },
+	{ EParticleModuleClass::Camera, "Camera" },
+	{ EParticleModuleClass::Parameter, "Parameter" },
 };
 
 constexpr ImVec4 ParticlePanelAccentColor = ImVec4(0.0f, 0.71f, 0.86f, 1.0f);
@@ -1038,7 +1056,61 @@ void FParticleSystemEditorWidget::Render(float DeltaTime)
 	}
 	ImGui::SameLine();
 
-	// ── 4. Module 드롭다운 ───────────────────────────────────────────
+	// ── 4. Emitter TypeData 드롭다운 ─────────────────────────────────
+	ImGui::BeginDisabled(!SelectedEmitter || !SelectedLOD);
+	EParticleEmitterType CurrentEmitterType = EParticleEmitterType::PET_Sprite;
+	if (SelectedLOD)
+	{
+		if (UParticleModuleTypeDataBase* TypeData = SelectedLOD->GetTypeDataModule())
+		{
+			CurrentEmitterType = TypeData->GetEmitterType();
+		}
+	}
+	const char* TypePreview = GetParticleEmitterTypeLabel(CurrentEmitterType);
+	ImGui::SetNextItemWidth(ImGui::CalcTextSize("RIBBON").x + ImGui::GetStyle().FramePadding.x * 2.0f + ImGui::GetFrameHeight());
+	if (ImGui::BeginCombo("##EmitterTypeCombo", TypePreview))
+	{
+		const EParticleEmitterType TypeOptions[] =
+		{
+			EParticleEmitterType::PET_Sprite,
+			EParticleEmitterType::PET_Mesh,
+			EParticleEmitterType::PET_Beam,
+			EParticleEmitterType::PET_Ribbon,
+		};
+
+		for (EParticleEmitterType TypeOption : TypeOptions)
+		{
+			const bool bSelected = CurrentEmitterType == TypeOption;
+			if (ImGui::Selectable(GetParticleEmitterTypeLabel(TypeOption), bSelected))
+			{
+				if (!bSelected)
+				{
+					UParticleModuleTypeDataBase* OldTypeData = SelectedLOD->GetTypeDataModule();
+					UParticleModuleTypeDataBase* NewTypeData = CreateParticleTypeDataByEmitterType(TypeOption, SelectedLOD);
+					SelectedLOD->SetTypeDataModule(NewTypeData);
+					SelectedLOD->CacheModules();
+					Asset->CacheSystemModuleInfo();
+					SelectedModule = NewTypeData;
+					if (OldTypeData)
+					{
+						GUObjectArray.RemoveObject(OldTypeData);
+						GUObjectArray.DestroyObject(OldTypeData);
+					}
+					SyncEditedLODSelection();
+					MarkDirty();
+				}
+			}
+			if (bSelected)
+			{
+				ImGui::SetItemDefaultFocus();
+			}
+		}
+		ImGui::EndCombo();
+	}
+	ImGui::EndDisabled();
+	ImGui::SameLine();
+
+	// ── 5. Module 드롭다운 ───────────────────────────────────────────
 	ImGui::BeginDisabled(!SelectedEmitter || !SelectedLOD);
 	ImGui::SetNextItemWidth(ImGui::CalcTextSize("Module").x + ImGui::GetStyle().FramePadding.x * 2.0f + ImGui::GetFrameHeight());
 	if (ImGui::BeginCombo("##ModuleCombo", "Module"))
@@ -1063,6 +1135,7 @@ void FParticleSystemEditorWidget::Render(float DeltaTime)
 					switch (Option.Class)
 					{
 					case EParticleModuleClass::Spawn:                NewModule = GUObjectArray.CreateObject<UParticleModuleSpawn>(SelectedLOD); break;
+					case EParticleModuleClass::SpawnPerUnit:         NewModule = GUObjectArray.CreateObject<UParticleModuleSpawnPerUnit>(SelectedLOD); break;
 					case EParticleModuleClass::Lifetime:             NewModule = GUObjectArray.CreateObject<UParticleModuleLifetime>(SelectedLOD); break;
 					case EParticleModuleClass::Location:             NewModule = GUObjectArray.CreateObject<UParticleModuleLocation>(SelectedLOD); break;
 					case EParticleModuleClass::Velocity:             NewModule = GUObjectArray.CreateObject<UParticleModuleVelocity>(SelectedLOD); break;
@@ -1078,6 +1151,11 @@ void FParticleSystemEditorWidget::Render(float DeltaTime)
 					case EParticleModuleClass::EventReceiverKillAll: NewModule = GUObjectArray.CreateObject<UParticleModuleEventReceiverKillAll>(SelectedLOD); break;
 					case EParticleModuleClass::SubImageIndex:        NewModule = GUObjectArray.CreateObject<UParticleModuleSubImageIndex>(SelectedLOD); break;
 					case EParticleModuleClass::SubUVMovie:           NewModule = GUObjectArray.CreateObject<UParticleModuleSubUVMovie>(SelectedLOD); break;
+					case EParticleModuleClass::TrailSource:          NewModule = GUObjectArray.CreateObject<UParticleModuleTrailSource>(SelectedLOD); break;
+					case EParticleModuleClass::Light:                NewModule = GUObjectArray.CreateObject<UParticleModuleLight>(SelectedLOD); break;
+					case EParticleModuleClass::VectorField:          NewModule = GUObjectArray.CreateObject<UParticleModuleVectorField>(SelectedLOD); break;
+					case EParticleModuleClass::Camera:               NewModule = GUObjectArray.CreateObject<UParticleModuleCamera>(SelectedLOD); break;
+					case EParticleModuleClass::Parameter:            NewModule = GUObjectArray.CreateObject<UParticleModuleParameter>(SelectedLOD); break;
 					default: break;
 					}
 					if (NewModule)
@@ -3067,6 +3145,7 @@ bool FParticleSystemEditorWidget::RenderParticleModuleItem(UParticleModule* Modu
 	case EParticleModuleClass::TypeDataBeam: ModuleName = "Beam Data"; break;
 	case EParticleModuleClass::TypeDataRibbon: ModuleName = "Ribbon Data"; break;
 	case EParticleModuleClass::Spawn: ModuleName = "Spawn"; break;
+	case EParticleModuleClass::SpawnPerUnit: ModuleName = "Spawn Per Unit"; break;
 	case EParticleModuleClass::Lifetime: ModuleName = "Lifetime"; break;
 	case EParticleModuleClass::Location: ModuleName = "Location"; break;
 	case EParticleModuleClass::Velocity: ModuleName = "Velocity"; break;
@@ -3082,6 +3161,11 @@ bool FParticleSystemEditorWidget::RenderParticleModuleItem(UParticleModule* Modu
 	case EParticleModuleClass::EventReceiverKillAll: ModuleName = "Event Receiver Kill All"; break;
 	case EParticleModuleClass::SubImageIndex: ModuleName = "SubImage Index"; break;
 	case EParticleModuleClass::SubUVMovie: ModuleName = "SubUV Movie"; break;
+	case EParticleModuleClass::TrailSource: ModuleName = "Trail Source"; break;
+	case EParticleModuleClass::Light: ModuleName = "Light"; break;
+	case EParticleModuleClass::VectorField: ModuleName = "Vector Field"; break;
+	case EParticleModuleClass::Camera: ModuleName = "Camera"; break;
+	case EParticleModuleClass::Parameter: ModuleName = "Parameter"; break;
 	default: break;
 	}
 
@@ -3104,7 +3188,8 @@ bool FParticleSystemEditorWidget::RenderParticleModuleItem(UParticleModule* Modu
 	const bool bCanReorderModule = ModuleIndexInStack >= 0 && !IsParticleModuleFixedInStack(ModuleClass);
 	const bool bModuleSelected = SelectedModule == Module;
 	const FParticleModuleStyleColors& ModuleColors =
-		(ModuleClass == EParticleModuleClass::Spawn) ? ParticleSpawnModuleColors :
+		((ModuleClass == EParticleModuleClass::Spawn)
+		|| (ModuleClass == EParticleModuleClass::SpawnPerUnit)) ? ParticleSpawnModuleColors :
 		((ModuleClass == EParticleModuleClass::Required) ? ParticleRequiredModuleColors :
 		(IsParticleEventModuleClass(ModuleClass)) ? ParticleEventModuleColors :
 		(IsParticleSubUVModuleClass(ModuleClass)) ? ParticleSubUVModuleColors :

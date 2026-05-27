@@ -47,3 +47,11 @@ struct FMeshParticleInstanceVertex
     FMatrix  Transform; // local-to-world transform, scale 포함
     FVector4 Color;     // rgba: normalized [0,1]
 };
+
+/** Ribbon Particle 렌더링용 동적 vertex */
+struct FRibbonParticleVertex
+{
+    FVector  Position; // world-space strip vertex
+    FVector2 TexCoord; // trail-length uv
+    FVector4 Color;    // rgba: normalized [0,1]
+};

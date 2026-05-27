@@ -42,6 +42,8 @@ struct FBaseParticle
     float   SubUVRandomCurrentFrame = 0.0f;
     float   SubUVMovieTime = 0.0f;
     float   SubUVMovieStartFrame = 0.0f;
+    uint32  SpawnId = 0;        // Runtime birth order. Ribbon trail 정렬에 사용.
+    uint32  SourceSpawnId = 0;  // Source emitter 기반 Ribbon trail grouping에 사용.
 };
 
 /** ParticleData와 ParticleIndices를 보관하는 메모리 컨테이너 */

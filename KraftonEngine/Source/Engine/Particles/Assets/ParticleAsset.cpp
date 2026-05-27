@@ -20,6 +20,7 @@ static UParticleModule* CreateModuleByClass(EParticleModuleClass ClassTag, UObje
     {
     case EParticleModuleClass::Required:             return GUObjectArray.CreateObject<UParticleModuleRequired>(Outer);
     case EParticleModuleClass::Spawn:                return GUObjectArray.CreateObject<UParticleModuleSpawn>(Outer);
+    case EParticleModuleClass::SpawnPerUnit:         return GUObjectArray.CreateObject<UParticleModuleSpawnPerUnit>(Outer);
     case EParticleModuleClass::Lifetime:             return GUObjectArray.CreateObject<UParticleModuleLifetime>(Outer);
     case EParticleModuleClass::Location:             return GUObjectArray.CreateObject<UParticleModuleLocation>(Outer);
     case EParticleModuleClass::Velocity:             return GUObjectArray.CreateObject<UParticleModuleVelocity>(Outer);
@@ -39,6 +40,7 @@ static UParticleModule* CreateModuleByClass(EParticleModuleClass ClassTag, UObje
     case EParticleModuleClass::TypeDataRibbon:       return GUObjectArray.CreateObject<UParticleModuleTypeDataRibbon>(Outer);
     case EParticleModuleClass::SubImageIndex:        return GUObjectArray.CreateObject<UParticleModuleSubImageIndex>(Outer);
     case EParticleModuleClass::SubUVMovie:           return GUObjectArray.CreateObject<UParticleModuleSubUVMovie>(Outer);
+    case EParticleModuleClass::TrailSource:          return GUObjectArray.CreateObject<UParticleModuleTrailSource>(Outer);
     default: return nullptr;
     }
 }

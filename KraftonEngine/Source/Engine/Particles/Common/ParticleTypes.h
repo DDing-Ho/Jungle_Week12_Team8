@@ -29,6 +29,7 @@ class UParticleEmitter;
 class UParticleLODLevel;
 class UParticleModule;
 class UParticleModuleRequired;
+class UParticleModuleSpawnPerUnit;
 class UParticleModuleTypeDataBase;
 class UParticleSystemComponent;
 
@@ -62,6 +63,7 @@ enum class EParticleModuleType : uint8
 {
     PMT_Required,       // Emitter 필수 설정
     PMT_Spawn,          // Particle 생성 수 / 생성 주기
+    PMT_SpawnPerUnit,   // 이동 거리 기반 Particle 생성
     PMT_Lifetime,       // Particle 수명
     PMT_Location,       // Particle 위치
     PMT_Velocity,       // Particle 속도
@@ -75,6 +77,12 @@ enum class EParticleModuleType : uint8
     PMT_Collision,      // Particle 충돌 처리
     PMT_Event,          // Particle 이벤트 처리
     PMT_SubUV,          // Texture Atlas / Flipbook
+    PMT_TrailSource,    // Ribbon Trail Source 설정
+
+    PMT_Light,          // Particle 기반 Light 효과
+    PMT_VectorField,    // 3D Vector Field 기반 이동
+    PMT_Camera,         // 카메라 기준 동작 보정
+    PMT_Parameter,      // 외부 시스템 / Material 값 전달
 
     PMT_Custom          // 확장용 Module
 };
@@ -118,6 +126,15 @@ enum class EParticleSubUVInterpMethod : uint8
     PSUVIM_Random_Blend  // random 프레임 변경 시 blend
 };
 
+/** Ribbon sheet가 trail tangent를 기준으로 펼쳐지는 기준 축 */
+UENUM()
+enum class EParticleRibbonRenderAxis : uint8
+{
+    CameraUp, // 현재 카메라 Up 벡터 기준
+    WorldUp,  // 월드 Up 벡터 기준
+    SourceUp  // ParticleSystemComponent Up 벡터 기준
+};
+
 /** 다형 직렬화 시 모듈 구체 클래스를 식별하는 태그 */
 enum class EParticleModuleClass : uint8
 {
@@ -125,9 +142,12 @@ enum class EParticleModuleClass : uint8
     Rotation, RotationRate, Acceleration,
     Collision = 12, Kill,
     EventGenerator, EventReceiverSpawn, EventReceiverKillAll,
+    SubUVLegacy = 17, Light, VectorField, Camera, Parameter,
     TypeDataSprite = 22, TypeDataMesh, TypeDataBeam, TypeDataRibbon,
     SubImageIndex,
     SubUVMovie,
+    TrailSource,
+    SpawnPerUnit,
     Unknown = 0xFF
 };
 

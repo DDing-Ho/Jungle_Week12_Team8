@@ -13,6 +13,7 @@
 #include "Particles/Common/ParticleDistributionTypes.h"
 #include "Core/Property/PropertyTypes.h"
 #include "ParticleCoreModules.generated.h"
+#include <algorithm>
 
 // ─────────────────────────────────────────────────────────────────────────────
 // UParticleModuleRequired
@@ -93,6 +94,37 @@ class UParticleModuleSpawn : public UParticleModule
     UPROPERTY(Edit, Category="Particle", DisplayName="Spawn Rate", Type=Distribution, Class=UDistributionFloat)
     UDistributionFloat* SpawnRateDist = nullptr;
     FRawDistributionFloat RawSpawnRate = FRawDistributionFloat::MakeConstant(10.0f);
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// UParticleModuleSpawnPerUnit
+// ─────────────────────────────────────────────────────────────────────────────
+
+UCLASS()
+class UParticleModuleSpawnPerUnit : public UParticleModule
+{
+  public:
+    GENERATED_BODY(UParticleModuleSpawnPerUnit)
+
+    virtual EParticleModuleType        GetModuleType() const override { return EParticleModuleType::PMT_SpawnPerUnit; }
+    virtual EParticleModuleUpdatePhase GetUpdatePhase() const override { return EParticleModuleUpdatePhase::PMUP_Spawn; }
+    virtual EParticleModuleClass       GetModuleClass() const override { return EParticleModuleClass::SpawnPerUnit; }
+    virtual void Serialize(FArchive& Ar) override;
+
+    float GetUnitDistance() const { return (std::max)(0.001f, UnitDistance); }
+    int32 GetMaxSpawnCountPerFrame() const { return (std::max)(1, MaxSpawnCountPerFrame); }
+    float GetMaxFrameDistance() const { return (std::max)(0.0f, MaxFrameDistance); }
+    bool ShouldIgnoreSpawnRate() const { return bIgnoreSpawnRate; }
+
+  private:
+    UPROPERTY(Edit, Category="Spawn Per Unit", DisplayName="Unit Distance", Min=0.001, Max=100000.0, Speed=0.1)
+    float UnitDistance = 10.0f;
+    UPROPERTY(Edit, Category="Spawn Per Unit", DisplayName="Max Spawn Count Per Frame", Min=1, Max=100000, Speed=1.0)
+    int32 MaxSpawnCountPerFrame = 32;
+    UPROPERTY(Edit, Category="Spawn Per Unit", DisplayName="Max Frame Distance", Min=0.0, Max=1000000.0, Speed=0.1)
+    float MaxFrameDistance = 0.0f;
+    UPROPERTY(Edit, Category="Spawn Per Unit", DisplayName="Ignore Spawn Rate")
+    bool bIgnoreSpawnRate = true;
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
