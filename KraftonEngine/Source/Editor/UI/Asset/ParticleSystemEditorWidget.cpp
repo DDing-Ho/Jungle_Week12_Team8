@@ -389,6 +389,45 @@ static bool IsParticleSubUVModuleClass(EParticleModuleClass ModuleClass)
 		|| ModuleClass == EParticleModuleClass::SubUVMovie;
 }
 
+static bool EventGeneratorRequiresEnabledCollisionModule(const UParticleModule* Module)
+{
+	const UParticleModuleEventGenerator* Generator = Cast<UParticleModuleEventGenerator>(Module);
+	if (!Generator)
+	{
+		return false;
+	}
+
+	for (const FParticleEventGeneratorEntry& Entry : Generator->GetGeneratedEvents())
+	{
+		if (Entry.Type == EParticleEventType::PEET_Collision)
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+static bool HasEnabledCollisionModule(const UParticleLODLevel* LOD)
+{
+	if (!LOD)
+	{
+		return false;
+	}
+
+	for (UParticleModule* Candidate : LOD->GetModules())
+	{
+		if (Candidate
+			&& Candidate->IsEnabled()
+			&& Candidate->GetModuleClass() == EParticleModuleClass::Collision)
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
 #if defined(_DEBUG)
 static const char* ParticleEventTypeToString(EParticleEventType EventType)
 {
@@ -1637,6 +1676,21 @@ bool FParticleSystemEditorWidget::RenderDetailsPanel()
 	else if (SelectedEmitterIndex >= 0 && SelectedEmitterIndex < static_cast<int32>(Asset->GetEmitters().size()))
 	{
 		DetailsObject = Asset->GetEmitter(SelectedEmitterIndex);
+	}
+
+	if (SelectedModule && EventGeneratorRequiresEnabledCollisionModule(SelectedModule))
+	{
+		UParticleEmitter* SelectedEmitter = (SelectedEmitterIndex >= 0 && SelectedEmitterIndex < static_cast<int32>(Asset->GetEmitters().size()))
+			? Asset->GetEmitter(SelectedEmitterIndex)
+			: nullptr;
+		const UParticleLODLevel* SelectedLOD = GetEditedLODLevel(SelectedEmitter);
+		if (!HasEnabledCollisionModule(SelectedLOD))
+		{
+			ImGui::TextColored(
+				ImVec4(1.0f, 0.72f, 0.22f, 1.0f),
+				"Warning: Collision event entries require an enabled Collision module in this LOD.");
+			ImGui::Separator();
+		}
 	}
 
 	bool bChanged = RenderEditableProperties(DetailsObject);
