@@ -8,6 +8,8 @@
 #include "Particles/Runtime/ParticleRuntimeTypes.h"
 #include "Particles/Common/ParticleHelper.h"
 #include "Particles/Common/ParticleDistributionTypes.h"
+#include "Particles/Modules/ParticleEventModules.h"
+#include "Core/Log.h"
 #include "Serialization/Archive.h"
 #include "Materials/Material.h"
 #include "Materials/MaterialManager.h"
@@ -31,6 +33,43 @@ namespace
         return Prop
             && (Prop->Name == "RandomSeedInfo" || Prop->Name == "Random Seed Info");
     }
+
+#if defined(_DEBUG)
+	const char* ParticleEventTypeToString(EParticleEventType EventType)
+	{
+		switch (EventType)
+		{
+		case EParticleEventType::PEET_Spawn:     return "Spawn";
+		case EParticleEventType::PEET_Death:     return "Death";
+		case EParticleEventType::PEET_Collision: return "Collision";
+		case EParticleEventType::PEET_Custom:    return "Custom";
+		default:                                 return "Unknown";
+		}
+	}
+
+	void LogGeneratedEvents(const char* Phase, const UParticleModuleEventGenerator* Module)
+	{
+		if (!Module)
+		{
+			return;
+		}
+
+		const TArray<FParticleEventGeneratorEntry>& Events = Module->GetGeneratedEvents();
+		UE_LOG("[ParticleDiag][EventGenerator] %s module=%p eventCount=%zu", Phase, Module, Events.size());
+		for (int32 EventIndex = 0; EventIndex < static_cast<int32>(Events.size()); ++EventIndex)
+		{
+			const FParticleEventGeneratorEntry& Entry = Events[EventIndex];
+			const FString EventName = Entry.EventName.ToString();
+			UE_LOG("[ParticleDiag][EventGenerator] %s module=%p event=%d type=%s name='%s' valid=%s",
+				Phase,
+				Module,
+				EventIndex,
+				ParticleEventTypeToString(Entry.Type),
+				EventName.c_str(),
+				Entry.EventName.IsValid() ? "true" : "false");
+		}
+	}
+#endif
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
