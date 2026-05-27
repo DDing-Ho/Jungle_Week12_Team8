@@ -44,6 +44,7 @@
 #include "Mesh/MeshManager.h"
 #include "GameFramework/StaticMeshActor.h"
 #include "Engine/Component/StaticMeshComponent.h"
+#include "Engine/Component/BoxComponent.h"
 
 static uint32 NextParticleSystemEditorInstanceId = 0;
 
@@ -645,7 +646,7 @@ static void DrawParticleModuleLabel(ImDrawList* DrawList, const ImRect& Rect, co
 }
 
 const FVector ParticlePreviewFloorLocation = FVector(0.0f, 0.0f, -1.0f);
-const FVector ParticlePreviewFloorScale = FVector(10.0f, 10.0f, 0.02f);
+const FVector ParticlePreviewFloorScale = FVector(10.0f, 10.0f, 1.0f);
 
 FParticleSystemEditorWidget::FParticleSystemEditorWidget()
 	: InstanceId(NextParticleSystemEditorInstanceId++)
@@ -683,6 +684,8 @@ void FParticleSystemEditorWidget::Open(UObject* Object)
 
 	AStaticMeshActor* FloorActor = WorldContext.World->SpawnActor<AStaticMeshActor>();
 	FloorActor->InitDefaultComponents("Asset/Mesh/CubeGrid/SM_CubeGrid_StaticMesh.uasset");
+	UBoxComponent* FloorBoxComponent = FloorActor->AddComponent<UBoxComponent>();
+	FloorBoxComponent->AttachToComponent(FloorActor->GetRootComponent());
 	FloorActor->SetActorLocation(ParticlePreviewFloorLocation);
 	FloorActor->SetActorScale(ParticlePreviewFloorScale);
 
@@ -1332,7 +1335,6 @@ void FParticleSystemEditorWidget::RenderPreviewViewport(const ImVec2& Size)
 			ImGui::TextDisabled("Mesh");
 			ImGui::Indent(8.0f);
 			ImGui::Checkbox("StaticMesh",       &RO.ShowFlags.bStaticMesh);
-			ImGui::Checkbox("SkeletalMesh",     &RO.ShowFlags.bSkeletalMesh);
 			ImGui::Unindent(8.0f);
 
 			ImGui::Spacing();
@@ -1340,15 +1342,14 @@ void FParticleSystemEditorWidget::RenderPreviewViewport(const ImVec2& Size)
 			ImGui::Indent(8.0f);
 			ImGui::Checkbox("Grid",             &RO.ShowFlags.bGrid);
 			ImGui::Checkbox("World Axis",       &RO.ShowFlags.bWorldAxis);
-			ImGui::Checkbox("Billboard Text",   &RO.ShowFlags.bBillboardText);
 			ImGui::Checkbox("Bounding Volume",  &RO.ShowFlags.bBoundingVolume);
+			ImGui::Checkbox("Collision Shape",  &RO.ShowFlags.bShowCollisionShape);
 			ImGui::Checkbox("Debug Draw",       &RO.ShowFlags.bDebugDraw);
 			ImGui::Unindent(8.0f);
 
 			ImGui::Spacing();
 			ImGui::TextDisabled("Post Process");
 			ImGui::Indent(8.0f);
-			ImGui::Checkbox("Fog",              &RO.ShowFlags.bFog);
 			ImGui::Checkbox("FXAA",             &RO.ShowFlags.bFXAA);
 			ImGui::Checkbox("Gamma Correction", &RO.ShowFlags.bGammaCorrection);
 			ImGui::Unindent(8.0f);
