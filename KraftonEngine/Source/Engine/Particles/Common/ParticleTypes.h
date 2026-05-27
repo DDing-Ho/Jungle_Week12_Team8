@@ -101,7 +101,7 @@ enum class EParticleEventType : uint8
     PEET_Spawn,          // Particle 생성 이벤트
     PEET_Death,          // Particle 소멸 이벤트
     PEET_Collision,      // Particle 충돌 이벤트
-    PEET_Burst,          // Burst Spawn 이벤트
+    // PEET_Burst,          // Burst Spawn 이벤트
     PEET_Custom          // 확장용 이벤트
 };
 

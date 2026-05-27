@@ -20,7 +20,7 @@ namespace
 		case EParticleEventType::PEET_Spawn:     return "Spawn";
 		case EParticleEventType::PEET_Death:     return "Death";
 		case EParticleEventType::PEET_Collision: return "Collision";
-		case EParticleEventType::PEET_Burst:     return "Burst";
+		// case EParticleEventType::PEET_Burst:     return "Burst";
 		case EParticleEventType::PEET_Custom:    return "Custom";
 		default:                                 return "Unknown";
 		}
