@@ -3,8 +3,10 @@
 #include "Engine/Particles/Assets/ParticleAsset.h"
 #include "Engine/Particles/Assets/ParticleSystemAssetManager.h"
 #include "Engine/Particles/Modules/ParticleCoreModules.h"
+#include "Engine/Particles/Modules/ParticleEventModules.h"
 #include "Engine/Particles/Modules/ParticleMotionModules.h"
 #include "Engine/Particles/Modules/ParticleRenderExpressionModules.h"
+#include "Engine/Core/Log.h"
 #include "Engine/Core/Property/FDistributionProperty.h"
 #include "Core/Property/FArrayProperty.h"
 #include "Core/Property/FEnumProperty.h"
@@ -385,6 +387,50 @@ static bool IsParticleSubUVModuleClass(EParticleModuleClass ModuleClass)
 	return ModuleClass == EParticleModuleClass::SubImageIndex
 		|| ModuleClass == EParticleModuleClass::SubUVMovie;
 }
+
+#if defined(_DEBUG)
+static const char* ParticleEventTypeToString(EParticleEventType EventType)
+{
+	switch (EventType)
+	{
+	case EParticleEventType::PEET_Spawn:     return "Spawn";
+	case EParticleEventType::PEET_Death:     return "Death";
+	case EParticleEventType::PEET_Collision: return "Collision";
+	case EParticleEventType::PEET_Custom:    return "Custom";
+	default:                                 return "Unknown";
+	}
+}
+
+static void LogEventGeneratorState(const char* Phase, const UObject* Object, const FProperty* Prop)
+{
+	const UParticleModuleEventGenerator* Generator = Cast<UParticleModuleEventGenerator>(Object);
+	if (!Generator)
+	{
+		return;
+	}
+
+	const char* PropertyName = Prop ? Prop->Name.c_str() : "<null>";
+	const TArray<FParticleEventGeneratorEntry>& Events = Generator->GetGeneratedEvents();
+	UE_LOG("[ParticleDiag][Editor] %s module=%p prop=%s eventCount=%zu",
+		Phase,
+		Generator,
+		PropertyName,
+		Events.size());
+
+	for (int32 EventIndex = 0; EventIndex < static_cast<int32>(Events.size()); ++EventIndex)
+	{
+		const FParticleEventGeneratorEntry& Entry = Events[EventIndex];
+		const FString EventName = Entry.EventName.ToString();
+		UE_LOG("[ParticleDiag][Editor] %s module=%p event=%d type=%s name='%s' valid=%s",
+			Phase,
+			Generator,
+			EventIndex,
+			ParticleEventTypeToString(Entry.Type),
+			EventName.c_str(),
+			Entry.EventName.IsValid() ? "true" : "false");
+	}
+}
+#endif
 
 static bool IsParticleModuleFixedInStack(EParticleModuleClass ModuleClass)
 {
@@ -795,6 +841,12 @@ void FParticleSystemEditorWidget::Render(float DeltaTime)
 	// ── 1. Save ──────────────────────────────────────────────────────
 	if (ImGui::Button("Save"))
 	{
+#if defined(_DEBUG)
+		UE_LOG("[ParticleDiag][Editor] SaveButton path=%s dirty=%s",
+			Asset->GetAssetPathFileName().c_str(),
+			IsDirty() ? "true" : "false");
+		LogEventGeneratorState("SaveButton-BeforeSave", SelectedModule, nullptr);
+#endif
 		if (FParticleSystemAssetManager::Get().Save(Asset))
 			ClearDirty();
 	}
@@ -2380,6 +2432,9 @@ void FParticleSystemEditorWidget::HandleEditedParticleProperty(UObject* Object, 
 	{
 		Object->PostEditProperty(Prop->Name.c_str());
 	}
+#if defined(_DEBUG)
+	LogEventGeneratorState("HandleEditedParticleProperty-AfterPostEdit", Object, Prop);
+#endif
 	if (UParticleModule* Module = Cast<UParticleModule>(Object))
 	{
 		Module->CacheModuleValues();
@@ -2396,6 +2451,9 @@ void FParticleSystemEditorWidget::HandleEditedParticleProperty(UObject* Object, 
 	{
 		Asset->CacheSystemModuleInfo();
 	}
+#if defined(_DEBUG)
+	LogEventGeneratorState("HandleEditedParticleProperty-AfterCache", Object, Prop);
+#endif
 	SyncEditedLODSelection();
 	MarkDirty();
 }
