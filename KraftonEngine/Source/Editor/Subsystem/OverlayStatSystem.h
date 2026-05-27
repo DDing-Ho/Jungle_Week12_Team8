@@ -13,6 +13,14 @@ struct FOverlayStatLine
 	FVector2 ScreenPosition = FVector2(0.0f, 0.0f);
 };
 
+// 레이블/값 쌍 — 컬럼 정렬 렌더링용
+struct FStatRow
+{
+	FString Label;
+	FString Value;
+	bool    bIsSectionHeader = false; // true면 구분선 헤더로 렌더링
+};
+
 struct FOverlayStatLayout
 {
 	float StartX = 16.0f;
@@ -32,10 +40,17 @@ public:
 	void ShowMemory(bool bEnable = true) { bShowMemory = bEnable; }
 	void ShowShadow(bool bEnable = true) { bShowShadow = bEnable; }
 	void ShowSkinning(bool bEnable = true) { bShowSkinning = bEnable; }
+	void ShowParticle(bool bEnable = true) { bShowParticle = bEnable; }
+	bool IsShowingFPS() const { return bShowFPS; }
+	bool IsShowingMemory() const { return bShowMemory; }
+	bool IsShowingShadow() const { return bShowShadow; }
+	bool IsShowingSkinning() const { return bShowSkinning; }
+	bool IsShowingParticle() const { return bShowParticle; }
 	bool ToggleFPS() { bShowFPS = !bShowFPS; return bShowFPS; }
 	bool ToggleMemory() { bShowMemory = !bShowMemory; return bShowMemory; }
 	bool ToggleShadow() { bShowShadow = !bShowShadow; return bShowShadow; }
 	bool ToggleSkinning() { bShowSkinning = !bShowSkinning; return bShowSkinning; }
+	bool ToggleParticle() { bShowParticle = !bShowParticle; return bShowParticle; }
 	void RecordPickingAttempt(double ElapsedMs);
 	void HideAll()
 	{
@@ -44,6 +59,7 @@ public:
 		bShowMemory = false;
 		bShowShadow = false;
 		bShowSkinning = false;
+		bShowParticle = false;
 	}
 
 	const FOverlayStatLayout& GetLayout() const { return Layout; }
@@ -55,16 +71,18 @@ public:
 
 private:
 	void AppendLine(TArray<FOverlayStatLine>& OutLines, float Y, const FString& Text) const;
-	void BuildFPSLines(const UEditorEngine& Editor, TArray<FString>& OutLines) const;
-	void BuildMemoryLines(TArray<FString>& OutLines) const;
-	void BuildShadowLines(TArray<FString>& OutLines) const;
-	void BuildSkinningLines(TArray<FString>& OutLines) const;
+	void BuildFPSLines(const UEditorEngine& Editor, TArray<FStatRow>& OutRows) const;
+	void BuildMemoryLines(TArray<FStatRow>& OutRows) const;
+	void BuildShadowLines(TArray<FStatRow>& OutRows) const;
+	void BuildSkinningLines(TArray<FStatRow>& OutRows) const;
+	void BuildParticleLines(const UEditorEngine& Editor, TArray<FStatRow>& OutRows) const;
 
 	bool bShowFPS = false;
 	bool bShowPickingTime = false; // WM_LBUTTONDOWN , VK_LBUTTON 입력 시점이 아닌 오브젝트 충돌 판정에 걸린 시간을 측정합니다.
 	bool bShowMemory = false;
 	bool bShowShadow = false;
 	bool bShowSkinning = false;
+	bool bShowParticle = false;
 	double LastPickingTimeMs = 0.0;
 	double AccumulatedPickingTimeMs = 0.0;
 	uint32 PickingAttemptCount = 0;
