@@ -13,6 +13,7 @@ rem   SYMBOL_STORE_PATH    = path to symbol store (e.g. \\server\symbols)
 rem
 rem Optional env var:
 rem   GIT_COMMIT           = override git commit hash
+rem   SOURCE_MIRROR_PATH   = override source mirror path
 rem
 rem Flow:
 rem   0. Check ENABLE_SYMBOL_UPLOAD
@@ -49,6 +50,9 @@ if "%OUT_DIR%"=="" (
     echo [SymbolStore] Usage: PostBuildSymbolStore.bat ^<OutDir^> ^<ConfigPlatform^> ^<ProjectDir^>
     exit /b 1
 )
+
+set "OUT_DIR=%OUT_DIR:/=\%"
+if not "%OUT_DIR:~-1%"=="\" set "OUT_DIR=%OUT_DIR%\"
 
 if "%CONFIG%"=="" (
     set "CONFIG=UnknownConfig"
@@ -137,6 +141,29 @@ rem ------------------------------------------------------------
 
 if not "%SOURCE_ROOT%"=="" set "SOURCE_ROOT=%SOURCE_ROOT:/=\%"
 if not "%SOURCE_ROOT%"=="" if not "%SOURCE_ROOT:~-1%"=="\" set "SOURCE_ROOT=%SOURCE_ROOT%\"
+set "SOURCE_ROOT_GIT=%SOURCE_ROOT:\=/%"
+
+if "%SOURCE_MIRROR_PATH%"=="" (
+    set "SOURCE_MIRROR_PATH=\\172.21.10.41\Team8\SourceMirror\Jungle_Week12_Team8.git"
+)
+
+set "GIT_MIRROR=%SOURCE_MIRROR_PATH:/=\%"
+if "%GIT_MIRROR:~-1%"=="\" set "GIT_MIRROR=%GIT_MIRROR:~0,-1%"
+
+if "%ENABLE_SOURCE_INDEX%"=="1" (
+    if not exist "%GIT_MIRROR%\HEAD" (
+        echo [SymbolStore] Git mirror not found. Creating mirror repository.
+        git clone --mirror "%SOURCE_ROOT_GIT%" "%GIT_MIRROR%"
+    ) else (
+        echo [SymbolStore] Updating Git mirror repository.
+        git --git-dir="%GIT_MIRROR%" fetch --all --prune
+    )
+
+    if errorlevel 1 (
+        echo [SymbolStore] WARNING: Git mirror update failed. Source indexing skipped.
+        set "ENABLE_SOURCE_INDEX=0"
+    )
+)
 
 rem ------------------------------------------------------------
 rem Print summary
@@ -150,6 +177,8 @@ echo  ProjectDir   : %PROJECT_DIR%
 echo  Product      : %PRODUCT%
 echo  Symbol Store : %SYMBOL_STORE_PATH%
 echo  Source Root  : %SOURCE_ROOT%
+echo  Source Index : %ENABLE_SOURCE_INDEX%
+echo  Source Mirror: %GIT_MIRROR%
 echo  Git Commit   : %GIT_COMMIT%
 echo ============================================================
 
@@ -219,21 +248,24 @@ if not exist "%TEMP_DIR%" (
 )
 
 echo [SymbolStore] [1/3] Extract source list via srctool.exe
-"%SRCTOOL%" "%PDB_PATH%" > "%SRC_LIST%" 2>nul
-
-if errorlevel 1 (
-    echo [SymbolStore] srctool.exe failed.
-    exit /b 1
-)
+"%SRCTOOL%" -r "%PDB_PATH%" > "%SRC_LIST%" 2>nul
 
 if not exist "%SRC_LIST%" (
     echo [SymbolStore] Source list was not created.
     exit /b 1
 )
 
+for %%A in ("%SRC_LIST%") do (
+    if %%~zA LEQ 0 (
+        echo [SymbolStore] Source list is empty.
+        exit /b 1
+    )
+)
+
 echo [SymbolStore] [2/3] Generate srcsrv stream file
+
 set "SRCSRV_TRGT=%%targ%%\%%var2%%\%%fnbksl%%^(%%var3%%^)\%%var4%%\%%fnfile%%^(%%var1%%^)"
-set "SRCSRV_CMD=cmd /c git -C ""%SOURCE_ROOT%"" show %%var4%%:%%var3%% ^> ""%%srcsrvtrg%%"""
+set "SRCSRV_CMD=cmd /c git --git-dir=^"%GIT_MIRROR%^" show %%var4%%:%%var3%% ^> ^"%%srcsrvtrg%%^""
 
 (
     echo SRCSRV: ini ------------------------------------------------
@@ -247,21 +279,32 @@ set "SRCSRV_CMD=cmd /c git -C ""%SOURCE_ROOT%"" show %%var4%%:%%var3%% ^> ""%%sr
 ) > "%SRCSRV_FILE%"
 
 set "INDEXED_COUNT=0"
+set "SKIPPED_COUNT=0"
 
 for /f "usebackq delims=" %%S in ("%SRC_LIST%") do (
     set "SRC_ABS=%%S"
     set "SRC_ABS=!SRC_ABS:/=\!"
-    set "SRC_REL=!SRC_ABS:%SOURCE_ROOT%=!"
 
-    if not "!SRC_REL!"=="!SRC_ABS!" (
-        set "SRC_REL=!SRC_REL:\=/!"
+    rem srctool summary/message lines must not be indexed as source files
+    if exist "!SRC_ABS!" (
+        set "SRC_REL=!SRC_ABS:%SOURCE_ROOT%=!"
 
-        if "!SRC_REL:~0,1!"=="/" (
-            set "SRC_REL=!SRC_REL:~1!"
+        if not "!SRC_REL!"=="!SRC_ABS!" (
+            set "SRC_REL=!SRC_REL:\=/!"
+
+            if "!SRC_REL:~0,1!"=="/" (
+                set "SRC_REL=!SRC_REL:~1!"
+            )
+
+            git --git-dir="%GIT_MIRROR%" cat-file -e "%GIT_COMMIT%:!SRC_REL!" 2>nul
+
+            if not errorlevel 1 (
+                echo !SRC_ABS!*%PRODUCT%*!SRC_REL!*%GIT_COMMIT%>> "%SRCSRV_FILE%"
+                set /a INDEXED_COUNT+=1
+            ) else (
+                set /a SKIPPED_COUNT+=1
+            )
         )
-
-        echo !SRC_ABS!*%PRODUCT%*!SRC_REL!*%GIT_COMMIT%>> "%SRCSRV_FILE%"
-        set /a INDEXED_COUNT+=1
     )
 )
 
@@ -273,6 +316,9 @@ if "%INDEXED_COUNT%"=="0" (
 )
 
 echo [SymbolStore] Indexed source files: %INDEXED_COUNT%
+if not "%SKIPPED_COUNT%"=="0" (
+    echo [SymbolStore] Skipped non-repository source files: %SKIPPED_COUNT%
+)
 
 echo [SymbolStore] [3/3] Write srcsrv stream via pdbstr.exe
 "%PDBSTR%" -w -p:"%PDB_PATH%" -s:srcsrv -i:"%SRCSRV_FILE%"
