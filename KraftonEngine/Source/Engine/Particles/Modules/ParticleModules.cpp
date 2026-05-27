@@ -419,8 +419,8 @@ void UParticleModuleVelocity::Spawn(FParticleEmitterInstance* Owner, FBasePartic
 {
     if (!bEnabled) return;
     const FVector V       = RawVelocity.GetValue(0.f, &ModuleStream);
-    Particle.BaseVelocity = V;
-    Particle.Velocity     = V;
+    Particle.BaseVelocity += V;
+    Particle.Velocity     += V;
 }
 
 // ── Color ─────────────────────────────────────────────────────────────────────
@@ -694,7 +694,7 @@ uint32 UParticleModuleAcceleration::RequiredBytes(UParticleModuleTypeDataBase* T
 }
 
 void UParticleModuleAcceleration::Spawn(FParticleEmitterInstance* Owner, FBaseParticle& Particle, float SpawnTime, int32 ModuleOffset)
-{
+{	
 	if (!bEnabled)
 		return;
 
@@ -714,9 +714,11 @@ void UParticleModuleAcceleration::Spawn(FParticleEmitterInstance* Owner, FBasePa
 	{
 		const FVector TotalAcceleration = UsedConstAcceleration + (bUseAccelerationOverLife ? UsedAcceleration * Particle.RelativeTime : UsedAcceleration);
 		Particle.Velocity += TotalAcceleration * SpawnTime;
+		Particle.BaseVelocity += TotalAcceleration * SpawnTime;
 		if (UsedDrag > 0.0f)
 		{
 			Particle.Velocity *= std::exp(-UsedDrag * SpawnTime);
+			Particle.BaseVelocity *= std::exp(-UsedDrag * SpawnTime);
 		}
 	}
 }
@@ -747,9 +749,11 @@ void UParticleModuleAcceleration::Update(
 		const FVector TotalAcceleration = UsedConstAcceleration + (bUseAccelerationOverLife ? UsedAcceleration * Particle.RelativeTime : UsedAcceleration);
 
 		Particle.Velocity += TotalAcceleration * DeltaTime;
+		Particle.BaseVelocity += TotalAcceleration * DeltaTime;
 		if (UsedDrag > 0.0f)
 		{
 			Particle.Velocity *= std::exp(-UsedDrag * DeltaTime);
+			Particle.BaseVelocity *= std::exp(-UsedDrag * DeltaTime);
 		}
 	END_PARTICLE_UPDATE_LOOP
 }
