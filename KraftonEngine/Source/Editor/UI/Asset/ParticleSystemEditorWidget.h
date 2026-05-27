@@ -46,6 +46,7 @@ private:
 	bool RenderEmitterModules(UParticleEmitter* Emitter, int32 EmitterIndex);
 	bool RenderParticleModuleItem(UParticleModule* Module, int32 EmitterIndex);
 	bool RenderCurveEditorPanel();
+	bool RemoveSelectedModule();
 	int32 GetEditedLODIndex(const UParticleSystem* Asset) const;
 	UParticleLODLevel* GetEditedLODLevel(UParticleEmitter* Emitter) const;
 	const UParticleLODLevel* GetEditedLODLevel(const UParticleEmitter* Emitter) const;

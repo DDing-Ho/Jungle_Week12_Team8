@@ -835,7 +835,7 @@ void FParticleSystemEditorWidget::Render(float DeltaTime)
 			if (Modules[i] == SelectedModule)
 			{
 				SelectedModuleIndex = i;
-				bCanRemoveModule = true;
+				bCanRemoveModule = !IsParticleModuleFixedInStack(SelectedModule->GetModuleClass());
 				break;
 			}
 		}
@@ -969,15 +969,7 @@ void FParticleSystemEditorWidget::Render(float DeltaTime)
 		ImGui::BeginDisabled(!bCanRemoveModule);
 		if (ImGui::Selectable("Remove Module"))
 		{
-			UParticleModule* RemovedModule = SelectedModule;
-			SelectedModule = nullptr;
-			SelectedLOD->RemoveModule(SelectedModuleIndex);
-			GUObjectArray.RemoveObject(RemovedModule);
-			GUObjectArray.DestroyObject(RemovedModule);
-			SelectedLOD->CacheModules();
-			Asset->CacheSystemModuleInfo();
-			SyncEditedLODSelection();
-			MarkDirty();
+			RemoveSelectedModule();
 		}
 		ImGui::EndDisabled();
 		ImGui::EndCombo();
@@ -1579,6 +1571,44 @@ bool FParticleSystemEditorWidget::InsertLODRelativeToCurrent(bool bInsertAfter)
 	EditedLODIndex = InsertLODIndex;
 	SelectedModule = nullptr;
 
+	Asset->CacheSystemModuleInfo();
+	SyncEditedLODSelection();
+	MarkDirty();
+	return true;
+}
+
+bool FParticleSystemEditorWidget::RemoveSelectedModule()
+{
+	UParticleSystem* Asset = Cast<UParticleSystem>(EditedObject);
+	if (!Asset || !SelectedModule || SelectedEmitterIndex < 0)
+	{
+		return false;
+	}
+
+	if (IsParticleModuleFixedInStack(SelectedModule->GetModuleClass()))
+	{
+		return false;
+	}
+
+	UParticleEmitter* SelectedEmitter = Asset->GetEmitter(SelectedEmitterIndex);
+	UParticleLODLevel* SelectedLOD = GetEditedLODLevel(SelectedEmitter);
+	if (!SelectedLOD)
+	{
+		return false;
+	}
+
+	const int32 SelectedModuleIndex = FindParticleModuleIndex(SelectedLOD, SelectedModule);
+	if (SelectedModuleIndex < 0)
+	{
+		return false;
+	}
+
+	UParticleModule* RemovedModule = SelectedModule;
+	SelectedModule = nullptr;
+	SelectedLOD->RemoveModule(SelectedModuleIndex);
+	GUObjectArray.RemoveObject(RemovedModule);
+	GUObjectArray.DestroyObject(RemovedModule);
+	SelectedLOD->CacheModules();
 	Asset->CacheSystemModuleInfo();
 	SyncEditedLODSelection();
 	MarkDirty();
@@ -2808,9 +2838,29 @@ bool FParticleSystemEditorWidget::RenderParticleModuleItem(UParticleModule* Modu
 		SelectedEmitterIndex = EmitterIndex;
 		SelectedModule = Module;
 	}
+	if (ImGui::IsItemClicked(ImGuiMouseButton_Right))
+	{
+		SelectedEmitterIndex = EmitterIndex;
+		SelectedModule = Module;
+	}
 	ImGui::PopID();
 	const ImRect ModuleRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax());
+	const bool bCanRemoveModule = ModuleIndexInStack >= 0 && !IsParticleModuleFixedInStack(ModuleClass);
 	ImGui::PopStyleColor(3);
+	ImGui::PopStyleVar(2);
+
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(10.0f, 8.0f));
+	ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(8.0f, 6.0f));
+	if (ImGui::BeginPopupContextItem())
+	{
+		ImGui::BeginDisabled(!bCanRemoveModule || SelectedModule != Module);
+		if (ImGui::MenuItem("Delete Module"))
+		{
+			bChanged |= RemoveSelectedModule();
+		}
+		ImGui::EndDisabled();
+		ImGui::EndPopup();
+	}
 	ImGui::PopStyleVar(2);
 
 	if (bSharedFromPreviousLOD)
