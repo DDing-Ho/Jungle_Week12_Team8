@@ -72,6 +72,8 @@ struct FDynamicBeamEmitterReplayData : public FDynamicEmitterReplayDataBase
     FVector Target;     // Beam 끝점
     float Width = 1.0f; // Beam 두께
     float TextureTiling = 1.0f; // Beam Texture 반복 비율
+    int32 SegmentCount = 1;
+    int32 MaxSegmentCount = 1;
     int32 PayloadOffset = sizeof(FBaseParticle); // FBeamParticlePayload 위치
 };
 
@@ -113,6 +115,12 @@ struct FDynamicEmitterDataBase
 
     virtual void GatherRenderData(const FParticleVertexBuildContext &Ctx,
                                       TArray<FMeshParticleInstanceVertex> &OutInstances) const
+    {
+    }
+
+    virtual void GatherRenderData(const FParticleVertexBuildContext& Ctx,
+                                      TArray<FBeamParticleInstanceVertex>& OutInstances,
+                                      TArray<uint32>& OutIndices) const
     {
     }
 
@@ -179,9 +187,9 @@ struct FDynamicBeamEmitterData : public FDynamicEmitterDataBase
         return Source;
     }
     // Source → Target 사이 빔 quad 생성
-    void GatherRenderData(const FParticleVertexBuildContext &Ctx,
-                              TArray<FSpriteParticleInstanceVertex> &OutInstances,
-                              TArray<uint32> &OutIndices) const override;
+    void GatherRenderData(const FParticleVertexBuildContext& Ctx,
+                              TArray<FBeamParticleInstanceVertex>& OutInstances,
+                              TArray<uint32>& OutIndices) const override;
 };
 
 /** Ribbon Emitter 렌더링 데이터 */

@@ -58,6 +58,7 @@ struct FParticleEmitterInstance
     int32 GetActiveParticleCount() const { return ActiveParticles; }
     float GetEmitterTime() const { return EmitterTime; }
     float GetRealDeltaTime() const { return RealDeltaTime; }
+	virtual int32 GetMaxActiveParticleLimit() const { return MaxActiveParticles; }
 
     virtual FDynamicEmitterDataBase *CreateDynamicEmitterData(); // 렌더링 데이터 생성
     void PublishParticleEvents(EParticleEventType EventType, const FBaseParticle& Particle, int32 ParticleIndex, TArray<FParticleEventData>* OutEventQueue, const FVector& EventNormal = FVector::ZeroVector);
@@ -113,11 +114,17 @@ private:
 struct FParticleBeamEmitterInstance : FParticleEmitterInstance
 {
 	void Init(UParticleSystemComponent* InComponent, UParticleEmitter* InTemplate) override;
+	void Tick(float DeltaTime, TArray<FParticleEventData>& OutEventQueue, float RealDeltaTime = -1.0f) override;
 	FDynamicEmitterDataBase* CreateDynamicEmitterData() override;
 	void PreSpawn(FBaseParticle& Particle, const FVector& InitialLocation, const FVector& InitialVelocity) override;
+	void Tick_SpawnParticles(float DeltaTime, TArray<FParticleEventData>* OutEventQueue) override;
+	int32 GetMaxActiveParticleLimit() const override;
 
 private:
+	void UpdateBeamPayloads(float DeltaTime);
+
 	UParticleModuleTypeDataBeam* BeamTypeData = nullptr;
+	int32 BeamPayloadOffset = INDEX_NONE;
 };
 
 struct FParticleRibbonEmitterInstance : FParticleEmitterInstance

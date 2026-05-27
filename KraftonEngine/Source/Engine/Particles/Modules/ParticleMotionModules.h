@@ -139,3 +139,93 @@ class UParticleModuleAcceleration : public UParticleModule
     float   Drag = 0.0f;                             // 속도 감쇠 계수
 };
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Beam Modules
+// ─────────────────────────────────────────────────────────────────────────────
+
+UCLASS()
+class UParticleModuleBeamSource : public UParticleModule
+{
+  public:
+    GENERATED_BODY(UParticleModuleBeamSource)
+
+    virtual EParticleModuleType GetModuleType() const override { return EParticleModuleType::PMT_Custom; }
+    virtual EParticleModuleUpdatePhase GetUpdatePhase() const override { return EParticleModuleUpdatePhase::PMUP_Update; }
+    virtual EParticleModuleClass GetModuleClass() const override { return EParticleModuleClass::BeamSource; }
+    virtual void Serialize(FArchive& Ar) override;
+
+    const FVector& GetSource() const { return Source; }
+    void SetSource(const FVector& InSource) { Source = InSource; }
+
+  private:
+    UPROPERTY(Edit, Category="Beam", DisplayName="Source")
+    FVector Source = FVector::ZeroVector;
+};
+
+UCLASS()
+class UParticleModuleBeamTarget : public UParticleModule
+{
+  public:
+    GENERATED_BODY(UParticleModuleBeamTarget)
+
+    virtual EParticleModuleType GetModuleType() const override { return EParticleModuleType::PMT_Custom; }
+    virtual EParticleModuleUpdatePhase GetUpdatePhase() const override { return EParticleModuleUpdatePhase::PMUP_Update; }
+    virtual EParticleModuleClass GetModuleClass() const override { return EParticleModuleClass::BeamTarget; }
+    virtual void Serialize(FArchive& Ar) override;
+
+    const FVector& GetTarget() const { return Target; }
+    void SetTarget(const FVector& InTarget) { Target = InTarget; }
+
+  private:
+    UPROPERTY(Edit, Category="Beam", DisplayName="Target")
+    FVector Target = FVector(100.0f, 0.0f, 0.0f);
+};
+
+UCLASS()
+class UParticleModuleBeamShape : public UParticleModule
+{
+  public:
+    GENERATED_BODY(UParticleModuleBeamShape)
+
+    virtual EParticleModuleType GetModuleType() const override { return EParticleModuleType::PMT_Custom; }
+    virtual EParticleModuleUpdatePhase GetUpdatePhase() const override { return EParticleModuleUpdatePhase::PMUP_Update; }
+    virtual EParticleModuleClass GetModuleClass() const override { return EParticleModuleClass::BeamShape; }
+    virtual void Serialize(FArchive& Ar) override;
+
+    bool ShouldOverrideBeamPoints() const { return bOverrideBeamPoints; }
+    void BuildBeamPoints(const FVector& Source, const FVector& Target, int32 SegmentCount, TArray<FVector>& OutPoints) const;
+
+  private:
+    UPROPERTY(Edit, Category="Beam", DisplayName="Shape Mode", Type=Enum, Enum=StaticEnum_EParticleBeamShapeMode())
+    EParticleBeamShapeMode ShapeMode = EParticleBeamShapeMode::Arc;
+    UPROPERTY(Edit, Category="Beam", DisplayName="Override Beam Points")
+    bool bOverrideBeamPoints = false;
+    UPROPERTY(Edit, Category="Beam", DisplayName="Shape Offset")
+    FVector ShapeOffset = FVector(0.0f, 0.0f, 50.0f);
+    UPROPERTY(Edit, Category="Beam", DisplayName="Sine Frequency", Min=0.0, Max=1000.0, Speed=0.1)
+    float SineFrequency = 1.0f;
+};
+
+UCLASS()
+class UParticleModuleBeamNoise : public UParticleModule
+{
+  public:
+    GENERATED_BODY(UParticleModuleBeamNoise)
+
+    virtual EParticleModuleType GetModuleType() const override { return EParticleModuleType::PMT_Custom; }
+    virtual EParticleModuleUpdatePhase GetUpdatePhase() const override { return EParticleModuleUpdatePhase::PMUP_Update; }
+    virtual EParticleModuleClass GetModuleClass() const override { return EParticleModuleClass::BeamNoise; }
+    virtual void Serialize(FArchive& Ar) override;
+
+    void ApplyNoise(float EmitterTime, TArray<FVector>& InOutPoints) const;
+
+  private:
+    UPROPERTY(Edit, Category="Beam", DisplayName="Noise Amplitude")
+    FVector NoiseAmplitude = FVector(0.0f, 0.0f, 25.0f);
+    UPROPERTY(Edit, Category="Beam", DisplayName="Frequency", Min=0.0, Max=1000.0, Speed=0.1)
+    float Frequency = 2.0f;
+    UPROPERTY(Edit, Category="Beam", DisplayName="Speed", Min=-1000.0, Max=1000.0, Speed=0.1)
+    float Speed = 1.0f;
+    UPROPERTY(Edit, Category="Beam", DisplayName="Phase", Min=-100000.0, Max=100000.0, Speed=0.1)
+    float Phase = 0.0f;
+};

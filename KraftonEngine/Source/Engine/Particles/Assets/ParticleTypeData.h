@@ -69,6 +69,17 @@ struct FBeamParticlePayload
     FVector Target = FVector::ZeroVector;
     float   Width = 1.0f;
     float   TextureTiling = 1.0f;
+    int32   PointCount = 0;
+
+    FVector* GetPoints()
+    {
+        return reinterpret_cast<FVector*>(reinterpret_cast<uint8*>(this) + sizeof(FBeamParticlePayload));
+    }
+
+    const FVector* GetPoints() const
+    {
+        return reinterpret_cast<const FVector*>(reinterpret_cast<const uint8*>(this) + sizeof(FBeamParticlePayload));
+    }
 };
 
 /** Beam Emitter TypeData */
@@ -80,8 +91,9 @@ class UParticleModuleTypeDataBeam : public UParticleModuleTypeDataBase
 
     virtual EParticleEmitterType GetEmitterType() const override { return EParticleEmitterType::PET_Beam; }
     virtual EParticleModuleClass GetModuleClass() const override { return EParticleModuleClass::TypeDataBeam; }
-	virtual uint32 RequiredBytes(UParticleModuleTypeDataBase* /*TypeData*/) const override { return sizeof(FBeamParticlePayload); }
+	virtual uint32 RequiredBytes(UParticleModuleTypeDataBase* TypeData) const override;
 	virtual void Serialize(FArchive& Ar) override;
+	virtual void PostEditProperty(const char* PropertyName) override;
 
 	const FVector& GetSource() const { return Source; }
 	void    SetSource(const FVector& InSource) { Source = InSource; }
@@ -91,16 +103,35 @@ class UParticleModuleTypeDataBeam : public UParticleModuleTypeDataBase
 	void    SetWidth(float InWidth) { Width = InWidth; }
 	float   GetTextureTiling() const { return TextureTiling; }
 	void    SetTextureTiling(float InTextureTiling) { TextureTiling = InTextureTiling; }
+	int32   GetMaxBeamCount() const { return MaxBeamCount; }
+	void    SetMaxBeamCount(int32 InMaxBeamCount);
+	int32   GetSegmentCount() const { return SegmentCount; }
+	void    SetSegmentCount(int32 InSegmentCount);
+	int32   GetMaxSegmentCount() const { return MaxSegmentCount; }
+	void    SetMaxSegmentCount(int32 InMaxSegmentCount);
+	const TArray<FVector>& GetBeamPoints() const { return BeamPoints; }
+	void    SetBeamPoints(const TArray<FVector>& InBeamPoints);
+	void    ClearBeamPoints();
+	void    AddBeamPoint(const FVector& InPoint);
+	void    SetBeamPoint(int32 Index, const FVector& InPoint);
 
   private:
-    UPROPERTY(Edit, Category="Particle", DisplayName="Source")
-    FVector Source = FVector::ZeroVector; // Beam 시작점
-    UPROPERTY(Edit, Category="Particle", DisplayName="Target")
-    FVector Target = FVector::ZeroVector; // Beam 끝점
+	void    ClampBeamSettings();
+
+    FVector Source = FVector::ZeroVector; // Legacy fallback. Beam Source module owns editable source.
+    FVector Target = FVector::ZeroVector; // Legacy fallback. Beam Target module owns editable target.
     UPROPERTY(Edit, Category="Particle", DisplayName="Width", Min=0.0, Max=100000.0, Speed=0.1)
     float   Width = 1.0f;                 // Beam 두께
     UPROPERTY(Edit, Category="Particle", DisplayName="Texture Tiling", Min=0.0, Max=100000.0, Speed=0.1)
     float   TextureTiling = 1.0f;         // Beam Texture 반복 비율
+	UPROPERTY(Edit, Category="Particle", DisplayName="MaxBeamCount", Min=0.0, Max=1000.0, Speed=1)
+	int32   MaxBeamCount = 1;             // 생성할 최대 Beam 개수
+	UPROPERTY(Edit, Category="Particle", DisplayName="Segment Count", Min=1.0, Max=1000.0, Speed=1.0)
+	int32   SegmentCount = 1;             // 실제 렌더링에 사용할 Beam segment 개수
+	UPROPERTY(Edit, Category="Particle", DisplayName="Max Segment Count", Min=1.0, Max=1000.0, Speed=1.0)
+	int32   MaxSegmentCount = 1;          // Beam payload tail에 예약할 최대 segment 개수
+	UPROPERTY(Edit, Category="Particle", DisplayName="Beam Points")
+	TArray<FVector> BeamPoints;           // 비어 있으면 Source/Target 선형 보간 사용
 };
 
 /** Ribbon / Trail Emitter TypeData */

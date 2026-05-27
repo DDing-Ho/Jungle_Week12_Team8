@@ -130,6 +130,15 @@ enum class EParticleRibbonRenderAxis : uint8
     SourceUp  // ParticleSystemComponent Up 벡터 기준
 };
 
+/** Beam Shape module이 Source/Target 사이 point를 생성하는 방식 */
+UENUM()
+enum class EParticleBeamShapeMode : uint8
+{
+    Linear,
+    Arc,
+    Sine
+};
+
 /** 다형 직렬화 시 모듈 구체 클래스를 식별하는 태그 */
 enum class EParticleModuleClass : uint8
 {
@@ -142,6 +151,10 @@ enum class EParticleModuleClass : uint8
     SubUVMovie,
     TrailSource,
     SpawnPerUnit,
+    BeamSource,
+    BeamTarget,
+    BeamShape,
+    BeamNoise,
     Unknown = 0xFF
 };
 

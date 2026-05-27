@@ -9,6 +9,7 @@
 #include "Object/FUObjectArray.h"
 #include "Serialization/WindowsArchive.h"
 #include "Particles/Runtime/ParticleRuntimeTypes.h"
+#include "Particles/Modules/ParticleMotionModules.h"
 
 // ─────────────────────────────────────────
 // 파일 내부 헬퍼: 다형 Module 생성
@@ -41,6 +42,10 @@ static UParticleModule* CreateModuleByClass(EParticleModuleClass ClassTag, UObje
     case EParticleModuleClass::SubImageIndex:        return GUObjectArray.CreateObject<UParticleModuleSubImageIndex>(Outer);
     case EParticleModuleClass::SubUVMovie:           return GUObjectArray.CreateObject<UParticleModuleSubUVMovie>(Outer);
     case EParticleModuleClass::TrailSource:          return GUObjectArray.CreateObject<UParticleModuleTrailSource>(Outer);
+    case EParticleModuleClass::BeamSource:           return GUObjectArray.CreateObject<UParticleModuleBeamSource>(Outer);
+    case EParticleModuleClass::BeamTarget:           return GUObjectArray.CreateObject<UParticleModuleBeamTarget>(Outer);
+    case EParticleModuleClass::BeamShape:            return GUObjectArray.CreateObject<UParticleModuleBeamShape>(Outer);
+    case EParticleModuleClass::BeamNoise:            return GUObjectArray.CreateObject<UParticleModuleBeamNoise>(Outer);
     default: return nullptr;
     }
 }

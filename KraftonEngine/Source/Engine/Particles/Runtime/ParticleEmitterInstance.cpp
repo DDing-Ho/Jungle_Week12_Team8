@@ -2,6 +2,7 @@
 #include "Particles/Common/ParticleHelper.h"
 #include "Particles/Modules/ParticleCoreModules.h"
 #include "Particles/Modules/ParticleEventModules.h"
+#include "Particles/Modules/ParticleMotionModules.h"
 #include "Particles/Modules/ParticleRenderExpressionModules.h"
 #include "Core/EngineTypes.h"
 #include "Component/ParticleSystemComponent.h"
@@ -120,6 +121,249 @@ namespace
 		OutNewRemainder = TotalDistance - static_cast<float>(RawSpawnCount) * UnitDistance;
 		return (std::min)(RawSpawnCount, Module->GetMaxSpawnCountPerFrame());
 	}
+
+	int32 GetBeamPayloadPointCapacity(int32 ParticleStride, int32 BeamPayloadOffset)
+	{
+		const int32 PointDataOffset = BeamPayloadOffset + static_cast<int32>(sizeof(FBeamParticlePayload));
+		if (BeamPayloadOffset == INDEX_NONE || BeamPayloadOffset < 0 || ParticleStride < PointDataOffset)
+			return 0;
+
+		return (ParticleStride - PointDataOffset) / static_cast<int32>(sizeof(FVector));
+	}
+
+	struct FBeamEndpoints
+	{
+		FVector Source = FVector::ZeroVector;
+		FVector Target = FVector::ZeroVector;
+	};
+
+	const UParticleModuleBeamSource* FindEnabledBeamSourceModule(const UParticleLODLevel* LODLevel)
+	{
+		if (!LODLevel)
+			return nullptr;
+
+		for (UParticleModule* Module : LODLevel->GetModules())
+		{
+			UParticleModuleBeamSource* BeamSourceModule = Cast<UParticleModuleBeamSource>(Module);
+			if (BeamSourceModule && BeamSourceModule->IsEnabled())
+			{
+				return BeamSourceModule;
+			}
+		}
+
+		return nullptr;
+	}
+
+	const UParticleModuleBeamTarget* FindEnabledBeamTargetModule(const UParticleLODLevel* LODLevel)
+	{
+		if (!LODLevel)
+			return nullptr;
+
+		for (UParticleModule* Module : LODLevel->GetModules())
+		{
+			UParticleModuleBeamTarget* BeamTargetModule = Cast<UParticleModuleBeamTarget>(Module);
+			if (BeamTargetModule && BeamTargetModule->IsEnabled())
+			{
+				return BeamTargetModule;
+			}
+		}
+
+		return nullptr;
+	}
+
+	FBeamEndpoints ResolveBeamEndpoints(const UParticleLODLevel* LODLevel, const UParticleModuleTypeDataBeam* BeamTypeData)
+	{
+		FBeamEndpoints Endpoints;
+		if (!BeamTypeData)
+			return Endpoints;
+
+		Endpoints.Source = BeamTypeData->GetSource();
+		Endpoints.Target = BeamTypeData->GetTarget();
+
+		if (const UParticleModuleBeamSource* BeamSourceModule = FindEnabledBeamSourceModule(LODLevel))
+		{
+			Endpoints.Source = BeamSourceModule->GetSource();
+		}
+
+		if (const UParticleModuleBeamTarget* BeamTargetModule = FindEnabledBeamTargetModule(LODLevel))
+		{
+			Endpoints.Target = BeamTargetModule->GetTarget();
+		}
+
+		return Endpoints;
+	}
+
+	const UParticleModuleBeamShape* FindEnabledBeamShapeModule(const UParticleLODLevel* LODLevel)
+	{
+		if (!LODLevel)
+			return nullptr;
+
+		for (UParticleModule* Module : LODLevel->GetModules())
+		{
+			UParticleModuleBeamShape* BeamShapeModule = Cast<UParticleModuleBeamShape>(Module);
+			if (BeamShapeModule && BeamShapeModule->IsEnabled())
+			{
+				return BeamShapeModule;
+			}
+		}
+
+		return nullptr;
+	}
+
+	const UParticleModuleBeamNoise* FindEnabledBeamNoiseModule(const UParticleLODLevel* LODLevel)
+	{
+		if (!LODLevel)
+			return nullptr;
+
+		for (UParticleModule* Module : LODLevel->GetModules())
+		{
+			UParticleModuleBeamNoise* BeamNoiseModule = Cast<UParticleModuleBeamNoise>(Module);
+			if (BeamNoiseModule && BeamNoiseModule->IsEnabled())
+			{
+				return BeamNoiseModule;
+			}
+		}
+
+		return nullptr;
+	}
+
+	void BuildLinearBeamPoints(
+		const UParticleModuleTypeDataBeam* BeamTypeData,
+		const FVector& Source,
+		const FVector& Target,
+		TArray<FVector>& OutPoints)
+	{
+		if (!BeamTypeData)
+		{
+			OutPoints.clear();
+			return;
+		}
+
+		const int32 SegmentCount = (std::min)(
+			(std::max)(1, BeamTypeData->GetSegmentCount()),
+			(std::max)(1, BeamTypeData->GetMaxSegmentCount()));
+		const int32 PointCount = SegmentCount + 1;
+
+		OutPoints.clear();
+		OutPoints.resize(PointCount);
+
+		for (int32 PointIndex = 0; PointIndex < PointCount; ++PointIndex)
+		{
+			const float Alpha = static_cast<float>(PointIndex) / static_cast<float>(SegmentCount);
+			OutPoints[PointIndex] = Source + (Target - Source) * Alpha;
+		}
+	}
+
+	const TArray<FVector>* BuildBeamShapePoints(
+		const UParticleLODLevel* LODLevel,
+		const UParticleModuleTypeDataBeam* BeamTypeData,
+		const FVector& Source,
+		const FVector& Target,
+		TArray<FVector>& OutGeneratedPoints)
+	{
+		const UParticleModuleBeamShape* BeamShapeModule = FindEnabledBeamShapeModule(LODLevel);
+		if (!BeamShapeModule || !BeamTypeData)
+			return nullptr;
+
+		const bool bHasAuthoredBeamPoints = BeamTypeData->GetBeamPoints().size() >= 2;
+		if (bHasAuthoredBeamPoints && !BeamShapeModule->ShouldOverrideBeamPoints())
+			return nullptr;
+
+		BeamShapeModule->BuildBeamPoints(
+			Source,
+			Target,
+			BeamTypeData->GetSegmentCount(),
+			OutGeneratedPoints);
+
+		return OutGeneratedPoints.size() >= 2 ? &OutGeneratedPoints : nullptr;
+	}
+
+	const TArray<FVector>* BuildBeamNoisePoints(
+		const UParticleLODLevel* LODLevel,
+		const UParticleModuleTypeDataBeam* BeamTypeData,
+		const FVector& Source,
+		const FVector& Target,
+		const TArray<FVector>* BasePoints,
+		float EmitterTime,
+		TArray<FVector>& OutGeneratedPoints)
+	{
+		const UParticleModuleBeamNoise* BeamNoiseModule = FindEnabledBeamNoiseModule(LODLevel);
+		if (!BeamNoiseModule || !BeamTypeData)
+		{
+			return BasePoints;
+		}
+
+		if (BasePoints && BasePoints->size() >= 2)
+		{
+			OutGeneratedPoints = *BasePoints;
+		}
+		else if (BeamTypeData->GetBeamPoints().size() >= 2)
+		{
+			OutGeneratedPoints = BeamTypeData->GetBeamPoints();
+		}
+		else
+		{
+			BuildLinearBeamPoints(BeamTypeData, Source, Target, OutGeneratedPoints);
+		}
+
+		BeamNoiseModule->ApplyNoise(EmitterTime, OutGeneratedPoints);
+		return OutGeneratedPoints.size() >= 2 ? &OutGeneratedPoints : BasePoints;
+	}
+
+	void FillBeamPayload(
+		FBeamParticlePayload* Payload,
+		const UParticleModuleTypeDataBeam* BeamTypeData,
+		const FVector& Source,
+		const FVector& Target,
+		int32 PointCapacity,
+		const TArray<FVector>* OverrideBeamPoints = nullptr)
+	{
+		if (!Payload || !BeamTypeData)
+			return;
+
+		Payload->Width = BeamTypeData->GetWidth();
+		Payload->TextureTiling = BeamTypeData->GetTextureTiling();
+
+		const int32 MaxSegmentCount = (std::max)(1, BeamTypeData->GetMaxSegmentCount());
+		const int32 DesiredSegmentCount = (std::min)((std::max)(1, BeamTypeData->GetSegmentCount()), MaxSegmentCount);
+		const int32 MaxPayloadPointCount = (std::min)(DesiredSegmentCount + 1, (std::max)(0, PointCapacity));
+
+		const TArray<FVector>& BeamPoints = OverrideBeamPoints ? *OverrideBeamPoints : BeamTypeData->GetBeamPoints();
+		const int32 AuthoredPointCount = (std::min)(static_cast<int32>(BeamPoints.size()), MaxPayloadPointCount);
+		if (AuthoredPointCount >= 2)
+		{
+			FVector* Points = Payload->GetPoints();
+			for (int32 PointIndex = 0; PointIndex < AuthoredPointCount; ++PointIndex)
+			{
+				Points[PointIndex] = BeamPoints[PointIndex];
+			}
+
+			Payload->Source = Points[0];
+			Payload->Target = Points[AuthoredPointCount - 1];
+			Payload->PointCount = AuthoredPointCount;
+			return;
+		}
+
+		Payload->Source = Source;
+		Payload->Target = Target;
+
+		const int32 DesiredPointCount = DesiredSegmentCount + 1;
+		const int32 PointCount = (std::min)(DesiredPointCount, (std::max)(0, PointCapacity));
+		Payload->PointCount = PointCount;
+
+		if (PointCount <= 0)
+			return;
+
+		FVector* Points = Payload->GetPoints();
+		const int32 SegmentCount = PointCount - 1;
+		for (int32 PointIndex = 0; PointIndex < PointCount; ++PointIndex)
+		{
+			const float Alpha = SegmentCount > 0
+				? static_cast<float>(PointIndex) / static_cast<float>(SegmentCount)
+				: 0.0f;
+			Points[PointIndex] = Source + (Target - Source) * Alpha;
+		}
+	}
 }
 
 FParticleEmitterInstance::~FParticleEmitterInstance()
@@ -229,9 +473,10 @@ void FParticleEmitterInstance::Tick(float DeltaTime, TArray<FParticleEventData>&
 //StartTime : 현재 프레임에서 첫 번째 파티클이 태어날 때까지 프레임 단위 시간
 void FParticleEmitterInstance::SpawnParticles(int32 Count, float StartTime, float Increment, const FVector& InitialLocation, const FVector& InitialVelocity, TArray<FParticleEventData>* OutEventQueue)
 {
+	const int32 MaxAllowedParticles = GetMaxActiveParticleLimit();
 	for (int32 i = 0; i < Count; ++i)
 	{
-		if (ActiveParticles >= MaxActiveParticles)
+		if (ActiveParticles >= MaxAllowedParticles)
 			break;
 		const int32 ActiveIndex = ActiveParticles;
 
@@ -443,7 +688,8 @@ void FParticleEmitterInstance::SpawnParticlesByRate(float DeltaTime, TArray<FPar
 	int32 SpawnCount = static_cast<int32>(floor(NewLeftover));
 	float NewSpawnFraction = NewLeftover - SpawnCount;
 
-	const int32 AvailableSlots = MaxActiveParticles - ActiveParticles;
+	const int32 MaxAllowedParticles = GetMaxActiveParticleLimit();
+	const int32 AvailableSlots = (std::max)(0, MaxAllowedParticles - ActiveParticles);
 	const int32 TotalSpawnCount = std::min(SpawnCount, AvailableSlots);
 
 	if (TotalSpawnCount > 0)
@@ -906,6 +1152,56 @@ void FParticleBeamEmitterInstance::Init(UParticleSystemComponent* InComponent, U
 	{
 		BeamTypeData = Cast<UParticleModuleTypeDataBeam>(CurrentLODLevel->GetTypeDataModule());
 	}
+	BeamPayloadOffset = GetModulePayloadOffset(EmitterTemplate, BeamTypeData);
+}
+
+void FParticleBeamEmitterInstance::Tick(float DeltaTime, TArray<FParticleEventData>& OutEventQueue, float InRealDeltaTime)
+{
+	FParticleEmitterInstance::Tick(DeltaTime, OutEventQueue, InRealDeltaTime);
+	UpdateBeamPayloads(DeltaTime);
+}
+
+int32 FParticleBeamEmitterInstance::GetMaxActiveParticleLimit() const
+{
+	const int32 TypeDataLimit = BeamTypeData ? BeamTypeData->GetMaxBeamCount() : MaxActiveParticles;
+	return (std::max)(0, (std::min)(MaxActiveParticles, TypeDataLimit));
+}
+
+void FParticleBeamEmitterInstance::UpdateBeamPayloads(float /*DeltaTime*/)
+{
+	if (!BeamTypeData || BeamPayloadOffset == INDEX_NONE)
+		return;
+
+	if (!ParticleData || !ParticleIndices || ParticleStride <= 0)
+		return;
+
+	const int32 PointCapacity = GetBeamPayloadPointCapacity(ParticleStride, BeamPayloadOffset);
+	const FBeamEndpoints Endpoints = ResolveBeamEndpoints(CurrentLODLevel, BeamTypeData);
+	TArray<FVector> ShapeBeamPoints;
+	const TArray<FVector>* OverrideBeamPoints = BuildBeamShapePoints(
+		CurrentLODLevel,
+		BeamTypeData,
+		Endpoints.Source,
+		Endpoints.Target,
+		ShapeBeamPoints);
+	TArray<FVector> NoiseBeamPoints;
+	OverrideBeamPoints = BuildBeamNoisePoints(
+		CurrentLODLevel,
+		BeamTypeData,
+		Endpoints.Source,
+		Endpoints.Target,
+		OverrideBeamPoints,
+		EmitterTime,
+		NoiseBeamPoints);
+
+	for (int32 i = 0; i < ActiveParticles; ++i)
+	{
+		uint8* ParticleBase = ParticleData + ParticleStride * ParticleIndices[i];
+		FBeamParticlePayload* Payload =
+			reinterpret_cast<FBeamParticlePayload*>(ParticleBase + BeamPayloadOffset);
+
+		FillBeamPayload(Payload, BeamTypeData, Endpoints.Source, Endpoints.Target, PointCapacity, OverrideBeamPoints);
+	}
 }
 
 FDynamicEmitterDataBase* FParticleBeamEmitterInstance::CreateDynamicEmitterData()
@@ -933,11 +1229,13 @@ FDynamicEmitterDataBase* FParticleBeamEmitterInstance::CreateDynamicEmitterData(
 	Source.ParticleStride = ParticleStride;
 	Source.RotationModuleOffset = FindModulePayloadOffset(EmitterTemplate, CurrentLODLevel, EParticleModuleClass::Rotation);
 	Source.Scale = FVector(1.0f, 1.0f, 1.0f);
-	Source.Source = BeamTypeData->GetSource();
-	Source.Target = BeamTypeData->GetTarget();
+	const FBeamEndpoints Endpoints = ResolveBeamEndpoints(CurrentLODLevel, BeamTypeData);
+	Source.Source = Endpoints.Source;
+	Source.Target = Endpoints.Target;
 	Source.Width = BeamTypeData->GetWidth();
 	Source.TextureTiling = BeamTypeData->GetTextureTiling();
-	const int32 BeamPayloadOffset = GetModulePayloadOffset(EmitterTemplate, BeamTypeData);
+	Source.SegmentCount = (std::min)((std::max)(1, BeamTypeData->GetSegmentCount()), (std::max)(1, BeamTypeData->GetMaxSegmentCount()));
+	Source.MaxSegmentCount = (std::max)(1, BeamTypeData->GetMaxSegmentCount());
 	Source.PayloadOffset = BeamPayloadOffset != INDEX_NONE ? BeamPayloadOffset : PayloadOffset;
 
 	UParticleModuleRequired* RequiredModule = CurrentLODLevel->GetRequiredModule();
@@ -975,7 +1273,6 @@ void FParticleBeamEmitterInstance::PreSpawn(FBaseParticle& Particle, const FVect
 	if (!BeamTypeData)
 		return;
 
-	const int32 BeamPayloadOffset = GetModulePayloadOffset(EmitterTemplate, BeamTypeData);
 	if (BeamPayloadOffset == INDEX_NONE)
 		return;
 
@@ -986,10 +1283,30 @@ void FParticleBeamEmitterInstance::PreSpawn(FBaseParticle& Particle, const FVect
 	if (!Payload)
 		return;
 
-	Payload->Source = BeamTypeData->GetSource();
-	Payload->Target = BeamTypeData->GetTarget();
-	Payload->Width = BeamTypeData->GetWidth();
-	Payload->TextureTiling = BeamTypeData->GetTextureTiling();
+	const int32 PointCapacity = GetBeamPayloadPointCapacity(ParticleStride, BeamPayloadOffset);
+	const FBeamEndpoints Endpoints = ResolveBeamEndpoints(CurrentLODLevel, BeamTypeData);
+	TArray<FVector> ShapeBeamPoints;
+	const TArray<FVector>* OverrideBeamPoints = BuildBeamShapePoints(
+		CurrentLODLevel,
+		BeamTypeData,
+		Endpoints.Source,
+		Endpoints.Target,
+		ShapeBeamPoints);
+	TArray<FVector> NoiseBeamPoints;
+	OverrideBeamPoints = BuildBeamNoisePoints(
+		CurrentLODLevel,
+		BeamTypeData,
+		Endpoints.Source,
+		Endpoints.Target,
+		OverrideBeamPoints,
+		EmitterTime,
+		NoiseBeamPoints);
+	FillBeamPayload(Payload, BeamTypeData, Endpoints.Source, Endpoints.Target, PointCapacity, OverrideBeamPoints);
+}
+
+void FParticleBeamEmitterInstance::Tick_SpawnParticles(float DeltaTime, TArray<FParticleEventData>* OutEventQueue)
+{
+	FParticleEmitterInstance::Tick_SpawnParticles(DeltaTime, OutEventQueue);
 }
 
 void FParticleRibbonEmitterInstance::Init(UParticleSystemComponent* InComponent, UParticleEmitter* InTemplate)

@@ -89,17 +89,22 @@ private:
 	// UpdatePerViewport에서 조립한 CPU staging 버퍼
 	TArray<FSpriteParticleInstanceVertex> StagedInstances;
 	TArray<FMeshParticleInstanceVertex> StagedMeshInstances;
+	TArray<FBeamParticleInstanceVertex> StagedBeamInstances;
 	TArray<FRibbonParticleVertex> StagedRibbonVertices;
 	TArray<uint32> StagedRibbonIndices;
 
 	// GPU 동적 버퍼 (mutable for const PrepareDrawBuffer)
 	mutable FVertexBuffer        QuadVB;
 	mutable FIndexBuffer         QuadIB;
+	mutable FVertexBuffer        BeamQuadVB;
+	mutable FIndexBuffer         BeamQuadIB;
 	mutable FDynamicVertexBuffer InstanceVB;
 	mutable FDynamicVertexBuffer MeshInstanceVB;
+	mutable FDynamicVertexBuffer BeamInstanceVB;
 	mutable FDynamicVertexBuffer RibbonVB;
 	mutable FDynamicIndexBuffer  RibbonIB;
 	mutable bool bSpriteInstanceBufferDirty = true;
 	mutable bool bMeshInstanceBufferDirty = true;
+	mutable bool bBeamInstanceBufferDirty = true;
 	mutable bool bRibbonBufferDirty = true;
 };

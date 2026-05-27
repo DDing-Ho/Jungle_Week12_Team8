@@ -121,8 +121,11 @@ FParticleSceneProxy::~FParticleSceneProxy()
 	ReleaseParticleMaterials();
 	QuadVB.Release();
 	QuadIB.Release();
+	BeamQuadVB.Release();
+	BeamQuadIB.Release();
 	InstanceVB.Release();
 	MeshInstanceVB.Release();
+	BeamInstanceVB.Release();
 	RibbonVB.Release();
 	RibbonIB.Release();
 }
@@ -232,12 +235,14 @@ void FParticleSceneProxy::UpdatePerViewport(const FFrameContext& Frame)
 {
 	StagedInstances.clear();
 	StagedMeshInstances.clear();
+	StagedBeamInstances.clear();
 	StagedRibbonVertices.clear();
 	StagedRibbonIndices.clear();
 	DrawSections.clear();
 	SectionDraws.clear();
 	bSpriteInstanceBufferDirty = true;
 	bMeshInstanceBufferDirty = true;
+	bBeamInstanceBufferDirty = true;
 	bRibbonBufferDirty = true;
 
 	if (!bVisible || CachedEmitters.empty()) return;
@@ -405,7 +410,28 @@ void FParticleSceneProxy::UpdatePerViewport(const FFrameContext& Frame)
 			continue;
 		}
 
-		// Beam은 section 타입만 예약해 둔다. GatherRenderData 구현 후 여기서 추가한다.
+		if (Source.eEmitterType == EDynamicEmitterType::DET_Beam)
+		{
+			const uint32 FirstInstance = static_cast<uint32>(StagedBeamInstances.size());
+
+			IgnoredIndices.clear();
+			E.Data->GatherRenderData(Ctx, StagedBeamInstances, IgnoredIndices);
+
+			const uint32 InstanceCount = static_cast<uint32>(StagedBeamInstances.size()) - FirstInstance;
+			if (InstanceCount == 0)
+				continue;
+
+			FParticleDrawSection Draw;
+			Draw.Type = EParticleDrawSectionType::Beam;
+			Draw.Material = ParticleMaterials[MaterialIndex];
+			Draw.FirstIndex = 0;
+			Draw.IndexCount = 6;
+			Draw.FirstInstance = FirstInstance;
+			Draw.InstanceCount = InstanceCount;
+			Draw.SortDepth = SortDepth;
+			DrawSections.push_back(Draw);
+			continue;
+		}
 	}
 }
 
@@ -507,6 +533,60 @@ bool FParticleSceneProxy::PrepareDrawBufferForSection(const FParticleDrawSection
 		OutBuffer.InstanceVB = MeshInstanceVB.GetBuffer();
 		OutBuffer.InstanceVBStride = MeshInstanceVB.GetStride();
 		OutBuffer.IndexCount = Section.MeshBuffer->GetIndexBuffer().GetIndexCount();
+		OutBuffer.FirstIndex = 0;
+		OutBuffer.BaseVertex = 0;
+		OutBuffer.StartInstance = 0;
+		OutBuffer.InstanceCount = TotalInstanceCount;
+		return true;
+	}
+
+	if (Section.Type == EParticleDrawSectionType::Beam)
+	{
+		if (StagedBeamInstances.empty())
+			return false;
+
+		if (!BeamQuadVB.GetBuffer())
+		{
+			static const FBeamParticleQuadVertex QuadVertices[4] =
+			{
+				{ FVector2(0.0f, -0.5f), FVector2(0.0f, 1.0f) },
+				{ FVector2(1.0f, -0.5f), FVector2(1.0f, 1.0f) },
+				{ FVector2(1.0f,  0.5f), FVector2(1.0f, 0.0f) },
+				{ FVector2(0.0f,  0.5f), FVector2(0.0f, 0.0f) },
+			};
+			BeamQuadVB.Create(Device, QuadVertices, 4, sizeof(QuadVertices), sizeof(FBeamParticleQuadVertex));
+		}
+
+		if (!BeamQuadIB.GetBuffer())
+		{
+			static const uint32 QuadIndices[6] = { 0, 1, 2, 0, 2, 3 };
+			BeamQuadIB.Create(Device, QuadIndices, 6, sizeof(QuadIndices));
+		}
+
+		if (!BeamQuadVB.GetBuffer() || !BeamQuadIB.GetBuffer())
+			return false;
+
+		const uint32 TotalInstanceCount = static_cast<uint32>(StagedBeamInstances.size());
+		if (bBeamInstanceBufferDirty)
+		{
+			if (BeamInstanceVB.GetStride() == 0)
+				BeamInstanceVB.Create(Device, TotalInstanceCount, sizeof(FBeamParticleInstanceVertex));
+			else
+				BeamInstanceVB.EnsureCapacity(Device, TotalInstanceCount);
+
+			if (!BeamInstanceVB.Update(Context, StagedBeamInstances.data(), TotalInstanceCount))
+				return false;
+
+			bBeamInstanceBufferDirty = false;
+		}
+
+		OutBuffer = {};
+		OutBuffer.VB = BeamQuadVB.GetBuffer();
+		OutBuffer.VBStride = BeamQuadVB.GetStride();
+		OutBuffer.IB = BeamQuadIB.GetBuffer();
+		OutBuffer.InstanceVB = BeamInstanceVB.GetBuffer();
+		OutBuffer.InstanceVBStride = BeamInstanceVB.GetStride();
+		OutBuffer.IndexCount = BeamQuadIB.GetIndexCount();
 		OutBuffer.FirstIndex = 0;
 		OutBuffer.BaseVertex = 0;
 		OutBuffer.StartInstance = 0;

@@ -129,6 +129,59 @@ namespace
 
 		return bExpanded;
 	}
+
+	int32 GetBeamPayloadPointCapacity(int32 ParticleStride, int32 BeamPayloadOffset)
+	{
+		const int32 PointDataOffset = BeamPayloadOffset + static_cast<int32>(sizeof(FBeamParticlePayload));
+		if (BeamPayloadOffset == INDEX_NONE || BeamPayloadOffset < 0 || ParticleStride < PointDataOffset)
+			return 0;
+
+		return (ParticleStride - PointDataOffset) / static_cast<int32>(sizeof(FVector));
+	}
+
+	bool ExpandBoundsByBeamEmitter(FBoundingBox& Bounds, const FParticleEmitterInstance* Instance)
+	{
+		if (!Instance || !Instance->CurrentLODLevel || !Instance->EmitterTemplate)
+			return false;
+
+		UParticleModuleTypeDataBase* TypeData = Instance->CurrentLODLevel->GetTypeDataModule();
+		UParticleModuleTypeDataBeam* BeamTypeData = Cast<UParticleModuleTypeDataBeam>(TypeData);
+		if (!BeamTypeData)
+			return false;
+
+		const int32 BeamPayloadOffset = Instance->EmitterTemplate->GetModulePayloadOffset(BeamTypeData);
+		const int32 PointCapacity = GetBeamPayloadPointCapacity(Instance->ParticleStride, BeamPayloadOffset);
+		if (PointCapacity <= 0)
+			return false;
+
+		bool bExpanded = false;
+		for (int32 ActiveIndex = 0; ActiveIndex < Instance->ActiveParticles; ++ActiveIndex)
+		{
+			const FBaseParticle* Particle = GetActiveParticle(Instance, ActiveIndex);
+			if (!Particle)
+				continue;
+
+			const FBeamParticlePayload* Payload =
+				reinterpret_cast<const FBeamParticlePayload*>(
+					reinterpret_cast<const uint8*>(Particle) + BeamPayloadOffset);
+
+			const int32 PointCount = (std::min)((std::max)(0, Payload->PointCount), PointCapacity);
+			if (PointCount < 2 || Payload->Width <= 0.0f)
+				continue;
+
+			const FVector Extent(Payload->Width, Payload->Width, Payload->Width);
+			const FVector* Points = Payload->GetPoints();
+			for (int32 PointIndex = 0; PointIndex < PointCount; ++PointIndex)
+			{
+				Bounds.Expand(Points[PointIndex] - Extent);
+				Bounds.Expand(Points[PointIndex] + Extent);
+			}
+
+			bExpanded = true;
+		}
+
+		return bExpanded;
+	}
 }
 
 UParticleSystemComponent::UParticleSystemComponent()
@@ -307,6 +360,9 @@ void UParticleSystemComponent::UpdateWorldAABB() const
 			break;
 
 		case EParticleEmitterType::PET_Beam:
+			bHasParticleBounds |= ExpandBoundsByBeamEmitter(ParticleBounds, Instance);
+			break;
+
 		default:
 			break;
 		}

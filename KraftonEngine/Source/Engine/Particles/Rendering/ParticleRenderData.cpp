@@ -1,4 +1,5 @@
 ﻿#include "ParticleRenderData.h"
+#include "Particles/Assets/ParticleTypeData.h"
 #include "Particles/Runtime/ParticleRuntimeTypes.h"
 
 #include <algorithm>
@@ -32,6 +33,12 @@ namespace
 	{
 		const uint8* ModuleData = GetModuleData(Source, Particle, Source.RotationModuleOffset, RotationModuleDataSize);
 		return ModuleData ? *reinterpret_cast<const FVector*>(ModuleData + RotationModuleMeshRotationOffset) : FVector::ZeroVector;
+	}
+
+	const FBeamParticlePayload* GetBeamPayload(const FDynamicBeamEmitterReplayData& Source, const FBaseParticle* Particle)
+	{
+		const uint8* PayloadData = GetModuleData(Source, Particle, Source.PayloadOffset, sizeof(FBeamParticlePayload));
+		return PayloadData ? reinterpret_cast<const FBeamParticlePayload*>(PayloadData) : nullptr;
 	}
 
 	FVector SafeNormalized(const FVector& Value, const FVector& Fallback)
@@ -306,11 +313,192 @@ void FDynamicMeshEmitterData::GatherRenderData(
 // Beam Particle: Source → Target 사이 ribbon strip 생성
 // ============================================================
 void FDynamicBeamEmitterData::GatherRenderData(
-    const FParticleVertexBuildContext& /*Ctx*/,
-    TArray<FSpriteParticleInstanceVertex>& /*OutInstances*/,
+    const FParticleVertexBuildContext& Ctx,
+    TArray<FBeamParticleInstanceVertex>& OutInstances,
     TArray<uint32>&                        /*OutIndices*/) const
 {
-    // 미구현 — Beam 경로 분할 및 width 처리 필요
+	if (!Source.IsValid()) return;
+
+	const int32 Stride = Source.ParticleStride;
+	const uint8* RawData = Source.DataContainer.ParticleData;
+	if (!RawData || !Source.DataContainer.ParticleIndices || Stride <= 0) return;
+
+	const int32 PayloadPointCapacity = [&]()
+	{
+		if (Source.PayloadOffset == INDEX_NONE || Source.PayloadOffset < 0)
+		{
+			return 0;
+		}
+
+		const int32 PayloadPointOffset = Source.PayloadOffset + static_cast<int32>(sizeof(FBeamParticlePayload));
+		if (Stride < PayloadPointOffset)
+		{
+			return 0;
+		}
+
+		return (Stride - PayloadPointOffset) / static_cast<int32>(sizeof(FVector));
+	}();
+
+	auto AppendSegmentInstance = [&](
+		const FBaseParticle* P,
+		const FVector& SegmentStart,
+		const FVector& SegmentEnd,
+		float BeamWidth,
+		float U0,
+		float U1)
+	{
+		if (FVector::DistSquared(SegmentStart, SegmentEnd) <= 1.0e-6f)
+		{
+			return;
+		}
+
+		FBeamParticleInstanceVertex Instance;
+		Instance.SegmentStart = SegmentStart;
+		Instance.SegmentEnd = SegmentEnd;
+		Instance.BeamWidth = BeamWidth;
+		Instance.U0 = U0;
+		Instance.U1 = U1;
+		Instance.Color = FVector4(
+			P->Color.R / 255.0f,
+			P->Color.G / 255.0f,
+			P->Color.B / 255.0f,
+			P->Color.A / 255.0f);
+
+		OutInstances.push_back(Instance);
+	};
+
+	auto AppendBeamSegments = [&](uint16 ParticleIdx)
+	{
+		const FBaseParticle* P = reinterpret_cast<const FBaseParticle*>(RawData + Stride * ParticleIdx);
+		const FBeamParticlePayload* Payload = GetBeamPayload(Source, P);
+		const FVector& BeamSource = Payload ? Payload->Source : Source.Source;
+		const FVector& BeamTarget = Payload ? Payload->Target : Source.Target;
+		const float BeamWidth = Payload ? Payload->Width : Source.Width;
+		const float TextureTiling = Payload ? Payload->TextureTiling : Source.TextureTiling;
+		if (BeamWidth <= 0.0f)
+		{
+			return;
+		}
+
+		const int32 PayloadPointCount = Payload
+			? (std::min)((std::max)(0, Payload->PointCount), PayloadPointCapacity)
+			: 0;
+
+		if (Payload && PayloadPointCount >= 2)
+		{
+			const FVector* Points = Payload->GetPoints();
+			const int32 SegmentCount = PayloadPointCount - 1;
+			for (int32 SegmentIndex = 0; SegmentIndex < SegmentCount; ++SegmentIndex)
+			{
+				const float U0 = TextureTiling * static_cast<float>(SegmentIndex) / static_cast<float>(SegmentCount);
+				const float U1 = TextureTiling * static_cast<float>(SegmentIndex + 1) / static_cast<float>(SegmentCount);
+				AppendSegmentInstance(P, Points[SegmentIndex], Points[SegmentIndex + 1], BeamWidth, U0, U1);
+			}
+			return;
+		}
+
+		const int32 SegmentCount = (std::max)(1, Source.SegmentCount);
+		for (int32 SegmentIndex = 0; SegmentIndex < SegmentCount; ++SegmentIndex)
+		{
+			const float T0 = static_cast<float>(SegmentIndex) / static_cast<float>(SegmentCount);
+			const float T1 = static_cast<float>(SegmentIndex + 1) / static_cast<float>(SegmentCount);
+			const FVector SegmentStart = BeamSource + (BeamTarget - BeamSource) * T0;
+			const FVector SegmentEnd = BeamSource + (BeamTarget - BeamSource) * T1;
+			const float U0 = TextureTiling * T0;
+			const float U1 = TextureTiling * T1;
+
+			AppendSegmentInstance(P, SegmentStart, SegmentEnd, BeamWidth, U0, U1);
+		}
+	};
+
+	auto GetBeamSortCenter = [&](const FBaseParticle* P, const FBeamParticlePayload* Payload)
+	{
+		if (Payload)
+		{
+			const int32 PayloadPointCount = (std::min)((std::max)(0, Payload->PointCount), PayloadPointCapacity);
+			if (PayloadPointCount >= 2)
+			{
+				const FVector* Points = Payload->GetPoints();
+				return (Points[0] + Points[PayloadPointCount - 1]) * 0.5f;
+			}
+		}
+
+		const FVector& BeamSource = Payload ? Payload->Source : Source.Source;
+		const FVector& BeamTarget = Payload ? Payload->Target : Source.Target;
+		return (BeamSource + BeamTarget) * 0.5f;
+	};
+
+	if (Source.SortMode == EParticleSortMode::PSM_None)
+	{
+		OutInstances.reserve(OutInstances.size() + Source.ActiveParticleCount * (std::max)(1, Source.SegmentCount));
+		for (int32 i = 0; i < Source.ActiveParticleCount; ++i)
+		{
+			AppendBeamSegments(Source.DataContainer.ParticleIndices[i]);
+		}
+		return;
+	}
+
+	struct FBeamSortEntry
+	{
+		uint16 ParticleIdx = 0;
+		float DistanceSq = 0.0f;
+		float RelativeTime = 0.0f;
+		int32 OriginalOrder = 0;
+	};
+
+	TArray<FBeamSortEntry> SortEntries;
+	SortEntries.reserve(Source.ActiveParticleCount);
+
+	for (int32 i = 0; i < Source.ActiveParticleCount; ++i)
+	{
+		const uint16 ParticleIdx = Source.DataContainer.ParticleIndices[i];
+		const FBaseParticle* P = reinterpret_cast<const FBaseParticle*>(RawData + Stride * ParticleIdx);
+		const FBeamParticlePayload* Payload = GetBeamPayload(Source, P);
+		const float BeamWidth = Payload ? Payload->Width : Source.Width;
+		if (BeamWidth <= 0.0f)
+		{
+			continue;
+		}
+
+		const FVector SegmentCenter = GetBeamSortCenter(P, Payload);
+		SortEntries.push_back({
+			ParticleIdx,
+			FVector::DistSquared(SegmentCenter, Ctx.CameraPosition),
+			P->RelativeTime,
+			i
+		});
+	}
+
+	if (Source.SortMode == EParticleSortMode::PSM_Age)
+	{
+		std::ranges::stable_sort(SortEntries,
+			[](const FBeamSortEntry& A, const FBeamSortEntry& B)
+			{
+				if (A.RelativeTime != B.RelativeTime)
+				{
+					return A.RelativeTime > B.RelativeTime;
+				}
+				return A.OriginalOrder < B.OriginalOrder;
+			});
+	}
+	else
+	{
+		std::ranges::stable_sort(SortEntries,
+			[](const FBeamSortEntry& A, const FBeamSortEntry& B)
+			{
+				if (A.DistanceSq != B.DistanceSq)
+				{
+					return A.DistanceSq > B.DistanceSq;
+				}
+				return A.OriginalOrder < B.OriginalOrder;
+			});
+	}
+
+	OutInstances.reserve(OutInstances.size() + SortEntries.size() * (std::max)(1, Source.SegmentCount));
+	for (const FBeamSortEntry& Entry : SortEntries)
+	{
+		AppendBeamSegments(Entry.ParticleIdx);
+	}
 }
 
 // ============================================================

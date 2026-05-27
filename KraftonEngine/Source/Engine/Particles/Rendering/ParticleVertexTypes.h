@@ -6,6 +6,8 @@
  * - FSpriteParticleQuadVertex:     Sprite Particle 공용 unit quad vertex
  * - FSpriteParticleInstanceVertex: Sprite Particle GPU 인스턴스 데이터
  * - FMeshParticleInstanceVertex:   Mesh   Particle GPU 인스턴스 데이터
+ * - FBeamParticleQuadVertex:       Beam   Particle 공용 unit quad vertex
+ * - FBeamParticleInstanceVertex:   Beam   Particle GPU 인스턴스 데이터
  */
 
 #pragma once
@@ -46,6 +48,22 @@ struct FMeshParticleInstanceVertex
 {
     FMatrix  Transform; // local-to-world transform, scale 포함
     FVector4 Color;     // rgba: normalized [0,1]
+};
+
+struct FBeamParticleQuadVertex
+{
+    FVector2 Corner;   // x: 0..1 along beam, y: -0.5..0.5 width
+    FVector2 TexCoord; // particle texture uv
+};
+
+struct FBeamParticleInstanceVertex
+{
+    FVector  SegmentStart;  // INSTANCESEGMENTSTART
+    FVector  SegmentEnd;    // INSTANCESEGMENTEND
+    float    BeamWidth;     // INSTANCEBEAMWIDTH
+    float    U0;            // INSTANCEU0
+    float    U1;            // INSTANCEU1
+    FVector4 Color;         // INSTANCECOLOR
 };
 
 /** Ribbon Particle 렌더링용 동적 vertex */

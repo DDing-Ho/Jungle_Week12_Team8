@@ -521,8 +521,8 @@ void UParticleModuleVelocity::Spawn(FParticleEmitterInstance* Owner, FBasePartic
     if (!bEnabled) return;
     const float EvalTime = Owner->GetEmitterTime() - SpawnTime;
     const FVector V       = RawVelocity.GetValue(EvalTime, &ModuleStream);
-    Particle.BaseVelocity += V;
-    Particle.Velocity     += V;
+    Particle.BaseVelocity = V;
+    Particle.Velocity     = V;
 }
 
 // ── Color ─────────────────────────────────────────────────────────────────────
@@ -830,6 +830,139 @@ void UParticleModuleAcceleration::Update(
 			Particle.BaseVelocity *= std::exp(-UsedDrag * DeltaTime);
 		}
 	END_PARTICLE_UPDATE_LOOP
+}
+
+void UParticleModuleBeamSource::Serialize(FArchive& Ar)
+{
+	UParticleModule::Serialize(Ar);
+	Ar << Source;
+}
+
+void UParticleModuleBeamTarget::Serialize(FArchive& Ar)
+{
+	UParticleModule::Serialize(Ar);
+	Ar << Target;
+}
+
+void UParticleModuleBeamShape::Serialize(FArchive& Ar)
+{
+	UParticleModule::Serialize(Ar);
+	int32 ShapeModeInt = static_cast<int32>(ShapeMode);
+	Ar << ShapeModeInt;
+	if (Ar.IsLoading())
+	{
+		ShapeMode = static_cast<EParticleBeamShapeMode>(ShapeModeInt);
+	}
+	Ar << bOverrideBeamPoints;
+	Ar << ShapeOffset;
+	Ar << SineFrequency;
+
+	if (Ar.IsLoading())
+	{
+		SineFrequency = (std::max)(0.0f, SineFrequency);
+	}
+}
+
+void UParticleModuleBeamShape::BuildBeamPoints(
+	const FVector& Source,
+	const FVector& Target,
+	int32 SegmentCount,
+	TArray<FVector>& OutPoints) const
+{
+	const int32 SafeSegmentCount = (std::max)(1, SegmentCount);
+	const int32 PointCount = SafeSegmentCount + 1;
+	OutPoints.clear();
+	OutPoints.resize(PointCount);
+
+	constexpr float Pi = 3.14159265358979323846f;
+	for (int32 PointIndex = 0; PointIndex < PointCount; ++PointIndex)
+	{
+		const float Alpha = static_cast<float>(PointIndex) / static_cast<float>(SafeSegmentCount);
+		FVector Point = Source + (Target - Source) * Alpha;
+
+		switch (ShapeMode)
+		{
+		case EParticleBeamShapeMode::Arc:
+			Point += ShapeOffset * std::sin(Alpha * Pi);
+			break;
+
+		case EParticleBeamShapeMode::Sine:
+			Point += ShapeOffset * std::sin(Alpha * SineFrequency * Pi * 2.0f);
+			break;
+
+		case EParticleBeamShapeMode::Linear:
+		default:
+			break;
+		}
+
+		OutPoints[PointIndex] = Point;
+	}
+}
+
+void UParticleModuleBeamNoise::Serialize(FArchive& Ar)
+{
+	UParticleModule::Serialize(Ar);
+	Ar << NoiseAmplitude;
+	Ar << Frequency;
+	Ar << Speed;
+	Ar << Phase;
+
+	if (Ar.IsLoading())
+	{
+		Frequency = (std::max)(0.0f, Frequency);
+	}
+}
+
+void UParticleModuleBeamNoise::ApplyNoise(
+	float EmitterTime,
+	TArray<FVector>& InOutPoints) const
+{
+	if (InOutPoints.size() < 3)
+	{
+		return;
+	}
+
+	const FVector Source = InOutPoints.front();
+	const FVector Target = InOutPoints.back();
+
+	FVector BeamDir = Target - Source;
+	const float BeamLenSq = BeamDir.Dot(BeamDir);
+
+	if (BeamLenSq <= 1e-6f)
+	{
+		return;
+	}
+
+	BeamDir = BeamDir.Normalized();
+
+	FVector Up = FVector(0.0f, 0.0f, 1.0f);
+	if (std::abs(BeamDir.Dot(Up)) > 0.95f)
+	{
+		Up = FVector(0.0f, 1.0f, 0.0f);
+	}
+
+	const FVector SideDir = FVector::Cross(Up, BeamDir).Normalized();
+	const FVector UpDir = FVector::Cross(BeamDir, SideDir).Normalized();
+
+	constexpr float Pi = 3.14159265358979323846f;
+	const float ClampedFrequency = (std::max)(0.0f, Frequency);
+	const float TimePhase = Phase + EmitterTime * Speed;
+	const int32 LastPointIndex = static_cast<int32>(InOutPoints.size()) - 1;
+
+	for (int32 PointIndex = 1; PointIndex < LastPointIndex; ++PointIndex)
+	{
+		const float Alpha = static_cast<float>(PointIndex) / static_cast<float>(LastPointIndex);
+		const float EndFade = std::sin(Alpha * Pi);
+		const float WavePhase = TimePhase + Alpha * ClampedFrequency * Pi * 2.0f;
+		const float PrimaryWave = std::sin(WavePhase);
+		const float SecondaryWave = std::sin(WavePhase * 1.37f + Pi * 0.5f);
+
+		const FVector Offset =
+			(SideDir * (NoiseAmplitude.X * SecondaryWave) +
+			 UpDir * (NoiseAmplitude.Z * PrimaryWave)) * EndFade;
+
+		InOutPoints[PointIndex] += Offset;
+	}
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1770,6 +1903,115 @@ void UParticleModuleTypeDataBeam::Serialize(FArchive& Ar)
     Ar << Target;
     Ar << Width;
     Ar << TextureTiling;
+    Ar << MaxBeamCount;
+    Ar << SegmentCount;
+    Ar << MaxSegmentCount;
+    Ar << BeamPoints;
+
+	if (Ar.IsLoading())
+	{
+		ClampBeamSettings();
+	}
+}
+
+uint32 UParticleModuleTypeDataBeam::RequiredBytes(UParticleModuleTypeDataBase* /*TypeData*/) const
+{
+	const int32 MaxPointCount = (std::max)(1, MaxSegmentCount) + 1;
+	return static_cast<uint32>(sizeof(FBeamParticlePayload) + sizeof(FVector) * MaxPointCount);
+}
+
+void UParticleModuleTypeDataBeam::PostEditProperty(const char* PropertyName)
+{
+	UParticleModuleTypeDataBase::PostEditProperty(PropertyName);
+
+	if ((strcmp(PropertyName, "Beam Points") == 0 || strcmp(PropertyName, "BeamPoints") == 0) &&
+		BeamPoints.size() >= 2)
+	{
+		SegmentCount = static_cast<int32>(BeamPoints.size()) - 1;
+	}
+
+	ClampBeamSettings();
+}
+
+void UParticleModuleTypeDataBeam::SetMaxBeamCount(int32 InMaxBeamCount)
+{
+	MaxBeamCount = InMaxBeamCount;
+	ClampBeamSettings();
+}
+
+void UParticleModuleTypeDataBeam::SetSegmentCount(int32 InSegmentCount)
+{
+	SegmentCount = InSegmentCount;
+	ClampBeamSettings();
+}
+
+void UParticleModuleTypeDataBeam::SetMaxSegmentCount(int32 InMaxSegmentCount)
+{
+	MaxSegmentCount = InMaxSegmentCount;
+	ClampBeamSettings();
+}
+
+void UParticleModuleTypeDataBeam::SetBeamPoints(const TArray<FVector>& InBeamPoints)
+{
+	BeamPoints = InBeamPoints;
+	if (BeamPoints.size() >= 2)
+	{
+		SegmentCount = static_cast<int32>(BeamPoints.size()) - 1;
+	}
+	ClampBeamSettings();
+}
+
+void UParticleModuleTypeDataBeam::ClearBeamPoints()
+{
+	BeamPoints.clear();
+	ClampBeamSettings();
+}
+
+void UParticleModuleTypeDataBeam::AddBeamPoint(const FVector& InPoint)
+{
+	const int32 MaxPointCount = (std::max)(1, MaxSegmentCount) + 1;
+	if (static_cast<int32>(BeamPoints.size()) >= MaxPointCount)
+	{
+		return;
+	}
+
+	BeamPoints.push_back(InPoint);
+	if (BeamPoints.size() >= 2)
+	{
+		SegmentCount = static_cast<int32>(BeamPoints.size()) - 1;
+	}
+	ClampBeamSettings();
+}
+
+void UParticleModuleTypeDataBeam::SetBeamPoint(int32 Index, const FVector& InPoint)
+{
+	if (Index < 0 || Index >= static_cast<int32>(BeamPoints.size()))
+	{
+		return;
+	}
+
+	BeamPoints[Index] = InPoint;
+	ClampBeamSettings();
+}
+
+void UParticleModuleTypeDataBeam::ClampBeamSettings()
+{
+	Width = (std::max)(0.0f, Width);
+	TextureTiling = (std::max)(0.0f, TextureTiling);
+	MaxBeamCount = (std::max)(0, MaxBeamCount);
+	MaxSegmentCount = (std::max)(1, MaxSegmentCount);
+	SegmentCount = (std::clamp)(SegmentCount, 1, MaxSegmentCount);
+
+	const int32 MaxPointCount = MaxSegmentCount + 1;
+	if (static_cast<int32>(BeamPoints.size()) > MaxPointCount)
+	{
+		BeamPoints.resize(MaxPointCount);
+	}
+
+	if (BeamPoints.size() >= 2)
+	{
+		SegmentCount = (std::min)(static_cast<int32>(BeamPoints.size()) - 1, MaxSegmentCount);
+	}
 }
 
 void UParticleModuleTypeDataRibbon::Serialize(FArchive& Ar)

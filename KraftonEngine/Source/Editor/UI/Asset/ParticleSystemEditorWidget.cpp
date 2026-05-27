@@ -426,6 +426,27 @@ static UParticleModule* FindModuleByClass(const UParticleLODLevel* LODLevel, EPa
 	return nullptr;
 }
 
+static void EnsureDefaultBeamEndpointModules(UParticleLODLevel* LODLevel)
+{
+	if (!LODLevel)
+	{
+		return;
+	}
+
+	if (!FindModuleByClass(LODLevel, EParticleModuleClass::BeamSource))
+	{
+		UParticleModuleBeamSource* SourceModule = GUObjectArray.CreateObject<UParticleModuleBeamSource>(LODLevel);
+		LODLevel->AddModule(SourceModule);
+	}
+
+	if (!FindModuleByClass(LODLevel, EParticleModuleClass::BeamTarget))
+	{
+		UParticleModuleBeamTarget* TargetModule = GUObjectArray.CreateObject<UParticleModuleBeamTarget>(LODLevel);
+		TargetModule->SetTarget(FVector(100.0f, 0.0f, 0.0f));
+		LODLevel->AddModule(TargetModule);
+	}
+}
+
 static bool AreParticleModulesEffectivelyShared(UParticleModule* CurrentModule, UParticleModule* PreviousModule)
 {
 	if (!CurrentModule || !PreviousModule)
@@ -483,6 +504,14 @@ static bool IsParticleSubUVModuleClass(EParticleModuleClass ModuleClass)
 {
 	return ModuleClass == EParticleModuleClass::SubImageIndex
 		|| ModuleClass == EParticleModuleClass::SubUVMovie;
+}
+
+static bool IsParticleBeamModuleClass(EParticleModuleClass ModuleClass)
+{
+	return ModuleClass == EParticleModuleClass::BeamSource
+		|| ModuleClass == EParticleModuleClass::BeamTarget
+		|| ModuleClass == EParticleModuleClass::BeamShape
+		|| ModuleClass == EParticleModuleClass::BeamNoise;
 }
 
 static bool EventGeneratorRequiresEnabledCollisionModule(const UParticleModule* Module)
@@ -702,6 +731,10 @@ constexpr FParticleModuleAddOption ParticleModuleAddOptions[] =
 	{ EParticleModuleClass::SubImageIndex, "SubImage Index" },
 	{ EParticleModuleClass::SubUVMovie, "SubUV Movie" },
 	{ EParticleModuleClass::TrailSource, "Trail Source" },
+	{ EParticleModuleClass::BeamSource, "Beam Source" },
+	{ EParticleModuleClass::BeamTarget, "Beam Target" },
+	{ EParticleModuleClass::BeamShape, "Beam Shape" },
+	{ EParticleModuleClass::BeamNoise, "Beam Noise" },
 };
 
 constexpr ImVec4 ParticlePanelAccentColor = ImVec4(0.0f, 0.71f, 0.86f, 1.0f);
@@ -1089,6 +1122,10 @@ void FParticleSystemEditorWidget::Render(float DeltaTime)
 					UParticleModuleTypeDataBase* OldTypeData = SelectedLOD->GetTypeDataModule();
 					UParticleModuleTypeDataBase* NewTypeData = CreateParticleTypeDataByEmitterType(TypeOption, SelectedLOD);
 					SelectedLOD->SetTypeDataModule(NewTypeData);
+					if (TypeOption == EParticleEmitterType::PET_Beam)
+					{
+						EnsureDefaultBeamEndpointModules(SelectedLOD);
+					}
 					SelectedLOD->CacheModules();
 					Asset->CacheSystemModuleInfo();
 					SelectedModule = NewTypeData;
@@ -1120,6 +1157,11 @@ void FParticleSystemEditorWidget::Render(float DeltaTime)
 		{
 			for (const FParticleModuleAddOption& Option : ParticleModuleAddOptions)
 			{
+				if (IsParticleBeamModuleClass(Option.Class) && CurrentEmitterType != EParticleEmitterType::PET_Beam)
+				{
+					continue;
+				}
+
 				bool bAlreadyExists = false;
 				for (UParticleModule* Module : SelectedLOD->GetModules())
 				{
@@ -1153,6 +1195,10 @@ void FParticleSystemEditorWidget::Render(float DeltaTime)
 					case EParticleModuleClass::SubImageIndex:        NewModule = GUObjectArray.CreateObject<UParticleModuleSubImageIndex>(SelectedLOD); break;
 					case EParticleModuleClass::SubUVMovie:           NewModule = GUObjectArray.CreateObject<UParticleModuleSubUVMovie>(SelectedLOD); break;
 					case EParticleModuleClass::TrailSource:          NewModule = GUObjectArray.CreateObject<UParticleModuleTrailSource>(SelectedLOD); break;
+					case EParticleModuleClass::BeamSource:           NewModule = GUObjectArray.CreateObject<UParticleModuleBeamSource>(SelectedLOD); break;
+					case EParticleModuleClass::BeamTarget:           NewModule = GUObjectArray.CreateObject<UParticleModuleBeamTarget>(SelectedLOD); break;
+					case EParticleModuleClass::BeamShape:            NewModule = GUObjectArray.CreateObject<UParticleModuleBeamShape>(SelectedLOD); break;
+					case EParticleModuleClass::BeamNoise:            NewModule = GUObjectArray.CreateObject<UParticleModuleBeamNoise>(SelectedLOD); break;
 					default: break;
 					}
 					if (NewModule)
@@ -3156,6 +3202,10 @@ bool FParticleSystemEditorWidget::RenderParticleModuleItem(UParticleModule* Modu
 	case EParticleModuleClass::SubImageIndex: ModuleName = "SubImage Index"; break;
 	case EParticleModuleClass::SubUVMovie: ModuleName = "SubUV Movie"; break;
 	case EParticleModuleClass::TrailSource: ModuleName = "Trail Source"; break;
+	case EParticleModuleClass::BeamSource: ModuleName = "Beam Source"; break;
+	case EParticleModuleClass::BeamTarget: ModuleName = "Beam Target"; break;
+	case EParticleModuleClass::BeamShape: ModuleName = "Beam Shape"; break;
+	case EParticleModuleClass::BeamNoise: ModuleName = "Beam Noise"; break;
 	default: break;
 	}
 
@@ -3183,6 +3233,7 @@ bool FParticleSystemEditorWidget::RenderParticleModuleItem(UParticleModule* Modu
 		((ModuleClass == EParticleModuleClass::Required) ? ParticleRequiredModuleColors :
 		(IsParticleEventModuleClass(ModuleClass)) ? ParticleEventModuleColors :
 		(IsParticleSubUVModuleClass(ModuleClass)) ? ParticleSubUVModuleColors :
+		(IsParticleBeamModuleClass(ModuleClass)) ? ParticleTypeDataModuleColors :
 		(((ModuleClass == EParticleModuleClass::TypeDataSprite)
 		|| (ModuleClass == EParticleModuleClass::TypeDataMesh)
 		|| (ModuleClass == EParticleModuleClass::TypeDataBeam)

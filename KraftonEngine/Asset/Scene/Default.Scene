@@ -1681,7 +1681,7 @@
           },
           "Rotation" : [0.000000, 0.000000, 0.000000],
           "Simulate Physics" : false,
-          "Template" : "Asset/ParticleSystems/NewParticleSystem.uasset",
+          "Template" : "None",
           "bEditorOnly" : false,
           "bHiddenInComponentTree" : false,
           "bIsActive" : true,
@@ -1696,9 +1696,9 @@
   "PerspectiveCamera" : {
     "FOV" : 1.047198,
     "FarClip" : 1000.000000,
-    "Location" : [40.726944, 10.046625, 4.745460],
+    "Location" : [8.939576, 4.481997, 13.595453],
     "NearClip" : 0.100000,
-    "Rotation" : [0.000000, 16.572496, -472.188934]
+    "Rotation" : [0.000000, 10.122500, -498.288635]
   },
   "Version" : 2,
   "WorldSettings" : {
