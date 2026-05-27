@@ -660,7 +660,7 @@
           "Cast Shadow" : false,
           "Cast Shadow as Two-Sided" : false,
           "Center of Mass" : [0.000000, 0.000000, 0.000000],
-          "Collision Enabled" : 0,
+          "Collision Enabled" : 1,
           "Draw Only If Selected" : false,
           "Generate Overlap Events" : false,
           "Is Visible" : true,
@@ -1733,6 +1733,51 @@
           "bTickEnable" : true
         }
       }
+    }, {
+      "ClassName" : "AActor",
+      "Name" : "AActor_3",
+      "NonSceneComponents" : [],
+      "Properties" : {
+        "Tags" : [],
+        "bNeedsTick" : true,
+        "bVisible" : true
+      },
+      "RootComponent" : {
+        "Children" : [],
+        "ClassName" : "UParticleSystemComponent",
+        "Properties" : {
+          "Auto Activate" : true,
+          "Cast Shadow" : true,
+          "Cast Shadow as Two-Sided" : false,
+          "Center of Mass" : [0.000000, 0.000000, 0.000000],
+          "Collision Enabled" : 0,
+          "Debug Event Trace" : false,
+          "EmitterDelay" : 0.000000,
+          "Generate Overlap Events" : false,
+          "Is Visible" : true,
+          "Mass (Kg)" : 1.000000,
+          "Object Type" : 0,
+          "RelativeTransform" : {
+            "Location" : [-15.132307, 20.072920, 16.822285],
+            "Scale" : [1.000000, 1.000000, 1.000000]
+          },
+          "Response Container" : {
+            "FootIK" : 2,
+            "Pawn" : 2,
+            "Projectile" : 2,
+            "Trigger" : 2,
+            "WorldDynamic" : 2,
+            "WorldStatic" : 2
+          },
+          "Rotation" : [0.000000, 0.000000, 0.000000],
+          "Simulate Physics" : false,
+          "Template" : "Asset/ParticleSystems/Missile.uasset",
+          "bEditorOnly" : false,
+          "bHiddenInComponentTree" : false,
+          "bIsActive" : true,
+          "bTickEnable" : true
+        }
+      }
     }],
   "ClassName" : "UWorld",
   "ContextHandle" : "NewScene",
@@ -1741,9 +1786,9 @@
   "PerspectiveCamera" : {
     "FOV" : 1.047198,
     "FarClip" : 1000.000000,
-    "Location" : [3.784788, -31.653702, 31.795326],
+    "Location" : [1.563377, -16.562860, 15.883238],
     "NearClip" : 0.100000,
-    "Rotation" : [0.000000, 23.922466, -627.592346]
+    "Rotation" : [0.000000, 28.272402, -625.192017]
   },
   "Version" : 2,
   "WorldSettings" : {
