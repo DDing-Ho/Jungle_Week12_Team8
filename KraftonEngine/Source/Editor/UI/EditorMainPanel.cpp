@@ -261,6 +261,49 @@ void FEditorMainPanel::RenderMainMenuBar()
 		WorldSettingsWidget.bOpen = true;
 	}
 
+	if (EditorEngine && ImGui::BeginMenu("Stat"))
+	{
+		FOverlayStatSystem& OverlayStats = EditorEngine->GetOverlayStatSystem();
+
+		bool bShowFPS = OverlayStats.IsShowingFPS();
+		if (ImGui::MenuItem("FPS", nullptr, bShowFPS))
+		{
+			OverlayStats.ShowFPS(!bShowFPS);
+		}
+
+		bool bShowMemory = OverlayStats.IsShowingMemory();
+		if (ImGui::MenuItem("Memory", nullptr, bShowMemory))
+		{
+			OverlayStats.ShowMemory(!bShowMemory);
+		}
+
+		bool bShowShadow = OverlayStats.IsShowingShadow();
+		if (ImGui::MenuItem("Shadow", nullptr, bShowShadow))
+		{
+			OverlayStats.ShowShadow(!bShowShadow);
+		}
+
+		bool bShowSkinning = OverlayStats.IsShowingSkinning();
+		if (ImGui::MenuItem("Skinning", nullptr, bShowSkinning))
+		{
+			OverlayStats.ShowSkinning(!bShowSkinning);
+		}
+
+		bool bShowParticle = OverlayStats.IsShowingParticle();
+		if (ImGui::MenuItem("Particle", nullptr, bShowParticle))
+		{
+			OverlayStats.ShowParticle(!bShowParticle);
+		}
+
+		ImGui::Separator();
+		if (ImGui::MenuItem("None"))
+		{
+			OverlayStats.HideAll();
+		}
+
+		ImGui::EndMenu();
+	}
+
 	if (ImGui::MenuItem("Shortcut"))
 	{
 		bShowShortcutOverlay = !bShowShortcutOverlay;
